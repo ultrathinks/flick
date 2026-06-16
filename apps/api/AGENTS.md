@@ -17,6 +17,6 @@ Hono API with Drizzle ORM over node-postgres. ESM (`"type": "module"`).
 
 ## Notes
 
-- ESM: use `.js` extension on relative imports (e.g. `./app.js`).
+- ESM: write the real `.ts` extension on relative imports (e.g. `./app.ts`); `rewriteRelativeImportExtensions` emits `.js` in `dist/`.
 - Requires `DATABASE_URL`; `getDb()` throws if unset.
 - TS config extends `@flick/typescript-config/node.json`.
