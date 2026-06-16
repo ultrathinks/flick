@@ -13,7 +13,8 @@
       "!**/android",
       "!**/.expo",
       "!**/expo-env.d.ts",
-      "!**/assets"
+      "!**/assets",
+      "!**/drizzle"
     ]
   },
   "formatter": {
