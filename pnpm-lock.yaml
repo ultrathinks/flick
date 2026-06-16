@@ -23,6 +23,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.13.7
         version: 1.19.14(hono@4.12.25)
+      '@hono/zod-validator':
+        specifier: ^0.8.0
+        version: 0.8.0(hono@4.12.25)(zod@4.4.3)
       drizzle-orm:
         specifier: ^0.38.3
         version: 0.38.4(@types/pg@8.20.0)(@types/react@19.2.17)(pg@8.21.0)(react@19.2.3)
@@ -32,6 +35,9 @@ importers:
       pg:
         specifier: ^8.13.1
         version: 8.21.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@flick/typescript-config':
         specifier: workspace:*
@@ -1216,6 +1222,12 @@ packages:
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: ^4
+
+  '@hono/zod-validator@0.8.0':
+    resolution: {integrity: sha512-5uS4S1/LKtZQYvD4BtpPUFkOv8d1wNxHHrChm26buMiEYc1FrHWvDUaKVBwkiVtvSExHSpLGDvcnpI2Copyj9w==}
+    peerDependencies:
+      hono: '>=4.10.0'
+      zod: ^3.25.0 || ^4.0.0
 
   '@isaacs/ttlcache@1.4.1':
     resolution: {integrity: sha512-RQgQ4uQ+pLbqXfOmieB91ejmLwvSgv9nLx6sT6sD83s7umBypgg+OIBOBbEUiJXrfpnp9j0mRhYYdzp9uqq3lA==}
@@ -3605,6 +3617,9 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
 snapshots:
 
   '@adobe/css-tools@4.5.0': {}
@@ -4741,6 +4756,11 @@ snapshots:
   '@hono/node-server@1.19.14(hono@4.12.25)':
     dependencies:
       hono: 4.12.25
+
+  '@hono/zod-validator@0.8.0(hono@4.12.25)(zod@4.4.3)':
+    dependencies:
+      hono: 4.12.25
+      zod: 4.4.3
 
   '@isaacs/ttlcache@1.4.1': {}
 
@@ -7193,3 +7213,5 @@ snapshots:
       yargs-parser: 21.1.1
 
   zod@3.25.76: {}
+
+  zod@4.4.3: {}
