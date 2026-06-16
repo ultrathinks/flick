@@ -1,0 +1,17 @@
+{
+  "name": "flick",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.16.1",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "biome check .",
+    "format": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.0",
+    "turbo": "^2.9.18",
+    "typescript": "^6.0.3"
+  }
+}
