@@ -136,6 +136,13 @@ export async function exchangeDodamToken(
   return exchangeCodeForToken(code);
 }
 
+function toStudentNumber(student: DodamStudent | null): string | null {
+  if (!student?.grade || !student.room || !student.number) {
+    return null;
+  }
+  return `${student.grade}${student.room}${String(student.number).padStart(2, "0")}`;
+}
+
 export async function getUserInfo(oauthAccessToken: string): Promise<NewUser> {
   const response = await fetch(DODAM_USER_INFO_URL, {
     headers: { Authorization: `Bearer ${oauthAccessToken}` },
@@ -153,8 +160,6 @@ export async function getUserInfo(oauthAccessToken: string): Promise<NewUser> {
     name: info.name,
     profileImageUrl: info.profileImage,
     roles: info.roles,
-    grade: info.student?.grade ?? null,
-    room: info.student?.room ?? null,
-    number: info.student?.number ?? null,
+    studentNumber: toStudentNumber(info.student),
   };
 }
