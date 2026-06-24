@@ -13,9 +13,11 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
-    "@hono/zod-validator": "^0.8.0",
+    "@hono/zod-openapi": "^1.4.0",
+    "@scalar/hono-api-reference": "^0.11.5",
     "drizzle-orm": "^0.38.3",
-    "hono": "^4.6.14",
+    "drizzle-zod": "^0.6.1",
+    "hono": "^4.12.5",
     "ioredis": "^5.11.1",
     "pg": "^8.13.1",
     "zod": "^4.4.3"

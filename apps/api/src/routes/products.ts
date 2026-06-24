@@ -1,11 +1,11 @@
-import { zValidator } from "@hono/zod-validator";
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
-import { Hono } from "hono";
-import { z } from "zod";
 import { type AuthVariables, requireAuth } from "../auth/middleware.ts";
 import { getDb } from "../db/index.ts";
 import { booths, products } from "../db/schema/index.ts";
 import { ForbiddenError, NotFoundError } from "../lib/errors.ts";
+import { errorResponse, jsonContent } from "../openapi/helpers.ts";
+import { productSchema } from "../openapi/schemas.ts";
 
 const productPatchSchema = z.object({
   name: z.string().min(1).optional(),
@@ -17,14 +17,30 @@ const productPatchSchema = z.object({
   sortOrder: z.number().int().optional(),
 });
 
-export const productsRoutes = new Hono<{ Variables: AuthVariables }>();
+export const productsRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
 
-productsRoutes.patch(
-  "/:id",
-  requireAuth,
-  zValidator("json", productPatchSchema),
+productsRoutes.openapi(
+  createRoute({
+    method: "patch",
+    path: "/{id}",
+    tags: ["products"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    request: {
+      params: z.object({ id: z.string() }),
+      body: {
+        content: { "application/json": { schema: productPatchSchema } },
+      },
+    },
+    responses: {
+      200: jsonContent(productSchema, "Updated product"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
   async (c) => {
-    const productId = c.req.param("id") as string;
+    const productId = c.req.valid("param").id;
     const [product] = await getDb()
       .select({ product: products, booth: booths })
       .from(products)
@@ -42,6 +58,6 @@ productsRoutes.patch(
       .set({ ...c.req.valid("json"), updatedAt: new Date() })
       .where(eq(products.id, productId))
       .returning();
-    return c.json(row);
+    return c.json(row, 200);
   },
 );

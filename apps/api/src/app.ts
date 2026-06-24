@@ -1,4 +1,5 @@
-import { Hono } from "hono";
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { Scalar } from "@scalar/hono-api-reference";
 import { HTTPException } from "hono/http-exception";
 import { AppError } from "./lib/errors.ts";
 import { authRoutes } from "./routes/auth.ts";
@@ -15,7 +16,7 @@ import { productsRoutes } from "./routes/products.ts";
 import { statsRoutes } from "./routes/stats.ts";
 import { usersRoutes } from "./routes/users.ts";
 
-export const app = new Hono();
+export const app = new OpenAPIHono();
 
 app.onError((err, c) => {
   if (err instanceof AppError) {
@@ -39,7 +40,7 @@ app.onError((err, c) => {
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 
-const v1 = new Hono();
+const v1 = new OpenAPIHono();
 
 v1.route("/auth", authRoutes);
 v1.route("/users", usersRoutes);
@@ -53,4 +54,26 @@ v1.route("/", moneyRoutes);
 v1.route("/", payoutsRoutes);
 v1.route("/", statsRoutes);
 
-app.route("/v1", v1);
+const appRoutes = app.route("/v1", v1);
+
+export type AppType = typeof appRoutes;
+
+if (process.env.NODE_ENV !== "production") {
+  app.openAPIRegistry.registerComponent("securitySchemes", "Bearer", {
+    type: "http",
+    scheme: "bearer",
+    description: "User session access token",
+  });
+  app.openAPIRegistry.registerComponent("securitySchemes", "Kiosk", {
+    type: "http",
+    scheme: "bearer",
+    description: "Kiosk device token",
+  });
+
+  app.doc("/v1/openapi.json", {
+    openapi: "3.1.0",
+    info: { title: "Flick API", version: "1.0.0" },
+  });
+
+  app.get("/v1/docs", Scalar({ url: "/v1/openapi.json" }));
+}
