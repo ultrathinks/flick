@@ -22,3 +22,18 @@ export function getDodamConfig() {
     redirectUri: requireEnv("DAUTH_REDIRECT_URI"),
   };
 }
+
+export function getEncryptionKey(): Buffer {
+  const key = Buffer.from(requireEnv("PAYOUT_ENCRYPTION_KEY"), "base64");
+  if (key.length !== 32) {
+    throw new Error("PAYOUT_ENCRYPTION_KEY must be 32 bytes base64");
+  }
+  return key;
+}
+
+export function getBootstrapAdminPublicIds(): string[] {
+  return (process.env.DAUTH_ADMIN_PUBLIC_IDS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}

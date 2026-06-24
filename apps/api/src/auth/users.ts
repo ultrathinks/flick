@@ -1,30 +1,62 @@
+import { sql } from "drizzle-orm";
+import { getBootstrapAdminPublicIds } from "../config.ts";
 import { getDb } from "../db/index.ts";
-import { type NewUser, type User, users } from "../db/schema/index.ts";
+import {
+  type NewUser,
+  transactions,
+  type User,
+  users,
+} from "../db/schema/index.ts";
+import { BASE_GRANT_AMOUNT } from "../lib/constants.ts";
+
+function isBootstrapAdmin(dauthPublicId: string): boolean {
+  return getBootstrapAdminPublicIds().includes(dauthPublicId);
+}
 
 export async function upsertByDauthId(user: NewUser): Promise<User> {
-  const [row] = await getDb()
-    .insert(users)
-    .values(user)
-    .onConflictDoUpdate({
-      target: users.dauthPublicId,
-      set: {
-        username: user.username,
-        name: user.name,
-        profileImageUrl: user.profileImageUrl,
-        roles: user.roles,
-        grade: user.grade,
-        room: user.room,
-        number: user.number,
+  const admin = isBootstrapAdmin(user.dauthPublicId);
+  return getDb().transaction(async (tx) => {
+    const [row] = await tx
+      .insert(users)
+      .values({ ...user, isAdmin: admin })
+      .onConflictDoUpdate({
+        target: users.dauthPublicId,
+        set: {
+          username: user.username,
+          name: user.name,
+          profileImageUrl: user.profileImageUrl,
+          roles: user.roles,
+          studentNumber: user.studentNumber,
+          isAdmin: admin ? true : sql`${users.isAdmin}`,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    if (!row) {
+      throw new Error("failed to upsert user");
+    }
+
+    await tx
+      .insert(transactions)
+      .values({
+        userId: row.id,
+        amount: BASE_GRANT_AMOUNT,
+        type: "grant",
+      })
+      .onConflictDoNothing();
+
+    const [updated] = await tx
+      .update(users)
+      .set({
+        balance: sql<number>`coalesce((select sum(${transactions.amount}) from ${transactions} where ${transactions.userId} = ${row.id}), 0)`,
         updatedAt: new Date(),
-      },
-    })
-    .returning();
+      })
+      .where(sql`${users.id} = ${row.id}`)
+      .returning();
 
-  if (!row) {
-    throw new Error("failed to upsert user");
-  }
-
-  return row;
+    return updated ?? row;
+  });
 }
 
 export function toPublicUser(user: User) {
@@ -34,8 +66,8 @@ export function toPublicUser(user: User) {
     name: user.name,
     profileImageUrl: user.profileImageUrl,
     roles: user.roles,
-    grade: user.grade,
-    room: user.room,
-    number: user.number,
+    isAdmin: user.isAdmin,
+    studentNumber: user.studentNumber,
+    balance: user.balance,
   };
 }
