@@ -21,6 +21,10 @@ import {
   orderSchema,
   productSchema,
 } from "../openapi/schemas.ts";
+import {
+  serializeBooth,
+  serializeKioskPairing,
+} from "../openapi/serializers.ts";
 import { createKioskPairing } from "./kiosks.ts";
 
 const boothBodySchema = z.object({
@@ -80,7 +84,7 @@ boothsRoutes.openapi(
           .from(booths)
           .where(eq(booths.ownerId, user.id))
           .orderBy(desc(booths.createdAt));
-    return c.json(rows, 200);
+    return c.json(rows.map(serializeBooth), 200);
   },
 );
 
@@ -106,7 +110,10 @@ boothsRoutes.openapi(
       .insert(booths)
       .values({ ...body, ownerId: user.id, status: "pending" })
       .returning();
-    return c.json(row, 201);
+    if (!row) {
+      throw new Error("failed to create booth");
+    }
+    return c.json(serializeBooth(row), 201);
   },
 );
 
@@ -136,7 +143,7 @@ boothsRoutes.openapi(
       .select()
       .from(kioskPairings)
       .where(eq(kioskPairings.boothId, boothId));
-    return c.json(rows, 200);
+    return c.json(rows.map(serializeKioskPairing), 200);
   },
 );
 
@@ -177,7 +184,10 @@ boothsRoutes.openapi(
       user.id,
       c.req.valid("json").name,
     );
-    return c.json(result, 201);
+    return c.json(
+      { pairing: serializeKioskPairing(result.pairing), code: result.code },
+      201,
+    );
   },
 );
 
@@ -215,7 +225,10 @@ boothsRoutes.openapi(
       .set({ ...c.req.valid("json"), updatedAt: new Date() })
       .where(eq(booths.id, boothId))
       .returning();
-    return c.json(row, 200);
+    if (!row) {
+      throw new NotFoundError("booth not found");
+    }
+    return c.json(serializeBooth(row), 200);
   },
 );
 
@@ -287,7 +300,7 @@ boothsRoutes.openapi(
       targetType: "booth",
       targetId: boothId,
     });
-    return c.json(row, 200);
+    return c.json(serializeBooth(row), 200);
   },
 );
 

@@ -2,7 +2,12 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.ts";
 import { getDb } from "../src/db/index.ts";
-import { transactions, users } from "../src/db/schema/index.ts";
+import {
+  booths,
+  payouts,
+  transactions,
+  users,
+} from "../src/db/schema/index.ts";
 import { closeRedis } from "../src/lib/redis.ts";
 import {
   authHeaders,
@@ -322,5 +327,177 @@ describe("kiosk order flow", () => {
     expect(payRes.status).toBe(201);
     const payload = (await payRes.json()) as { code: string };
     expect(payload.code).toBeTruthy();
+  });
+});
+
+describe("response field exposure", () => {
+  it("omits tokenHash from kiosk pairing and kiosk responses", async () => {
+    const owner = await createUser();
+    const [booth] = await getDb()
+      .insert(booths)
+      .values({ ownerId: owner.id, name: "Booth", status: "approved" })
+      .returning();
+    const pairRes = await app.request(`/v1/booths/${booth?.id}/kiosks`, {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ name: "Kiosk" }),
+    });
+    expect(pairRes.status).toBe(201);
+    const paired = (await pairRes.json()) as {
+      pairing: Record<string, unknown>;
+      code: string;
+    };
+    expect(paired.pairing).not.toHaveProperty("codeHash");
+
+    const claimRes = await app.request("/v1/kiosks/pair", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: paired.code }),
+    });
+    expect(claimRes.status).toBe(201);
+    const claimed = (await claimRes.json()) as {
+      kiosk: Record<string, unknown>;
+      deviceToken: string;
+    };
+    expect(claimed.kiosk).not.toHaveProperty("tokenHash");
+
+    const meRes = await app.request("/v1/kiosks/me", {
+      headers: kioskHeaders(claimed.deviceToken),
+    });
+    expect(meRes.status).toBe(200);
+    const me = (await meRes.json()) as {
+      kiosk: Record<string, unknown>;
+      booth: Record<string, unknown>;
+    };
+    expect(me.kiosk).not.toHaveProperty("tokenHash");
+    expect(me.booth).not.toHaveProperty("approvedBy");
+  });
+
+  it("omits codeHash from payment responses", async () => {
+    const owner = await createUser();
+    const { boothId, deviceToken } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 5 });
+
+    const orderRes = await app.request("/v1/orders", {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+      body: JSON.stringify({ items: [{ productId, quantity: 1 }] }),
+    });
+    const order = (await orderRes.json()) as { id: string };
+    const payRes = await app.request(`/v1/orders/${order.id}/payments`, {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+    });
+    expect(payRes.status).toBe(201);
+    const created = (await payRes.json()) as {
+      payment: Record<string, unknown>;
+      code: string;
+    };
+    expect(created.payment).not.toHaveProperty("codeHash");
+
+    const buyer = await createUser({ balance: 5000 });
+    const viewRes = await app.request(`/v1/payment-codes/${created.code}`, {
+      headers: authHeaders(buyer.accessToken),
+    });
+    expect(viewRes.status).toBe(200);
+    const view = (await viewRes.json()) as {
+      payment: Record<string, unknown>;
+      booth: Record<string, unknown>;
+    };
+    expect(view.payment).not.toHaveProperty("codeHash");
+    expect(view.booth).not.toHaveProperty("approvedBy");
+  });
+
+  it("omits internal fields from transaction responses", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const user = await createUser();
+    await app.request("/v1/charges", {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+      body: JSON.stringify({
+        userId: user.id,
+        amount: 500,
+        idempotencyKey: "exposure-key",
+      }),
+    });
+    const res = await app.request("/v1/users/me/transactions", {
+      headers: authHeaders(user.accessToken),
+    });
+    expect(res.status).toBe(200);
+    const rows = (await res.json()) as Array<Record<string, unknown>>;
+    for (const row of rows) {
+      expect(row).not.toHaveProperty("idempotencyKey");
+      expect(row).not.toHaveProperty("adminId");
+      expect(row).not.toHaveProperty("refundedTransactionId");
+    }
+  });
+
+  it("omits approvedBy from booth list", async () => {
+    const admin = await createUser({ isAdmin: true });
+    await getDb()
+      .insert(booths)
+      .values({ ownerId: admin.id, name: "Booth", status: "approved" });
+    const res = await app.request("/v1/booths", {
+      headers: authHeaders(admin.accessToken),
+    });
+    const list = (await res.json()) as Array<Record<string, unknown>>;
+    for (const row of list) {
+      expect(row).not.toHaveProperty("approvedBy");
+    }
+  });
+});
+
+describe("payout reject guard", () => {
+  it("rejects a requested payout and blocks rejecting a paid one", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const user = await createUser({ balance: 5000 });
+    const reqRes = await app.request("/v1/users/me/payout", {
+      method: "POST",
+      headers: authHeaders(user.accessToken),
+      body: JSON.stringify({
+        bankName: "Bank",
+        accountNumber: "1234567890",
+        accountHolder: "User",
+      }),
+    });
+    const payout = (await reqRes.json()) as { id: string };
+
+    const payRes = await app.request(`/v1/payouts/${payout.id}/pay`, {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+    });
+    expect(payRes.status).toBe(200);
+
+    const rejectRes = await app.request(`/v1/payouts/${payout.id}/reject`, {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+    });
+    expect(rejectRes.status).toBe(409);
+    const [row] = await getDb()
+      .select()
+      .from(payouts)
+      .where(eq(payouts.id, payout.id));
+    expect(row?.status).toBe("paid");
+  });
+
+  it("rejects a requested payout", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const user = await createUser({ balance: 5000 });
+    const reqRes = await app.request("/v1/users/me/payout", {
+      method: "POST",
+      headers: authHeaders(user.accessToken),
+      body: JSON.stringify({
+        bankName: "Bank",
+        accountNumber: "1234567890",
+        accountHolder: "User",
+      }),
+    });
+    const payout = (await reqRes.json()) as { id: string };
+    const rejectRes = await app.request(`/v1/payouts/${payout.id}/reject`, {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+    });
+    expect(rejectRes.status).toBe(200);
+    expect(await balanceOf(user.id)).toBe(5000);
   });
 });

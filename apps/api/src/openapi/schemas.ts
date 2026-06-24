@@ -12,13 +12,20 @@ import {
   refunds,
   transactions,
 } from "../db/schema/index.ts";
+import {
+  BOOTH_PUBLIC_OMIT,
+  KIOSK_PAIRING_PUBLIC_OMIT,
+  KIOSK_PUBLIC_OMIT,
+  PAYMENT_PUBLIC_OMIT,
+  TRANSACTION_PUBLIC_OMIT,
+} from "./serializers.ts";
 
 export const transactionSchema = z
-  .object(createSelectSchema(transactions).shape)
+  .object(createSelectSchema(transactions).omit(TRANSACTION_PUBLIC_OMIT).shape)
   .openapi("Transaction");
 
 export const boothSchema = z
-  .object(createSelectSchema(booths).shape)
+  .object(createSelectSchema(booths).omit(BOOTH_PUBLIC_OMIT).shape)
   .openapi("Booth");
 
 export const productSchema = z
@@ -26,11 +33,13 @@ export const productSchema = z
   .openapi("Product");
 
 export const kioskSchema = z
-  .object(createSelectSchema(kiosks).shape)
+  .object(createSelectSchema(kiosks).omit(KIOSK_PUBLIC_OMIT).shape)
   .openapi("Kiosk");
 
 export const kioskPairingSchema = z
-  .object(createSelectSchema(kioskPairings).shape)
+  .object(
+    createSelectSchema(kioskPairings).omit(KIOSK_PAIRING_PUBLIC_OMIT).shape,
+  )
   .openapi("KioskPairing");
 
 export const orderSchema = z
@@ -42,7 +51,7 @@ export const orderItemSchema = z
   .openapi("OrderItem");
 
 export const paymentSchema = z
-  .object(createSelectSchema(payments).shape)
+  .object(createSelectSchema(payments).omit(PAYMENT_PUBLIC_OMIT).shape)
   .openapi("Payment");
 
 export const refundSchema = z
