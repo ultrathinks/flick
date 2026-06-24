@@ -2,7 +2,12 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.ts";
 import { getDb } from "../src/db/index.ts";
-import { booths, transactions, users } from "../src/db/schema/index.ts";
+import {
+  booths,
+  payouts,
+  transactions,
+  users,
+} from "../src/db/schema/index.ts";
 import { closeRedis } from "../src/lib/redis.ts";
 import {
   authHeaders,
@@ -442,3 +447,57 @@ describe("response field exposure", () => {
   });
 });
 
+describe("payout reject guard", () => {
+  it("rejects a requested payout and blocks rejecting a paid one", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const user = await createUser({ balance: 5000 });
+    const reqRes = await app.request("/v1/users/me/payout", {
+      method: "POST",
+      headers: authHeaders(user.accessToken),
+      body: JSON.stringify({
+        bankName: "Bank",
+        accountNumber: "1234567890",
+        accountHolder: "User",
+      }),
+    });
+    const payout = (await reqRes.json()) as { id: string };
+
+    const payRes = await app.request(`/v1/payouts/${payout.id}/pay`, {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+    });
+    expect(payRes.status).toBe(200);
+
+    const rejectRes = await app.request(`/v1/payouts/${payout.id}/reject`, {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+    });
+    expect(rejectRes.status).toBe(409);
+    const [row] = await getDb()
+      .select()
+      .from(payouts)
+      .where(eq(payouts.id, payout.id));
+    expect(row?.status).toBe("paid");
+  });
+
+  it("rejects a requested payout", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const user = await createUser({ balance: 5000 });
+    const reqRes = await app.request("/v1/users/me/payout", {
+      method: "POST",
+      headers: authHeaders(user.accessToken),
+      body: JSON.stringify({
+        bankName: "Bank",
+        accountNumber: "1234567890",
+        accountHolder: "User",
+      }),
+    });
+    const payout = (await reqRes.json()) as { id: string };
+    const rejectRes = await app.request(`/v1/payouts/${payout.id}/reject`, {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+    });
+    expect(rejectRes.status).toBe(200);
+    expect(await balanceOf(user.id)).toBe(5000);
+  });
+});
