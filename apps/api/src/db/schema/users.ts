@@ -1,5 +1,12 @@
 import { relations } from "drizzle-orm";
-import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { sessions } from "./sessions.ts";
 
 export const users = pgTable("users", {
@@ -9,9 +16,9 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   profileImageUrl: text("profile_image_url"),
   roles: text("roles").array().notNull(),
-  grade: integer("grade"),
-  room: integer("room"),
-  number: integer("number"),
+  isAdmin: boolean("is_admin").notNull().default(false),
+  studentNumber: text("student_number"),
+  balance: bigint("balance", { mode: "number" }).notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
