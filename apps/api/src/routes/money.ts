@@ -19,6 +19,7 @@ import {
   resolvedUserSchema,
   transactionSchema,
 } from "../openapi/schemas.ts";
+import { serializeTransaction } from "../openapi/serializers.ts";
 
 const resolveSchema = z.object({ code: z.string().min(1) });
 const chargeSchema = z.object({
@@ -150,7 +151,7 @@ moneyRoutes.openapi(
       }
       return transaction;
     });
-    return c.json(result, 201);
+    return c.json(serializeTransaction(result), 201);
   },
 );
 

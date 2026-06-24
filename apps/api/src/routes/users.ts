@@ -16,6 +16,7 @@ import {
   transactionSchema,
   userCodeSchema,
 } from "../openapi/schemas.ts";
+import { serializeTransaction } from "../openapi/serializers.ts";
 
 async function createUserCode(userId: string) {
   const code = generateSecret(24);
@@ -92,7 +93,7 @@ usersRoutes.openapi(
       .from(transactions)
       .where(eq(transactions.userId, user.id))
       .orderBy(desc(transactions.createdAt));
-    return c.json(rows, 200);
+    return c.json(rows.map(serializeTransaction), 200);
   },
 );
 

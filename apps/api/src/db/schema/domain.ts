@@ -352,6 +352,7 @@ export const kiosksRelations = relations(kiosks, ({ one }) => ({
 export type Booth = typeof booths.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type Kiosk = typeof kiosks.$inferSelect;
+export type KioskPairing = typeof kioskPairings.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type Transaction = typeof transactions.$inferSelect;
