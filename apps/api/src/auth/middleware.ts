@@ -1,10 +1,15 @@
+import { and, eq, isNull } from "drizzle-orm";
 import type { Context, Next } from "hono";
-import type { User } from "../db/schema/index.ts";
-import { UnauthorizedError } from "../lib/errors.ts";
+import { getDb } from "../db/index.ts";
+import type { Kiosk, User } from "../db/schema/index.ts";
+import { kiosks } from "../db/schema/index.ts";
+import { ForbiddenError, UnauthorizedError } from "../lib/errors.ts";
+import { hashSecret } from "../lib/security.ts";
 import { verifyAccessToken } from "./session.ts";
 
 export type AuthVariables = {
   user: User;
+  kiosk: Kiosk;
 };
 
 export function extractBearerToken(c: Context): string | null {
@@ -30,5 +35,38 @@ export async function requireAuth(
   }
 
   c.set("user", user);
+  await next();
+}
+
+export async function requireAdmin(
+  c: Context<{ Variables: AuthVariables }>,
+  next: Next,
+) {
+  await requireAuth(c, async () => undefined);
+  if (!c.get("user").isAdmin) {
+    throw new ForbiddenError();
+  }
+  await next();
+}
+
+export async function requireKiosk(
+  c: Context<{ Variables: AuthVariables }>,
+  next: Next,
+) {
+  const token = extractBearerToken(c);
+  if (!token) {
+    throw new UnauthorizedError();
+  }
+  const [row] = await getDb()
+    .select()
+    .from(kiosks)
+    .where(
+      and(eq(kiosks.tokenHash, hashSecret(token)), isNull(kiosks.revokedAt)),
+    )
+    .limit(1);
+  if (!row) {
+    throw new UnauthorizedError();
+  }
+  c.set("kiosk", row);
   await next();
 }
