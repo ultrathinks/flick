@@ -72,7 +72,6 @@ kiosksRoutes.openapi(
           boothId: pairing.boothId,
           name: pairing.kioskName,
           tokenHash: hashSecret(token),
-          lastSeenAt: now,
         })
         .returning();
       if (!kiosk) {
