@@ -1,7 +1,5 @@
-import { zValidator } from "@hono/zod-validator";
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { Hono } from "hono";
-import { z } from "zod";
 import { type AuthVariables, requireAdmin } from "../auth/middleware.ts";
 import { getDb } from "../db/index.ts";
 import {
@@ -15,6 +13,12 @@ import {
 import { BadRequestError, NotFoundError } from "../lib/errors.ts";
 import { rateLimit } from "../lib/rate-limit.ts";
 import { hashSecret } from "../lib/security.ts";
+import { errorResponse, jsonContent } from "../openapi/helpers.ts";
+import {
+  refundSchema,
+  resolvedUserSchema,
+  transactionSchema,
+} from "../openapi/schemas.ts";
 
 const resolveSchema = z.object({ code: z.string().min(1) });
 const chargeSchema = z.object({
@@ -22,18 +26,31 @@ const chargeSchema = z.object({
   amount: z.number().int().positive(),
   idempotencyKey: z.string().min(1),
 });
-const refundSchema = z.object({
+const refundBodySchema = z.object({
   orderId: z.string().uuid(),
   reason: z.string().optional(),
 });
 
-export const moneyRoutes = new Hono<{ Variables: AuthVariables }>();
+export const moneyRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
 
-moneyRoutes.post(
-  "/user-codes/resolve",
-  requireAdmin,
-  rateLimit(60, "user-codes:resolve"),
-  zValidator("json", resolveSchema),
+moneyRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/user-codes/resolve",
+    tags: ["money"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAdmin, rateLimit(60, "user-codes:resolve")] as const,
+    request: {
+      body: { content: { "application/json": { schema: resolveSchema } } },
+    },
+    responses: {
+      200: jsonContent(resolvedUserSchema, "Resolved user"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+      429: errorResponse("Too many requests"),
+    },
+  }),
   async (c) => {
     const { code } = c.req.valid("json");
     const [row] = await getDb()
@@ -50,20 +67,36 @@ moneyRoutes.post(
     if (!row || row.code.expiresAt <= new Date()) {
       throw new NotFoundError("user code not found");
     }
-    return c.json({
-      userId: row.user.id,
-      name: row.user.name,
-      roles: row.user.roles,
-      studentNumber: row.user.studentNumber,
-      balance: row.user.balance,
-    });
+    return c.json(
+      {
+        userId: row.user.id,
+        name: row.user.name,
+        roles: row.user.roles,
+        studentNumber: row.user.studentNumber,
+        balance: row.user.balance,
+      },
+      200,
+    );
   },
 );
 
-moneyRoutes.post(
-  "/charges",
-  requireAdmin,
-  zValidator("json", chargeSchema),
+moneyRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/charges",
+    tags: ["money"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAdmin] as const,
+    request: {
+      body: { content: { "application/json": { schema: chargeSchema } } },
+    },
+    responses: {
+      201: jsonContent(transactionSchema, "Created charge"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
   async (c) => {
     const admin = c.get("user");
     const body = c.req.valid("json");
@@ -121,10 +154,23 @@ moneyRoutes.post(
   },
 );
 
-moneyRoutes.post(
-  "/refunds",
-  requireAdmin,
-  zValidator("json", refundSchema),
+moneyRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/refunds",
+    tags: ["money"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAdmin] as const,
+    request: {
+      body: { content: { "application/json": { schema: refundBodySchema } } },
+    },
+    responses: {
+      201: jsonContent(refundSchema, "Created refund"),
+      400: errorResponse("Bad request"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+    },
+  }),
   async (c) => {
     const admin = c.get("user");
     const { orderId, reason } = c.req.valid("json");
@@ -193,6 +239,9 @@ moneyRoutes.post(
         targetId: orderId,
         metadata: { amount: order.totalAmount },
       });
+      if (!refund) {
+        throw new Error("failed to create refund");
+      }
       return refund;
     });
     return c.json(result, 201);

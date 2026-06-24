@@ -1,7 +1,5 @@
-import { zValidator } from "@hono/zod-validator";
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { and, desc, eq } from "drizzle-orm";
-import { Hono } from "hono";
-import { z } from "zod";
 import {
   type AuthVariables,
   requireAdmin,
@@ -16,15 +14,22 @@ import {
   products,
 } from "../db/schema/index.ts";
 import { ForbiddenError, NotFoundError } from "../lib/errors.ts";
+import { errorResponse, jsonContent } from "../openapi/helpers.ts";
+import {
+  boothSchema,
+  kioskPairingSchema,
+  orderSchema,
+  productSchema,
+} from "../openapi/schemas.ts";
 import { createKioskPairing } from "./kiosks.ts";
 
-const boothSchema = z.object({
+const boothBodySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   imageUrl: z.string().url().optional(),
 });
 
-const productSchema = z.object({
+const productBodySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   imageUrl: z.string().url().optional(),
@@ -33,6 +38,8 @@ const productSchema = z.object({
   status: z.enum(["available", "hidden"]).optional(),
   sortOrder: z.number().int().optional(),
 });
+
+const idParam = z.object({ id: z.string() });
 
 async function requireBoothOwnerOrAdmin(userId: string, boothId: string) {
   const [booth] = await getDb()
@@ -50,24 +57,48 @@ async function requireBoothOwnerOrAdmin(userId: string, boothId: string) {
   return { booth, owns: Boolean(userBooth) };
 }
 
-export const boothsRoutes = new Hono<{ Variables: AuthVariables }>();
+export const boothsRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
 
-boothsRoutes.get("/", requireAuth, async (c) => {
-  const user = c.get("user");
-  const rows = user.isAdmin
-    ? await getDb().select().from(booths).orderBy(desc(booths.createdAt))
-    : await getDb()
-        .select()
-        .from(booths)
-        .where(eq(booths.ownerId, user.id))
-        .orderBy(desc(booths.createdAt));
-  return c.json(rows);
-});
+boothsRoutes.openapi(
+  createRoute({
+    method: "get",
+    path: "/",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    responses: {
+      200: jsonContent(z.array(boothSchema), "Booths"),
+      401: errorResponse("Unauthorized"),
+    },
+  }),
+  async (c) => {
+    const user = c.get("user");
+    const rows = user.isAdmin
+      ? await getDb().select().from(booths).orderBy(desc(booths.createdAt))
+      : await getDb()
+          .select()
+          .from(booths)
+          .where(eq(booths.ownerId, user.id))
+          .orderBy(desc(booths.createdAt));
+    return c.json(rows, 200);
+  },
+);
 
-boothsRoutes.post(
-  "/",
-  requireAuth,
-  zValidator("json", boothSchema),
+boothsRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    request: {
+      body: { content: { "application/json": { schema: boothBodySchema } } },
+    },
+    responses: {
+      201: jsonContent(boothSchema, "Created booth"),
+      401: errorResponse("Unauthorized"),
+    },
+  }),
   async (c) => {
     const user = c.get("user");
     const body = c.req.valid("json");
@@ -79,27 +110,64 @@ boothsRoutes.post(
   },
 );
 
-boothsRoutes.get("/:id/kiosks", requireAuth, async (c) => {
-  const user = c.get("user");
-  const boothId = c.req.param("id") as string;
-  const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
-  if (!owns && !user.isAdmin) {
-    throw new ForbiddenError();
-  }
-  const rows = await getDb()
-    .select()
-    .from(kioskPairings)
-    .where(eq(kioskPairings.boothId, boothId));
-  return c.json(rows);
-});
-
-boothsRoutes.post(
-  "/:id/kiosks",
-  requireAuth,
-  zValidator("json", z.object({ name: z.string().min(1) })),
+boothsRoutes.openapi(
+  createRoute({
+    method: "get",
+    path: "/{id}/kiosks",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    request: { params: idParam },
+    responses: {
+      200: jsonContent(z.array(kioskPairingSchema), "Booth kiosk pairings"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
   async (c) => {
     const user = c.get("user");
-    const boothId = c.req.param("id") as string;
+    const boothId = c.req.valid("param").id;
+    const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
+    if (!owns && !user.isAdmin) {
+      throw new ForbiddenError();
+    }
+    const rows = await getDb()
+      .select()
+      .from(kioskPairings)
+      .where(eq(kioskPairings.boothId, boothId));
+    return c.json(rows, 200);
+  },
+);
+
+boothsRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/{id}/kiosks",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    request: {
+      params: idParam,
+      body: {
+        content: {
+          "application/json": { schema: z.object({ name: z.string().min(1) }) },
+        },
+      },
+    },
+    responses: {
+      201: jsonContent(
+        z.object({ pairing: kioskPairingSchema, code: z.string() }),
+        "Created kiosk pairing",
+      ),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
+  async (c) => {
+    const user = c.get("user");
+    const boothId = c.req.valid("param").id;
     const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
     if (!owns && !user.isAdmin) {
       throw new ForbiddenError();
@@ -113,13 +181,31 @@ boothsRoutes.post(
   },
 );
 
-boothsRoutes.patch(
-  "/:id",
-  requireAuth,
-  zValidator("json", boothSchema.partial()),
+boothsRoutes.openapi(
+  createRoute({
+    method: "patch",
+    path: "/{id}",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    request: {
+      params: idParam,
+      body: {
+        content: {
+          "application/json": { schema: boothBodySchema.partial() },
+        },
+      },
+    },
+    responses: {
+      200: jsonContent(boothSchema, "Updated booth"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
   async (c) => {
     const user = c.get("user");
-    const boothId = c.req.param("id") as string;
+    const boothId = c.req.valid("param").id;
     const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
     if (!owns && !user.isAdmin) {
       throw new ForbiddenError();
@@ -129,81 +215,157 @@ boothsRoutes.patch(
       .set({ ...c.req.valid("json"), updatedAt: new Date() })
       .where(eq(booths.id, boothId))
       .returning();
-    return c.json(row);
+    return c.json(row, 200);
   },
 );
 
-boothsRoutes.post("/:id/approve", requireAdmin, async (c) => {
-  const user = c.get("user");
-  const boothId = c.req.param("id") as string;
-  const [row] = await getDb()
-    .update(booths)
-    .set({ status: "approved", approvedBy: user.id, approvedAt: new Date() })
-    .where(eq(booths.id, boothId))
-    .returning();
-  if (!row) {
-    throw new NotFoundError("booth not found");
-  }
-  await getDb().insert(auditLogs).values({
-    actorId: user.id,
-    action: "booth.approve",
-    targetType: "booth",
-    targetId: boothId,
-  });
-  return c.json(row);
-});
-
-boothsRoutes.post("/:id/reject", requireAdmin, async (c) => {
-  const user = c.get("user");
-  const boothId = c.req.param("id") as string;
-  const [row] = await getDb()
-    .update(booths)
-    .set({ status: "rejected", approvedBy: user.id, approvedAt: new Date() })
-    .where(eq(booths.id, boothId))
-    .returning();
-  if (!row) {
-    throw new NotFoundError("booth not found");
-  }
-  await getDb().insert(auditLogs).values({
-    actorId: user.id,
-    action: "booth.reject",
-    targetType: "booth",
-    targetId: boothId,
-  });
-  return c.json(row);
-});
-
-boothsRoutes.get("/:id/products", requireAuth, async (c) => {
-  const boothId = c.req.param("id") as string;
-  const rows = await getDb()
-    .select()
-    .from(products)
-    .where(eq(products.boothId, boothId));
-  return c.json(rows);
-});
-
-boothsRoutes.get("/:id/orders", requireAuth, async (c) => {
-  const user = c.get("user");
-  const boothId = c.req.param("id") as string;
-  const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
-  if (!owns && !user.isAdmin) {
-    throw new ForbiddenError();
-  }
-  const rows = await getDb()
-    .select()
-    .from(orders)
-    .where(eq(orders.boothId, boothId))
-    .orderBy(desc(orders.createdAt));
-  return c.json(rows);
-});
-
-boothsRoutes.post(
-  "/:id/products",
-  requireAuth,
-  zValidator("json", productSchema),
+boothsRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/{id}/approve",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAdmin] as const,
+    request: { params: idParam },
+    responses: {
+      200: jsonContent(boothSchema, "Approved booth"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
   async (c) => {
     const user = c.get("user");
-    const boothId = c.req.param("id") as string;
+    const boothId = c.req.valid("param").id;
+    const [row] = await getDb()
+      .update(booths)
+      .set({ status: "approved", approvedBy: user.id, approvedAt: new Date() })
+      .where(eq(booths.id, boothId))
+      .returning();
+    if (!row) {
+      throw new NotFoundError("booth not found");
+    }
+    await getDb().insert(auditLogs).values({
+      actorId: user.id,
+      action: "booth.approve",
+      targetType: "booth",
+      targetId: boothId,
+    });
+    return c.json(row, 200);
+  },
+);
+
+boothsRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/{id}/reject",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAdmin] as const,
+    request: { params: idParam },
+    responses: {
+      200: jsonContent(boothSchema, "Rejected booth"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
+  async (c) => {
+    const user = c.get("user");
+    const boothId = c.req.valid("param").id;
+    const [row] = await getDb()
+      .update(booths)
+      .set({ status: "rejected", approvedBy: user.id, approvedAt: new Date() })
+      .where(eq(booths.id, boothId))
+      .returning();
+    if (!row) {
+      throw new NotFoundError("booth not found");
+    }
+    await getDb().insert(auditLogs).values({
+      actorId: user.id,
+      action: "booth.reject",
+      targetType: "booth",
+      targetId: boothId,
+    });
+    return c.json(row, 200);
+  },
+);
+
+boothsRoutes.openapi(
+  createRoute({
+    method: "get",
+    path: "/{id}/products",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    request: { params: idParam },
+    responses: {
+      200: jsonContent(z.array(productSchema), "Booth products"),
+      401: errorResponse("Unauthorized"),
+    },
+  }),
+  async (c) => {
+    const boothId = c.req.valid("param").id;
+    const rows = await getDb()
+      .select()
+      .from(products)
+      .where(eq(products.boothId, boothId));
+    return c.json(rows, 200);
+  },
+);
+
+boothsRoutes.openapi(
+  createRoute({
+    method: "get",
+    path: "/{id}/orders",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    request: { params: idParam },
+    responses: {
+      200: jsonContent(z.array(orderSchema), "Booth orders"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
+  async (c) => {
+    const user = c.get("user");
+    const boothId = c.req.valid("param").id;
+    const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
+    if (!owns && !user.isAdmin) {
+      throw new ForbiddenError();
+    }
+    const rows = await getDb()
+      .select()
+      .from(orders)
+      .where(eq(orders.boothId, boothId))
+      .orderBy(desc(orders.createdAt));
+    return c.json(rows, 200);
+  },
+);
+
+boothsRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/{id}/products",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    request: {
+      params: idParam,
+      body: { content: { "application/json": { schema: productBodySchema } } },
+    },
+    responses: {
+      201: jsonContent(productSchema, "Created product"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
+  async (c) => {
+    const user = c.get("user");
+    const boothId = c.req.valid("param").id;
     const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
     if (!owns && !user.isAdmin) {
       throw new ForbiddenError();
