@@ -1,0 +1,1 @@
+ALTER TABLE "kiosks" DROP COLUMN "last_seen_at";

@@ -328,25 +328,40 @@ payoutsRoutes.openapi(
       401: errorResponse("Unauthorized"),
       403: errorResponse("Forbidden"),
       404: errorResponse("Not found"),
+      409: errorResponse("Conflict"),
     },
   }),
   async (c) => {
     const admin = c.get("user");
     const payoutId = c.req.valid("param").id;
-    const [row] = await getDb()
-      .update(payouts)
-      .set({ status: "rejected" })
-      .where(eq(payouts.id, payoutId))
-      .returning();
-    if (!row) {
+    const result = await getDb().transaction(async (tx) => {
+      const [payout] = await tx
+        .select()
+        .from(payouts)
+        .where(eq(payouts.id, payoutId))
+        .for("update");
+      if (!payout) {
+        throw new NotFoundError("payout not found");
+      }
+      if (payout.status !== "requested") {
+        throw new ConflictError("payout is not requested");
+      }
+      const [updated] = await tx
+        .update(payouts)
+        .set({ status: "rejected" })
+        .where(eq(payouts.id, payoutId))
+        .returning();
+      await tx.insert(auditLogs).values({
+        actorId: admin.id,
+        action: "payout.reject",
+        targetType: "payout",
+        targetId: payoutId,
+      });
+      return updated;
+    });
+    if (!result) {
       throw new NotFoundError("payout not found");
     }
-    await getDb().insert(auditLogs).values({
-      actorId: admin.id,
-      action: "payout.reject",
-      targetType: "payout",
-      targetId: payoutId,
-    });
-    return c.json(maskedPayout(row), 200);
+    return c.json(maskedPayout(result), 200);
   },
 );

@@ -31,6 +31,7 @@ import {
   paymentCodeViewSchema,
   paymentWithOrderSchema,
 } from "../openapi/schemas.ts";
+import { serializeBooth, serializePayment } from "../openapi/serializers.ts";
 
 const createOrderSchema = z.object({
   items: z
@@ -248,7 +249,7 @@ ordersRoutes.openapi(
       }
       return payment;
     });
-    return c.json({ payment: result, code }, 201);
+    return c.json({ payment: serializePayment(result), code }, 201);
   },
 );
 
@@ -291,9 +292,9 @@ paymentCodesRoutes.openapi(
       .where(eq(orderItems.orderId, row.order.id));
     return c.json(
       {
-        payment: row.payment,
+        payment: serializePayment(row.payment),
         order: row.order,
-        booth: row.booth,
+        booth: serializeBooth(row.booth),
         items,
         balance: c.get("user").balance,
       },
@@ -443,7 +444,10 @@ paymentsRoutes.openapi(
     if (!row) {
       throw new NotFoundError("payment not found");
     }
-    return c.json(row, 200);
+    return c.json(
+      { payment: serializePayment(row.payment), order: row.order },
+      200,
+    );
   },
 );
 
@@ -485,7 +489,7 @@ paymentsRoutes.get("/:id/events", requireKiosk, async (c) => {
           if (payment && payment.status !== "pending") {
             controller.enqueue(
               encoder.encode(
-                `event: ${payment.status}\ndata: ${JSON.stringify(payment)}\n\n`,
+                `event: ${payment.status}\ndata: ${JSON.stringify(serializePayment(payment))}\n\n`,
               ),
             );
             close();

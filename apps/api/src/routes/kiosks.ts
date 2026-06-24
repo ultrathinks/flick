@@ -17,6 +17,7 @@ import { rateLimit } from "../lib/rate-limit.ts";
 import { generateSecret, hashSecret } from "../lib/security.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import { boothSchema, kioskSchema, productSchema } from "../openapi/schemas.ts";
+import { serializeBooth, serializeKiosk } from "../openapi/serializers.ts";
 
 const createKioskSchema = z.object({
   name: z.string().min(1),
@@ -71,7 +72,6 @@ kiosksRoutes.openapi(
           boothId: pairing.boothId,
           name: pairing.kioskName,
           tokenHash: hashSecret(token),
-          lastSeenAt: now,
         })
         .returning();
       if (!kiosk) {
@@ -83,7 +83,7 @@ kiosksRoutes.openapi(
         .where(eq(kioskPairings.id, pairing.id));
       return kiosk;
     });
-    return c.json({ kiosk: result, deviceToken: token }, 201);
+    return c.json({ kiosk: serializeKiosk(result), deviceToken: token }, 201);
   },
 );
 
@@ -111,7 +111,10 @@ kiosksRoutes.openapi(
     if (!booth) {
       throw new NotFoundError("booth not found");
     }
-    return c.json({ kiosk, booth }, 200);
+    return c.json(
+      { kiosk: serializeKiosk(kiosk), booth: serializeBooth(booth) },
+      200,
+    );
   },
 );
 
@@ -176,7 +179,10 @@ kiosksRoutes.openapi(
       .set({ revokedAt: new Date() })
       .where(eq(kiosks.id, kioskId))
       .returning();
-    return c.json(updated, 200);
+    if (!updated) {
+      throw new NotFoundError("kiosk not found");
+    }
+    return c.json(serializeKiosk(updated), 200);
   },
 );
 
