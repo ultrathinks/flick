@@ -45,6 +45,10 @@ type DodamUserInfo = {
   student: DodamStudent | null;
 };
 
+type DodamUserInfoResponse = {
+  data: DodamUserInfo;
+};
+
 async function authorize(dodamAccessToken: string, state: string) {
   const config = getDodamConfig();
   const params = new URLSearchParams({
@@ -152,7 +156,8 @@ export async function getUserInfo(oauthAccessToken: string): Promise<NewUser> {
     throw new DodamError("Dodam user info request failed", 401);
   }
 
-  const info = (await response.json()) as DodamUserInfo;
+  const body = (await response.json()) as DodamUserInfoResponse;
+  const info = body.data;
 
   return {
     dauthPublicId: info.publicId,
