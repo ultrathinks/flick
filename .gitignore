@@ -6,6 +6,9 @@ out
 build
 *.log
 .DS_Store
+.env
+.env.*
+!.env.example
 .env*.local
 .vscode
 references
