@@ -1,12 +1,19 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import {
   type AuthVariables,
   requireAuth,
   requireKiosk,
 } from "../auth/middleware.ts";
 import { getDb } from "../db/index.ts";
-import { booths, kioskPairings, kiosks, products } from "../db/schema/index.ts";
+import {
+  booths,
+  kioskPairings,
+  kiosks,
+  productOptionGroups,
+  productOptionValues,
+  products,
+} from "../db/schema/index.ts";
 import { PAIRING_TTL_MS } from "../lib/constants.ts";
 import {
   BadRequestError,
@@ -16,7 +23,11 @@ import {
 import { rateLimit } from "../lib/rate-limit.ts";
 import { generateSecret, hashSecret } from "../lib/security.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
-import { boothSchema, kioskSchema, productSchema } from "../openapi/schemas.ts";
+import {
+  boothSchema,
+  kioskSchema,
+  productWithOptionsSchema,
+} from "../openapi/schemas.ts";
 import { serializeBooth, serializeKiosk } from "../openapi/serializers.ts";
 
 const createKioskSchema = z.object({
@@ -126,7 +137,7 @@ kiosksRoutes.openapi(
     security: [{ Kiosk: [] }],
     middleware: [requireKiosk] as const,
     responses: {
-      200: jsonContent(z.array(productSchema), "Kiosk products"),
+      200: jsonContent(z.array(productWithOptionsSchema), "Kiosk products"),
       401: errorResponse("Unauthorized"),
     },
   }),
@@ -139,9 +150,59 @@ kiosksRoutes.openapi(
         and(
           eq(products.boothId, kiosk.boothId),
           eq(products.status, "available"),
+          isNull(products.archivedAt),
         ),
       );
-    return c.json(rows, 200);
+    const productIds = rows.map((product) => product.id);
+    const groups =
+      productIds.length > 0
+        ? await getDb()
+            .select()
+            .from(productOptionGroups)
+            .where(
+              and(
+                inArray(productOptionGroups.productId, productIds),
+                isNull(productOptionGroups.archivedAt),
+              ),
+            )
+            .orderBy(asc(productOptionGroups.sortOrder))
+        : [];
+    const groupIds = groups.map((group) => group.id);
+    const values =
+      groupIds.length > 0
+        ? await getDb()
+            .select()
+            .from(productOptionValues)
+            .where(
+              and(
+                inArray(productOptionValues.groupId, groupIds),
+                isNull(productOptionValues.archivedAt),
+              ),
+            )
+            .orderBy(asc(productOptionValues.sortOrder))
+        : [];
+    const valuesByGroup = new Map<string, typeof values>();
+    for (const value of values) {
+      const list = valuesByGroup.get(value.groupId) ?? [];
+      list.push(value);
+      valuesByGroup.set(value.groupId, list);
+    }
+    const groupsByProduct = new Map<
+      string,
+      Array<(typeof groups)[number] & { values: typeof values }>
+    >();
+    for (const group of groups) {
+      const list = groupsByProduct.get(group.productId) ?? [];
+      list.push({ ...group, values: valuesByGroup.get(group.id) ?? [] });
+      groupsByProduct.set(group.productId, list);
+    }
+    return c.json(
+      rows.map((product) => ({
+        ...product,
+        optionGroups: groupsByProduct.get(product.id) ?? [],
+      })),
+      200,
+    );
   },
 );
 

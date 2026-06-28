@@ -179,16 +179,33 @@ export const payoutAccountSchema = z
   })
   .openapi("PayoutAccount");
 
+export const orderItemWithOptionsSchema = z
+  .object({
+    ...orderItemSchema.shape,
+    options: z.array(orderItemOptionSchema),
+  })
+  .openapi("OrderItemWithOptions");
+
 export const orderWithItemsSchema = z
-  .object({ ...orderSchema.shape, items: z.array(orderItemSchema) })
+  .object({
+    ...orderSchema.shape,
+    items: z.array(orderItemWithOptionsSchema),
+  })
   .openapi("OrderWithItems");
+
+export const productWithOptionsSchema = z
+  .object({
+    ...productSchema.shape,
+    optionGroups: z.array(productOptionGroupWithValuesSchema),
+  })
+  .openapi("ProductWithOptions");
 
 export const paymentCodeViewSchema = z
   .object({
     payment: paymentSchema,
     order: orderSchema,
     booth: boothSchema,
-    items: z.array(orderItemSchema),
+    items: z.array(orderItemWithOptionsSchema),
     balance: z.number(),
   })
   .openapi("PaymentCodeView");
