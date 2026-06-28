@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import {
   type AuthVariables,
   requireAdmin,
@@ -13,7 +13,11 @@ import {
   orders,
   products,
 } from "../db/schema/index.ts";
-import { ForbiddenError, NotFoundError } from "../lib/errors.ts";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../lib/errors.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   boothSchema,
@@ -38,7 +42,7 @@ const productBodySchema = z.object({
   description: z.string().optional(),
   imageUrl: z.string().url().optional(),
   price: z.number().int().positive(),
-  stock: z.number().int().min(0),
+  stock: z.number().int().min(0).nullable().optional(),
   status: z.enum(["available", "hidden"]).optional(),
   sortOrder: z.number().int().optional(),
 });
@@ -78,11 +82,15 @@ boothsRoutes.openapi(
   async (c) => {
     const user = c.get("user");
     const rows = user.isAdmin
-      ? await getDb().select().from(booths).orderBy(desc(booths.createdAt))
+      ? await getDb()
+          .select()
+          .from(booths)
+          .where(isNull(booths.archivedAt))
+          .orderBy(desc(booths.createdAt))
       : await getDb()
           .select()
           .from(booths)
-          .where(eq(booths.ownerId, user.id))
+          .where(and(eq(booths.ownerId, user.id), isNull(booths.archivedAt)))
           .orderBy(desc(booths.createdAt));
     return c.json(rows.map(serializeBooth), 200);
   },
@@ -167,6 +175,7 @@ boothsRoutes.openapi(
         z.object({ pairing: kioskPairingSchema, code: z.string() }),
         "Created kiosk pairing",
       ),
+      400: errorResponse("Bad request"),
       401: errorResponse("Unauthorized"),
       403: errorResponse("Forbidden"),
       404: errorResponse("Not found"),
@@ -175,9 +184,12 @@ boothsRoutes.openapi(
   async (c) => {
     const user = c.get("user");
     const boothId = c.req.valid("param").id;
-    const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
+    const { booth, owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
     if (!owns && !user.isAdmin) {
       throw new ForbiddenError();
+    }
+    if (booth.status !== "approved") {
+      throw new BadRequestError("booth is not approved");
     }
     const result = await createKioskPairing(
       boothId,
@@ -322,7 +334,7 @@ boothsRoutes.openapi(
     const rows = await getDb()
       .select()
       .from(products)
-      .where(eq(products.boothId, boothId));
+      .where(and(eq(products.boothId, boothId), isNull(products.archivedAt)));
     return c.json(rows, 200);
   },
 );

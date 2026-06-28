@@ -12,7 +12,7 @@ const productPatchSchema = z.object({
   description: z.string().optional(),
   imageUrl: z.string().url().optional(),
   price: z.number().int().positive().optional(),
-  stock: z.number().int().min(0).optional(),
+  stock: z.number().int().min(0).nullable().optional(),
   status: z.enum(["available", "hidden"]).optional(),
   sortOrder: z.number().int().optional(),
 });
@@ -59,5 +59,42 @@ productsRoutes.openapi(
       .where(eq(products.id, productId))
       .returning();
     return c.json(row, 200);
+  },
+);
+
+productsRoutes.openapi(
+  createRoute({
+    method: "delete",
+    path: "/{id}",
+    tags: ["products"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    request: { params: z.object({ id: z.string() }) },
+    responses: {
+      204: { description: "Archived product" },
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
+  async (c) => {
+    const productId = c.req.valid("param").id;
+    const [product] = await getDb()
+      .select({ product: products, booth: booths })
+      .from(products)
+      .innerJoin(booths, eq(products.boothId, booths.id))
+      .where(eq(products.id, productId));
+    if (!product) {
+      throw new NotFoundError("product not found");
+    }
+    const user = c.get("user");
+    if (!user.isAdmin && product.booth.ownerId !== user.id) {
+      throw new ForbiddenError();
+    }
+    await getDb()
+      .update(products)
+      .set({ archivedAt: new Date(), updatedAt: new Date() })
+      .where(eq(products.id, productId));
+    return c.body(null, 204);
   },
 );
