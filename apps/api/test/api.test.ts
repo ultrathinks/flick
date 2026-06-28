@@ -12,6 +12,8 @@ import { closeRedis } from "../src/lib/redis.ts";
 import {
   authHeaders,
   createBoothWithKiosk,
+  createOptionGroup,
+  createOptionValue,
   createOrderWithPayment,
   createProduct,
   createUser,
@@ -327,6 +329,233 @@ describe("kiosk order flow", () => {
     expect(payRes.status).toBe(201);
     const payload = (await payRes.json()) as { code: string };
     expect(payload.code).toBeTruthy();
+  });
+});
+
+describe("kiosk order options", () => {
+  it("applies option price deltas to unit price and snapshots them", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 10000 });
+    const { boothId, deviceToken } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 10 });
+    const sizeGroup = await createOptionGroup(productId, {
+      name: "Size",
+      required: true,
+    });
+    const large = await createOptionValue(sizeGroup, {
+      name: "L",
+      priceDelta: 500,
+    });
+
+    const orderRes = await app.request("/v1/orders", {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+      body: JSON.stringify({
+        items: [{ productId, quantity: 2, optionValueIds: [large] }],
+      }),
+    });
+    expect(orderRes.status).toBe(201);
+    const order = (await orderRes.json()) as {
+      id: string;
+      totalAmount: number;
+    };
+    expect(order.totalAmount).toBe(3000);
+
+    const payRes = await app.request(`/v1/orders/${order.id}/payments`, {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+    });
+    const { code } = (await payRes.json()) as { code: string };
+
+    const viewRes = await app.request(`/v1/payment-codes/${code}`, {
+      headers: authHeaders(buyer.accessToken),
+    });
+    expect(viewRes.status).toBe(200);
+    const view = (await viewRes.json()) as {
+      items: Array<{
+        unitPrice: number;
+        options: Array<{ valueName: string; priceDelta: number }>;
+      }>;
+    };
+    expect(view.items[0]?.unitPrice).toBe(1500);
+    expect(view.items[0]?.options).toHaveLength(1);
+    expect(view.items[0]?.options[0]?.valueName).toBe("L");
+    expect(view.items[0]?.options[0]?.priceDelta).toBe(500);
+
+    const confirmRes = await app.request(`/v1/payment-codes/${code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+    expect(confirmRes.status).toBe(200);
+    expect(await balanceOf(buyer.id)).toBe(7000);
+    expect(await ledgerOf(buyer.id)).toBe(7000);
+  });
+
+  it("rejects when a required option group is not selected", async () => {
+    const owner = await createUser();
+    const { boothId, deviceToken } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000 });
+    const group = await createOptionGroup(productId, { required: true });
+    await createOptionValue(group, { name: "L" });
+
+    const orderRes = await app.request("/v1/orders", {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+      body: JSON.stringify({ items: [{ productId, quantity: 1 }] }),
+    });
+    expect(orderRes.status).toBe(400);
+  });
+
+  it("rejects an option value from another product", async () => {
+    const owner = await createUser();
+    const { boothId, deviceToken } = await createBoothWithKiosk(owner.id);
+    const productA = await createProduct(boothId, { price: 1000 });
+    const productB = await createProduct(boothId, { price: 1000 });
+    const groupB = await createOptionGroup(productB, { required: false });
+    const valueB = await createOptionValue(groupB, { name: "L" });
+
+    const orderRes = await app.request("/v1/orders", {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+      body: JSON.stringify({
+        items: [{ productId: productA, quantity: 1, optionValueIds: [valueB] }],
+      }),
+    });
+    expect(orderRes.status).toBe(400);
+  });
+});
+
+describe("booth approval gate", () => {
+  it("rejects kiosk orders for an unapproved booth", async () => {
+    const owner = await createUser();
+    const { boothId, deviceToken } = await createBoothWithKiosk(owner.id, {
+      status: "pending",
+    });
+    const productId = await createProduct(boothId, { price: 1000 });
+
+    const orderRes = await app.request("/v1/orders", {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+      body: JSON.stringify({ items: [{ productId, quantity: 1 }] }),
+    });
+    expect(orderRes.status).toBe(400);
+  });
+});
+
+describe("unlimited stock", () => {
+  it("does not block payment when stock is null", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 10000 });
+    const { boothId, deviceToken } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, {
+      price: 1000,
+      stock: null,
+    });
+
+    const orderRes = await app.request("/v1/orders", {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+      body: JSON.stringify({ items: [{ productId, quantity: 3 }] }),
+    });
+    expect(orderRes.status).toBe(201);
+    const order = (await orderRes.json()) as { id: string };
+
+    const payRes = await app.request(`/v1/orders/${order.id}/payments`, {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+    });
+    const { code } = (await payRes.json()) as { code: string };
+
+    const confirmRes = await app.request(`/v1/payment-codes/${code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+    expect(confirmRes.status).toBe(200);
+    expect(await balanceOf(buyer.id)).toBe(7000);
+  });
+});
+
+describe("option management", () => {
+  it("creates and lists option groups with values, archives on delete", async () => {
+    const owner = await createUser();
+    const { boothId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000 });
+
+    const groupRes = await app.request(
+      `/v1/products/${productId}/option-groups`,
+      {
+        method: "POST",
+        headers: authHeaders(owner.accessToken),
+        body: JSON.stringify({ name: "Size" }),
+      },
+    );
+    expect(groupRes.status).toBe(201);
+    const group = (await groupRes.json()) as { id: string };
+
+    const valueRes = await app.request(`/v1/option-groups/${group.id}/values`, {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ name: "L", priceDelta: 500, isDefault: true }),
+    });
+    expect(valueRes.status).toBe(201);
+
+    const listRes = await app.request(`/v1/products/${productId}/options`, {
+      headers: authHeaders(owner.accessToken),
+    });
+    expect(listRes.status).toBe(200);
+    const groups = (await listRes.json()) as Array<{
+      id: string;
+      values: Array<{ name: string; priceDelta: number; isDefault: boolean }>;
+    }>;
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.values[0]?.name).toBe("L");
+    expect(groups[0]?.values[0]?.isDefault).toBe(true);
+
+    const deleteRes = await app.request(`/v1/option-groups/${group.id}`, {
+      method: "DELETE",
+      headers: authHeaders(owner.accessToken),
+    });
+    expect(deleteRes.status).toBe(204);
+
+    const afterRes = await app.request(`/v1/products/${productId}/options`, {
+      headers: authHeaders(owner.accessToken),
+    });
+    const after = (await afterRes.json()) as unknown[];
+    expect(after).toHaveLength(0);
+  });
+
+  it("forbids managing options on a booth you do not own", async () => {
+    const owner = await createUser();
+    const other = await createUser();
+    const { boothId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000 });
+
+    const res = await app.request(`/v1/products/${productId}/option-groups`, {
+      method: "POST",
+      headers: authHeaders(other.accessToken),
+      body: JSON.stringify({ name: "Size" }),
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("menu soft-delete", () => {
+  it("archives a product and hides it from the booth list", async () => {
+    const owner = await createUser();
+    const { boothId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000 });
+
+    const deleteRes = await app.request(`/v1/products/${productId}`, {
+      method: "DELETE",
+      headers: authHeaders(owner.accessToken),
+    });
+    expect(deleteRes.status).toBe(204);
+
+    const listRes = await app.request(`/v1/booths/${boothId}/products`, {
+      headers: authHeaders(owner.accessToken),
+    });
+    const products = (await listRes.json()) as unknown[];
+    expect(products).toHaveLength(0);
   });
 });
 

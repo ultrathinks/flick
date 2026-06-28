@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   index,
   integer,
   jsonb,
@@ -65,6 +66,7 @@ export const booths = pgTable(
     status: boothStatus("status").notNull().default("pending"),
     approvedBy: uuid("approved_by").references(() => users.id),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -89,9 +91,10 @@ export const products = pgTable(
     description: text("description"),
     imageUrl: text("image_url"),
     price: bigint("price", { mode: "number" }).notNull(),
-    stock: integer("stock").notNull(),
+    stock: integer("stock"),
     status: productStatus("status").notNull().default("available"),
     sortOrder: integer("sort_order").notNull().default(0),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -103,6 +106,45 @@ export const products = pgTable(
     index("products_booth_id_idx").on(table.boothId),
     index("products_status_idx").on(table.status),
   ],
+);
+
+export const productOptionGroups = pgTable(
+  "product_option_groups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    required: boolean("required").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("product_option_groups_product_id_idx").on(table.productId),
+  ],
+);
+
+export const productOptionValues = pgTable(
+  "product_option_values",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => productOptionGroups.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    priceDelta: bigint("price_delta", { mode: "number" }).notNull().default(0),
+    isDefault: boolean("is_default").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("product_option_values_group_id_idx").on(table.groupId)],
 );
 
 export const kiosks = pgTable(
@@ -186,6 +228,25 @@ export const orderItems = pgTable(
     totalAmount: bigint("total_amount", { mode: "number" }).notNull(),
   },
   (table) => [index("order_items_order_id_idx").on(table.orderId)],
+);
+
+export const orderItemOptions = pgTable(
+  "order_item_options",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orderItemId: uuid("order_item_id")
+      .notNull()
+      .references(() => orderItems.id, { onDelete: "cascade" }),
+    groupName: text("group_name").notNull(),
+    valueName: text("value_name").notNull(),
+    priceDelta: bigint("price_delta", { mode: "number" }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("order_item_options_order_item_id_idx").on(table.orderItemId),
+  ],
 );
 
 export const payments = pgTable(
@@ -340,9 +401,49 @@ export const boothsRelations = relations(booths, ({ one, many }) => ({
   orders: many(orders),
 }));
 
-export const productsRelations = relations(products, ({ one }) => ({
+export const productsRelations = relations(products, ({ one, many }) => ({
   booth: one(booths, { fields: [products.boothId], references: [booths.id] }),
+  optionGroups: many(productOptionGroups),
 }));
+
+export const productOptionGroupsRelations = relations(
+  productOptionGroups,
+  ({ one, many }) => ({
+    product: one(products, {
+      fields: [productOptionGroups.productId],
+      references: [products.id],
+    }),
+    values: many(productOptionValues),
+  }),
+);
+
+export const productOptionValuesRelations = relations(
+  productOptionValues,
+  ({ one }) => ({
+    group: one(productOptionGroups, {
+      fields: [productOptionValues.groupId],
+      references: [productOptionGroups.id],
+    }),
+  }),
+);
+
+export const orderItemsRelations = relations(orderItems, ({ one, many }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id],
+  }),
+  options: many(orderItemOptions),
+}));
+
+export const orderItemOptionsRelations = relations(
+  orderItemOptions,
+  ({ one }) => ({
+    orderItem: one(orderItems, {
+      fields: [orderItemOptions.orderItemId],
+      references: [orderItems.id],
+    }),
+  }),
+);
 
 export const kiosksRelations = relations(kiosks, ({ one }) => ({
   booth: one(booths, { fields: [kiosks.boothId], references: [booths.id] }),
@@ -350,6 +451,9 @@ export const kiosksRelations = relations(kiosks, ({ one }) => ({
 
 export type Booth = typeof booths.$inferSelect;
 export type Product = typeof products.$inferSelect;
+export type ProductOptionGroup = typeof productOptionGroups.$inferSelect;
+export type ProductOptionValue = typeof productOptionValues.$inferSelect;
+export type OrderItemOption = typeof orderItemOptions.$inferSelect;
 export type Kiosk = typeof kiosks.$inferSelect;
 export type KioskPairing = typeof kioskPairings.$inferSelect;
 export type Order = typeof orders.$inferSelect;

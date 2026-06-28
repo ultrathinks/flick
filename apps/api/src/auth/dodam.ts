@@ -6,6 +6,7 @@ import {
   DODAM_TOKEN_URL,
   DODAM_USER_INFO_URL,
   getDodamConfig,
+  getDodamPosConfig,
 } from "../config.ts";
 import type { NewUser } from "../db/schema/index.ts";
 import { AppError } from "../lib/errors.ts";
@@ -138,6 +139,39 @@ export async function exchangeDodamToken(
   await authorize(dodamAccessToken, state);
   const code = await consent(dodamAccessToken, state);
   return exchangeCodeForToken(code);
+}
+
+export async function exchangeAuthorizationCode(params: {
+  code: string;
+  codeVerifier: string;
+  redirectUri: string;
+}): Promise<string> {
+  const config = getDodamPosConfig();
+  if (params.redirectUri !== config.redirectUri) {
+    throw new DodamError("invalid redirect uri");
+  }
+  const response = await fetch(DODAM_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code: params.code,
+      redirect_uri: params.redirectUri,
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      code_verifier: params.codeVerifier,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new DodamError(
+      "Dodam authorization code exchange failed",
+      response.status === 401 ? 401 : 400,
+    );
+  }
+
+  const tokens = (await response.json()) as DodamTokenResponse;
+  return tokens.access_token;
 }
 
 function toStudentNumber(student: DodamStudent | null): string | null {

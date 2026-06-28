@@ -23,6 +23,14 @@ export function getDodamConfig() {
   };
 }
 
+export function getDodamPosConfig() {
+  return {
+    clientId: requireEnv("DAUTH_POS_CLIENT_ID"),
+    clientSecret: requireEnv("DAUTH_POS_CLIENT_SECRET"),
+    redirectUri: requireEnv("DAUTH_POS_REDIRECT_URI"),
+  };
+}
+
 export function getEncryptionKey(): Buffer {
   const key = Buffer.from(requireEnv("PAYOUT_ENCRYPTION_KEY"), "base64");
   if (key.length !== 32) {
@@ -36,4 +44,15 @@ export function getBootstrapAdminPublicIds(): string[] {
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
+}
+
+export function getS3Config() {
+  return {
+    endpoint: requireEnv("S3_ENDPOINT"),
+    region: process.env.S3_REGION ?? "us-east-1",
+    bucket: requireEnv("S3_BUCKET"),
+    accessKeyId: requireEnv("S3_ACCESS_KEY"),
+    secretAccessKey: requireEnv("S3_SECRET_KEY"),
+    publicBaseUrl: requireEnv("S3_PUBLIC_BASE_URL"),
+  };
 }
