@@ -167,6 +167,12 @@ importers:
 
   apps/pos:
     dependencies:
+      '@tanstack/react-query':
+        specifier: ^5.62.7
+        version: 5.101.1(react@19.2.4)
+      ky:
+        specifier: ^1.7.4
+        version: 1.14.3
       next:
         specifier: 16.2.9
         version: 16.2.9(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -176,10 +182,16 @@ importers:
       react-dom:
         specifier: 19.2.4
         version: 19.2.4(react@19.2.4)
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@biomejs/biome':
         specifier: 2.2.0
         version: 2.2.0
+      '@flick/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.1
@@ -5108,9 +5120,7 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.85.3': {}
 

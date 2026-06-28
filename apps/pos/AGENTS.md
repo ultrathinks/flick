@@ -1,0 +1,25 @@
+<!-- BEGIN:nextjs-agent-rules -->
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+<!-- END:nextjs-agent-rules -->
+
+# apps/pos
+
+Booth-operator management web app (Next.js 16 App Router + React 19). Operators register a booth, manage menus (products) and single-select options, and toggle sold-out during operation. Orders/payments happen on the kiosk, not here.
+
+## Run
+
+- Dev: `pnpm dev` (port 3002)
+- Build: `pnpm build` (`next build`); lint: `pnpm lint` (uses the root Biome config — no nested config)
+- Env: copy `.env.example`. Needs a registered DAuth client (`NEXT_PUBLIC_DAUTH_CLIENT_ID`) whose redirect URI matches `NEXT_PUBLIC_DAUTH_REDIRECT_URI` and the API's `DAUTH_POS_REDIRECT_URI`.
+
+## Structure (FSD + App Router)
+
+- `src/app/` — routes + route handlers; replaces FSD `app`/`pages`. Import direction `shared → entities → features → widgets → app`. Alias `@/*`. Relative imports keep the `.ts`/`.tsx` extension (tsconfig enables `allowImportingTsExtensions`).
+- Auth: DAuth Authorization Code + PKCE. `GET /api/auth/login` starts the flow (PKCE verifier/state in short-lived httpOnly cookies); `GET /api/auth/callback` exchanges the code via the API's `POST /v1/auth/dauth` and sets httpOnly session cookies. Tokens are never exposed to client JS.
+- `src/app/api/proxy/[...path]` — same-origin proxy that injects the bearer cookie into Flick API calls and refreshes on 401. The client `ky` instance targets `/api/proxy`.
+
+## Notes
+
+- TS config extends `@flick/typescript-config/nextjs.json`. No nested lockfile/workspace/biome config — use the repo root.
