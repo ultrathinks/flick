@@ -31,6 +31,38 @@ services:
       timeout: 5s
       retries: 10
 
+  minio:
+    image: minio/minio:latest
+    container_name: flick-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: flick
+      MINIO_ROOT_PASSWORD: flickflick
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - flick-minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 flick flickflick &&
+      mc mb --ignore-existing local/flick-uploads &&
+      mc anonymous set download local/flick-uploads
+      "
+
 volumes:
   flick-postgres-data:
   flick-redis-data:
+  flick-minio-data:

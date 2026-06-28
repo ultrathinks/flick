@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import {
   type AuthVariables,
   requireAdmin,
@@ -78,11 +78,15 @@ boothsRoutes.openapi(
   async (c) => {
     const user = c.get("user");
     const rows = user.isAdmin
-      ? await getDb().select().from(booths).orderBy(desc(booths.createdAt))
+      ? await getDb()
+          .select()
+          .from(booths)
+          .where(isNull(booths.archivedAt))
+          .orderBy(desc(booths.createdAt))
       : await getDb()
           .select()
           .from(booths)
-          .where(eq(booths.ownerId, user.id))
+          .where(and(eq(booths.ownerId, user.id), isNull(booths.archivedAt)))
           .orderBy(desc(booths.createdAt));
     return c.json(rows.map(serializeBooth), 200);
   },
@@ -322,7 +326,7 @@ boothsRoutes.openapi(
     const rows = await getDb()
       .select()
       .from(products)
-      .where(eq(products.boothId, boothId));
+      .where(and(eq(products.boothId, boothId), isNull(products.archivedAt)));
     return c.json(rows, 200);
   },
 );

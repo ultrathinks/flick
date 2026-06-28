@@ -4,10 +4,13 @@ import {
   booths,
   kioskPairings,
   kiosks,
+  orderItemOptions,
   orderItems,
   orders,
   payments,
   payouts,
+  productOptionGroups,
+  productOptionValues,
   products,
   refunds,
   transactions,
@@ -31,6 +34,25 @@ export const boothSchema = z
 export const productSchema = z
   .object(createSelectSchema(products).shape)
   .openapi("Product");
+
+export const productOptionValueSchema = z
+  .object(createSelectSchema(productOptionValues).shape)
+  .openapi("ProductOptionValue");
+
+export const productOptionGroupSchema = z
+  .object(createSelectSchema(productOptionGroups).shape)
+  .openapi("ProductOptionGroup");
+
+export const productOptionGroupWithValuesSchema = z
+  .object({
+    ...productOptionGroupSchema.shape,
+    values: z.array(productOptionValueSchema),
+  })
+  .openapi("ProductOptionGroupWithValues");
+
+export const orderItemOptionSchema = z
+  .object(createSelectSchema(orderItemOptions).shape)
+  .openapi("OrderItemOption");
 
 export const kioskSchema = z
   .object(createSelectSchema(kiosks).omit(KIOSK_PUBLIC_OMIT).shape)

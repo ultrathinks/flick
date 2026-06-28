@@ -37,3 +37,14 @@ export function getBootstrapAdminPublicIds(): string[] {
     .map((value) => value.trim())
     .filter(Boolean);
 }
+
+export function getS3Config() {
+  return {
+    endpoint: requireEnv("S3_ENDPOINT"),
+    region: process.env.S3_REGION ?? "us-east-1",
+    bucket: requireEnv("S3_BUCKET"),
+    accessKeyId: requireEnv("S3_ACCESS_KEY"),
+    secretAccessKey: requireEnv("S3_SECRET_KEY"),
+    publicBaseUrl: requireEnv("S3_PUBLIC_BASE_URL"),
+  };
+}
