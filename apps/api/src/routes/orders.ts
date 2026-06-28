@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   type AuthVariables,
   requireAuth,
@@ -8,9 +8,12 @@ import {
 import { getDb } from "../db/index.ts";
 import {
   booths,
+  orderItemOptions,
   orderItems,
   orders,
   payments,
+  productOptionGroups,
+  productOptionValues,
   products,
   transactions,
   users,
@@ -39,12 +42,34 @@ const createOrderSchema = z.object({
       z.object({
         productId: z.string().uuid(),
         quantity: z.number().int().positive(),
+        optionValueIds: z.array(z.string().uuid()).optional(),
       }),
     )
     .min(1),
 });
 
 const idParam = z.object({ id: z.string() });
+
+async function attachOptions<T extends { id: string }>(items: T[]) {
+  const itemIds = items.map((item) => item.id);
+  const options =
+    itemIds.length > 0
+      ? await getDb()
+          .select()
+          .from(orderItemOptions)
+          .where(inArray(orderItemOptions.orderItemId, itemIds))
+      : [];
+  const optionsByItem = new Map<string, typeof options>();
+  for (const option of options) {
+    const list = optionsByItem.get(option.orderItemId) ?? [];
+    list.push(option);
+    optionsByItem.set(option.orderItemId, list);
+  }
+  return items.map((item) => ({
+    ...item,
+    options: optionsByItem.get(item.id) ?? [],
+  }));
+}
 
 export const ordersRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
 
@@ -67,6 +92,15 @@ ordersRoutes.openapi(
   async (c) => {
     const kiosk = c.get("kiosk");
     const body = c.req.valid("json");
+
+    const [booth] = await getDb()
+      .select()
+      .from(booths)
+      .where(eq(booths.id, kiosk.boothId));
+    if (booth?.status !== "approved") {
+      throw new BadRequestError("booth is not approved");
+    }
+
     const productIds = body.items.map((item) => item.productId);
     const productRows = await getDb()
       .select()
@@ -75,6 +109,7 @@ ordersRoutes.openapi(
         and(
           inArray(products.id, productIds),
           eq(products.boothId, kiosk.boothId),
+          isNull(products.archivedAt),
         ),
       );
     if (productRows.length !== new Set(productIds).size) {
@@ -83,19 +118,116 @@ ordersRoutes.openapi(
     const productById = new Map(
       productRows.map((product) => [product.id, product]),
     );
-    const items = body.items.map((item) => {
-      const product = productById.get(item.productId);
-      if (product?.status !== "available") {
-        throw new BadRequestError("unavailable product");
+
+    const allValueIds = body.items.flatMap((item) => item.optionValueIds ?? []);
+    const valueById = new Map<
+      string,
+      { id: string; groupId: string; name: string; priceDelta: number }
+    >();
+    const groupById = new Map<
+      string,
+      { id: string; productId: string; name: string; required: boolean }
+    >();
+    if (allValueIds.length > 0) {
+      const valueRows = await getDb()
+        .select({
+          value: productOptionValues,
+          group: productOptionGroups,
+        })
+        .from(productOptionValues)
+        .innerJoin(
+          productOptionGroups,
+          eq(productOptionValues.groupId, productOptionGroups.id),
+        )
+        .where(
+          and(
+            inArray(productOptionValues.id, allValueIds),
+            isNull(productOptionValues.archivedAt),
+            isNull(productOptionGroups.archivedAt),
+          ),
+        );
+      for (const row of valueRows) {
+        valueById.set(row.value.id, {
+          id: row.value.id,
+          groupId: row.value.groupId,
+          name: row.value.name,
+          priceDelta: row.value.priceDelta,
+        });
+        groupById.set(row.group.id, {
+          id: row.group.id,
+          productId: row.group.productId,
+          name: row.group.name,
+          required: row.group.required,
+        });
       }
-      return {
-        productId: product.id,
-        name: product.name,
-        unitPrice: product.price,
-        quantity: item.quantity,
-        totalAmount: product.price * item.quantity,
-      };
-    });
+    }
+
+    const items = await Promise.all(
+      body.items.map(async (item) => {
+        const product = productById.get(item.productId);
+        if (product?.status !== "available") {
+          throw new BadRequestError("unavailable product");
+        }
+        const selectedValueIds = item.optionValueIds ?? [];
+        const selectedValues = selectedValueIds.map((valueId) => {
+          const value = valueById.get(valueId);
+          if (!value) {
+            throw new BadRequestError("invalid option");
+          }
+          const group = groupById.get(value.groupId);
+          if (!group || group.productId !== product.id) {
+            throw new BadRequestError("invalid option");
+          }
+          return { value, group };
+        });
+
+        const seenGroups = new Set<string>();
+        for (const { group } of selectedValues) {
+          if (seenGroups.has(group.id)) {
+            throw new BadRequestError("duplicate option group");
+          }
+          seenGroups.add(group.id);
+        }
+
+        const requiredGroups = await getDb()
+          .select({ id: productOptionGroups.id })
+          .from(productOptionGroups)
+          .where(
+            and(
+              eq(productOptionGroups.productId, product.id),
+              eq(productOptionGroups.required, true),
+              isNull(productOptionGroups.archivedAt),
+            ),
+          );
+        for (const group of requiredGroups) {
+          if (!seenGroups.has(group.id)) {
+            throw new BadRequestError("missing required option");
+          }
+        }
+
+        const optionSum = selectedValues.reduce(
+          (sum, { value }) => sum + value.priceDelta,
+          0,
+        );
+        const unitPrice = product.price + optionSum;
+        if (unitPrice < 0) {
+          throw new BadRequestError("invalid option price");
+        }
+        return {
+          productId: product.id,
+          name: product.name,
+          unitPrice,
+          quantity: item.quantity,
+          totalAmount: unitPrice * item.quantity,
+          options: selectedValues.map(({ value, group }) => ({
+            groupName: group.name,
+            valueName: value.name,
+            priceDelta: value.priceDelta,
+          })),
+        };
+      }),
+    );
+
     const totalAmount = items.reduce((sum, item) => sum + item.totalAmount, 0);
     const order = await getDb().transaction(async (tx) => {
       const [created] = await tx
@@ -105,9 +237,32 @@ ordersRoutes.openapi(
       if (!created) {
         throw new Error("failed to create order");
       }
-      await tx
-        .insert(orderItems)
-        .values(items.map((item) => ({ ...item, orderId: created.id })));
+      for (const item of items) {
+        const [createdItem] = await tx
+          .insert(orderItems)
+          .values({
+            orderId: created.id,
+            productId: item.productId,
+            name: item.name,
+            unitPrice: item.unitPrice,
+            quantity: item.quantity,
+            totalAmount: item.totalAmount,
+          })
+          .returning();
+        if (!createdItem) {
+          throw new Error("failed to create order item");
+        }
+        if (item.options.length > 0) {
+          await tx.insert(orderItemOptions).values(
+            item.options.map((option) => ({
+              orderItemId: createdItem.id,
+              groupName: option.groupName,
+              valueName: option.valueName,
+              priceDelta: option.priceDelta,
+            })),
+          );
+        }
+      }
       return created;
     });
     return c.json(order, 201);
@@ -151,7 +306,7 @@ ordersRoutes.openapi(
       .select()
       .from(orderItems)
       .where(eq(orderItems.orderId, orderId));
-    return c.json({ ...row.order, items }, 200);
+    return c.json({ ...row.order, items: await attachOptions(items) }, 200);
   },
 );
 
@@ -295,7 +450,7 @@ paymentCodesRoutes.openapi(
         payment: serializePayment(row.payment),
         order: row.order,
         booth: serializeBooth(row.booth),
-        items,
+        items: await attachOptions(items),
         balance: c.get("user").balance,
       },
       200,
@@ -370,12 +525,19 @@ paymentCodesRoutes.openapi(
           .where(
             and(
               eq(products.id, item.productId),
+              sql`${products.stock} is not null`,
               sql`${products.stock} >= ${item.quantity}`,
             ),
           )
           .returning();
         if (!updatedProduct) {
-          throw new BadRequestError("insufficient stock");
+          const [current] = await tx
+            .select({ stock: products.stock })
+            .from(products)
+            .where(eq(products.id, item.productId));
+          if (current?.stock != null) {
+            throw new BadRequestError("insufficient stock");
+          }
         }
       }
       const [transaction] = await tx

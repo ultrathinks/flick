@@ -7,6 +7,8 @@ import {
   orderItems,
   orders,
   payments,
+  productOptionGroups,
+  productOptionValues,
   products,
   transactions,
   users,
@@ -17,7 +19,7 @@ let seq = 0;
 
 export async function resetDb(): Promise<void> {
   await getDb().execute(
-    sql`truncate audit_logs, payouts, refunds, transactions, payments, order_items, orders, products, kiosks, kiosk_pairings, user_codes, sessions, users restart identity cascade`,
+    sql`truncate audit_logs, payouts, refunds, transactions, payments, order_item_options, order_items, orders, product_option_values, product_option_groups, products, kiosks, kiosk_pairings, user_codes, sessions, users restart identity cascade`,
   );
 }
 
@@ -60,14 +62,17 @@ export async function createUser(options?: {
   return { id: user.id, accessToken: session.accessToken };
 }
 
-export async function createBoothWithKiosk(ownerId: string): Promise<{
+export async function createBoothWithKiosk(
+  ownerId: string,
+  options?: { status?: "draft" | "pending" | "approved" | "rejected" },
+): Promise<{
   boothId: string;
   kioskId: string;
   deviceToken: string;
 }> {
   const [booth] = await getDb()
     .insert(booths)
-    .values({ ownerId, name: "Booth", status: "approved" })
+    .values({ ownerId, name: "Booth", status: options?.status ?? "approved" })
     .returning();
   if (!booth) {
     throw new Error("failed to seed booth");
@@ -89,7 +94,7 @@ export async function createBoothWithKiosk(ownerId: string): Promise<{
 
 export async function createProduct(
   boothId: string,
-  options?: { price?: number; stock?: number },
+  options?: { price?: number; stock?: number | null },
 ): Promise<string> {
   const [product] = await getDb()
     .insert(products)
@@ -97,13 +102,50 @@ export async function createProduct(
       boothId,
       name: "Item",
       price: options?.price ?? 1000,
-      stock: options?.stock ?? 10,
+      stock: options?.stock === undefined ? 10 : options.stock,
     })
     .returning();
   if (!product) {
     throw new Error("failed to seed product");
   }
   return product.id;
+}
+
+export async function createOptionGroup(
+  productId: string,
+  options?: { name?: string; required?: boolean },
+): Promise<string> {
+  const [group] = await getDb()
+    .insert(productOptionGroups)
+    .values({
+      productId,
+      name: options?.name ?? "Size",
+      required: options?.required ?? true,
+    })
+    .returning();
+  if (!group) {
+    throw new Error("failed to seed option group");
+  }
+  return group.id;
+}
+
+export async function createOptionValue(
+  groupId: string,
+  options?: { name?: string; priceDelta?: number; isDefault?: boolean },
+): Promise<string> {
+  const [value] = await getDb()
+    .insert(productOptionValues)
+    .values({
+      groupId,
+      name: options?.name ?? "L",
+      priceDelta: options?.priceDelta ?? 0,
+      isDefault: options?.isDefault ?? false,
+    })
+    .returning();
+  if (!value) {
+    throw new Error("failed to seed option value");
+  }
+  return value.id;
 }
 
 export async function createOrderWithPayment(

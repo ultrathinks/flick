@@ -13,7 +13,11 @@ import {
   orders,
   products,
 } from "../db/schema/index.ts";
-import { ForbiddenError, NotFoundError } from "../lib/errors.ts";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../lib/errors.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   boothSchema,
@@ -171,6 +175,7 @@ boothsRoutes.openapi(
         z.object({ pairing: kioskPairingSchema, code: z.string() }),
         "Created kiosk pairing",
       ),
+      400: errorResponse("Bad request"),
       401: errorResponse("Unauthorized"),
       403: errorResponse("Forbidden"),
       404: errorResponse("Not found"),
@@ -179,9 +184,12 @@ boothsRoutes.openapi(
   async (c) => {
     const user = c.get("user");
     const boothId = c.req.valid("param").id;
-    const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
+    const { booth, owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
     if (!owns && !user.isAdmin) {
       throw new ForbiddenError();
+    }
+    if (booth.status !== "approved") {
+      throw new BadRequestError("booth is not approved");
     }
     const result = await createKioskPairing(
       boothId,
