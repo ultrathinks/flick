@@ -152,8 +152,8 @@ export async function exchangeAuthorizationCode(params: {
   }
   const response = await fetch(DODAM_TOKEN_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
       grant_type: "authorization_code",
       code: params.code,
       redirect_uri: params.redirectUri,
