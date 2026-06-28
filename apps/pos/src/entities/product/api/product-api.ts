@@ -1,0 +1,41 @@
+import { z } from "zod";
+import { request, requestVoid } from "@/shared/api";
+import { type Product, productSchema } from "../model/types.ts";
+
+export function fetchBoothProducts(boothId: string): Promise<Product[]> {
+  return request(z.array(productSchema), `booths/${boothId}/products`);
+}
+
+export interface ProductInput {
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  price: number;
+  stock: number | null;
+  status?: "available" | "hidden";
+  sortOrder?: number;
+}
+
+export function createProduct(
+  boothId: string,
+  input: ProductInput,
+): Promise<Product> {
+  return request(productSchema, `booths/${boothId}/products`, {
+    method: "post",
+    json: input,
+  });
+}
+
+export function updateProduct(
+  id: string,
+  input: Partial<ProductInput>,
+): Promise<Product> {
+  return request(productSchema, `products/${id}`, {
+    method: "patch",
+    json: input,
+  });
+}
+
+export function archiveProduct(id: string): Promise<void> {
+  return requestVoid(`products/${id}`, { method: "delete" });
+}

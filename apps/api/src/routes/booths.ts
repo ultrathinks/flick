@@ -42,7 +42,7 @@ const productBodySchema = z.object({
   description: z.string().optional(),
   imageUrl: z.string().url().optional(),
   price: z.number().int().positive(),
-  stock: z.number().int().min(0),
+  stock: z.number().int().min(0).nullable().optional(),
   status: z.enum(["available", "hidden"]).optional(),
   sortOrder: z.number().int().optional(),
 });
