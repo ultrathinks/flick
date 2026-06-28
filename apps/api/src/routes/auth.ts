@@ -1,5 +1,9 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { exchangeDodamToken, getUserInfo } from "../auth/dodam.ts";
+import {
+  exchangeAuthorizationCode,
+  exchangeDodamToken,
+  getUserInfo,
+} from "../auth/dodam.ts";
 import {
   type AuthVariables,
   extractBearerToken,
@@ -18,6 +22,12 @@ const dodamSchema = z.object({
 
 const refreshSchema = z.object({
   refreshToken: z.string().min(1),
+});
+
+const dauthSchema = z.object({
+  code: z.string().min(1),
+  codeVerifier: z.string().min(1),
+  redirectUri: z.string().min(1),
 });
 
 export const authRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
@@ -40,6 +50,36 @@ authRoutes.openapi(
   async (c) => {
     const { token } = c.req.valid("json");
     const oauthAccessToken = await exchangeDodamToken(token);
+    const userInfo = await getUserInfo(oauthAccessToken);
+    const user = await upsertByDauthId(userInfo);
+    const session = await issueSession(user.id);
+    return c.json(session, 200);
+  },
+);
+
+authRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/dauth",
+    tags: ["auth"],
+    middleware: [rateLimit(20, "auth:dauth")] as const,
+    request: {
+      body: { content: { "application/json": { schema: dauthSchema } } },
+    },
+    responses: {
+      200: jsonContent(sessionSchema, "Issued session"),
+      400: errorResponse("Bad request"),
+      401: errorResponse("Unauthorized"),
+      429: errorResponse("Too many requests"),
+    },
+  }),
+  async (c) => {
+    const { code, codeVerifier, redirectUri } = c.req.valid("json");
+    const oauthAccessToken = await exchangeAuthorizationCode({
+      code,
+      codeVerifier,
+      redirectUri,
+    });
     const userInfo = await getUserInfo(oauthAccessToken);
     const user = await upsertByDauthId(userInfo);
     const session = await issueSession(user.id);
