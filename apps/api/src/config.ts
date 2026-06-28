@@ -23,6 +23,14 @@ export function getDodamConfig() {
   };
 }
 
+export function getDodamPosConfig() {
+  return {
+    clientId: requireEnv("DAUTH_POS_CLIENT_ID"),
+    clientSecret: requireEnv("DAUTH_POS_CLIENT_SECRET"),
+    redirectUri: requireEnv("DAUTH_POS_REDIRECT_URI"),
+  };
+}
+
 export function getEncryptionKey(): Buffer {
   const key = Buffer.from(requireEnv("PAYOUT_ENCRYPTION_KEY"), "base64");
   if (key.length !== 32) {
