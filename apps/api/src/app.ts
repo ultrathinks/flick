@@ -12,8 +12,10 @@ import {
   paymentsRoutes,
 } from "./routes/orders.ts";
 import { payoutsRoutes } from "./routes/payouts.ts";
+import { productOptionsRoutes } from "./routes/product-options.ts";
 import { productsRoutes } from "./routes/products.ts";
 import { statsRoutes } from "./routes/stats.ts";
+import { uploadsRoutes } from "./routes/uploads.ts";
 import { usersRoutes } from "./routes/users.ts";
 
 export const app = new OpenAPIHono();
@@ -46,6 +48,8 @@ v1.route("/auth", authRoutes);
 v1.route("/users", usersRoutes);
 v1.route("/booths", boothsRoutes);
 v1.route("/products", productsRoutes);
+v1.route("/", productOptionsRoutes);
+v1.route("/uploads", uploadsRoutes);
 v1.route("/kiosks", kiosksRoutes);
 v1.route("/orders", ordersRoutes);
 v1.route("/payment-codes", paymentCodesRoutes);
