@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { CartItem } from "@/entities/cart/model/types";
+import { createOrder, createOrderPayment } from "@/entities/order/api/orders";
 import { getKioskProducts } from "@/entities/product/api/products";
 import {
   addProductToCart,
@@ -18,6 +19,7 @@ import {
   getCartItems,
   getKioskSession,
   setCartItems,
+  setPaymentSnapshot,
 } from "@/shared/model/storage";
 import { useLocalState } from "@/shared/model/use-local-state";
 import { ProductsCatalog } from "@/widgets/products/ui/products-catalog";
@@ -107,6 +109,7 @@ export default function ProductsPage() {
   const [context, setContext] = useState<KioskContext | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [cartItems, setCartItemsState] = useLocalState<CartItem[]>(
@@ -247,12 +250,68 @@ export default function ProductsPage() {
     );
   }
 
-  function handleCheckout() {
+  async function handleCheckout() {
+    if (isCheckingOut) {
+      return;
+    }
     if (cartTotalCount === 0) {
       showAlert("상품을 선택해주세요");
       return;
     }
-    showAlert("결제 기능 준비 중입니다");
+
+    setIsCheckingOut(true);
+
+    if (bypassKioskAuth) {
+      setPaymentSnapshot({
+        orderId: "mock-order",
+        paymentId: "mock-payment",
+        code: "mock-kiosk-payment-code-001",
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        totalAmount: cartTotalAmount,
+      });
+      router.push("/payment");
+      setIsCheckingOut(false);
+      return;
+    }
+
+    const { token } = getKioskSession();
+    if (!token) {
+      setIsCheckingOut(false);
+      router.replace("/pairing");
+      return;
+    }
+
+    try {
+      const order = await createOrder(
+        token,
+        resolvedCartItems.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+        })),
+      );
+      const { payment, code } = await createOrderPayment(token, order.id);
+      setPaymentSnapshot({
+        orderId: order.id,
+        paymentId: payment.id,
+        code,
+        expiresAt: payment.expiresAt,
+        totalAmount: order.totalAmount,
+      });
+      router.push("/payment");
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        clearKioskData();
+        router.replace("/pairing");
+        return;
+      }
+      if (error instanceof ApiError && error.status === 400) {
+        showAlert("상품 재고 또는 상태가 변경되었습니다");
+        return;
+      }
+      showAlert("결제 요청을 생성할 수 없습니다");
+    } finally {
+      setIsCheckingOut(false);
+    }
   }
 
   return (
@@ -265,6 +324,7 @@ export default function ProductsPage() {
       cartItems={resolvedCartItems}
       cartTotalAmount={cartTotalAmount}
       cartTotalCount={cartTotalCount}
+      isCheckingOut={isCheckingOut}
       onAddProduct={handleAddProduct}
       onClearCart={handleClearCart}
       onUpdateCartQuantity={handleUpdateCartQuantity}

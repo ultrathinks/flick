@@ -7,6 +7,7 @@ type CartPanelProps = {
   products: Product[];
   totalAmount: number;
   totalCount: number;
+  isCheckingOut: boolean;
   onClearCart: () => void;
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onCheckout: () => void;
@@ -17,6 +18,7 @@ export function CartPanel({
   products,
   totalAmount,
   totalCount,
+  isCheckingOut,
   onClearCart,
   onUpdateQuantity,
   onCheckout,
@@ -137,10 +139,10 @@ export function CartPanel({
         <button
           type="button"
           className="mt-4 flex w-full items-center justify-center rounded-xl bg-indigo-600 py-4 text-base font-semibold text-white transition hover:bg-indigo-700 disabled:bg-slate-300"
-          disabled={items.length === 0}
+          disabled={items.length === 0 || isCheckingOut}
           onClick={onCheckout}
         >
-          결제하기
+          {isCheckingOut ? "결제 준비 중" : "결제하기"}
         </button>
       </div>
     </aside>
