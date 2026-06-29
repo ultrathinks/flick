@@ -10,24 +10,47 @@ export type SSEMessage = {
   data: Record<string, unknown>;
 };
 
+const MAX_RETRIES = 5;
+const BASE_DELAY_MS = 1000;
+const MAX_DELAY_MS = 30000;
+
+function calculateDelay(attempt: number) {
+  return Math.min(BASE_DELAY_MS * 2 ** attempt, MAX_DELAY_MS);
+}
+
 export function usePaymentSSE(paymentId: string | null, token: string | null) {
   const [status, setStatus] = useState<SSEStatus>("idle");
   const [lastEvent, setLastEvent] = useState<SSEMessage | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const retryCountRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!paymentId || !token) {
       return;
     }
 
-    setStatus("connecting");
+    retryCountRef.current = 0;
 
     const abortController = new AbortController();
-    abortRef.current = abortController;
-
     const url = `${getApiBaseUrl()}/payments/${paymentId}/events`;
 
-    (async () => {
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    async function connect() {
+      if (!mountedRef.current || abortController.signal.aborted) {
+        return;
+      }
+
+      setStatus("connecting");
+
       try {
         const response = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` },
@@ -35,11 +58,16 @@ export function usePaymentSSE(paymentId: string | null, token: string | null) {
         });
 
         if (!response.ok || !response.body) {
-          setStatus("disconnected");
+          scheduleReconnect();
+          return;
+        }
+
+        if (!mountedRef.current || abortController.signal.aborted) {
           return;
         }
 
         setStatus("connected");
+        retryCountRef.current = 0;
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -50,6 +78,10 @@ export function usePaymentSSE(paymentId: string | null, token: string | null) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
+            break;
+          }
+
+          if (!mountedRef.current || abortController.signal.aborted) {
             break;
           }
 
@@ -64,7 +96,9 @@ export function usePaymentSSE(paymentId: string | null, token: string | null) {
             if (line.startsWith("event: ")) {
               currentEvent = line.slice(7).trim();
             } else if (line.startsWith("data: ")) {
-              currentData = line.slice(6);
+              currentData = currentData
+                ? `${currentData}\n${line.slice(6)}`
+                : line.slice(6);
             } else if (line === "") {
               if (currentData) {
                 try {
@@ -86,18 +120,40 @@ export function usePaymentSSE(paymentId: string | null, token: string | null) {
           }
         }
 
-        setStatus("disconnected");
+        scheduleReconnect();
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
-        setStatus("disconnected");
+        scheduleReconnect();
       }
-    })();
+    }
+
+    function scheduleReconnect() {
+      if (!mountedRef.current || abortController.signal.aborted) {
+        return;
+      }
+
+      if (retryCountRef.current >= MAX_RETRIES) {
+        setStatus("disconnected");
+        return;
+      }
+
+      const delay = calculateDelay(retryCountRef.current);
+      retryCountRef.current += 1;
+
+      setStatus("connecting");
+
+      reconnectTimeout = setTimeout(connect, delay);
+    }
+
+    connect();
 
     return () => {
       abortController.abort();
-      abortRef.current = null;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
     };
   }, [paymentId, token]);
 
