@@ -164,6 +164,10 @@ export async function exchangeAuthorizationCode(params: {
   });
 
   if (!response.ok) {
+    const responseBody = await response.text();
+    console.error(
+      `[dodam] exchange_failed status=${response.status} body=${responseBody}`,
+    );
     throw new DodamError(
       "Dodam authorization code exchange failed",
       response.status === 401 ? 401 : 400,
