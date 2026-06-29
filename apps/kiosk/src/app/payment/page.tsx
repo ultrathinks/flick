@@ -37,7 +37,9 @@ export default function PaymentPage() {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<PaymentSnapshot | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [pageError, setPageError] = useState<string | null>(null);
   const cancelledRef = useRef(false);
+  const completedRef = useRef(false);
 
   const { token } = getKioskSession();
 
@@ -57,9 +59,7 @@ export default function PaymentPage() {
   }, [router]);
 
   useEffect(() => {
-    if (!snapshot?.expiresAt) {
-      return;
-    }
+    if (!snapshot?.expiresAt) return;
     const updateRemainingSeconds = () => {
       setRemainingSeconds(getRemainingSeconds(snapshot.expiresAt ?? ""));
     };
@@ -69,32 +69,40 @@ export default function PaymentPage() {
   }, [snapshot?.expiresAt]);
 
   useEffect(() => {
-    if (!lastEvent) {
-      return;
-    }
+    if (!lastEvent) return;
+
+    if (completedRef.current) return;
+
     if (lastEvent.event === "completed") {
+      completedRef.current = true;
       router.push("/payment/complete");
       return;
     }
     if (lastEvent.event === "expired" || lastEvent.event === "canceled") {
+      completedRef.current = true;
       clearPaymentSnapshot();
+      sessionStorage.setItem("flick:alert", "결제가 취소되었습니다");
       router.replace("/products");
     }
   }, [lastEvent, router]);
 
-  const cancelAndGoBackRef = useRef(async () => {});
-
-  cancelAndGoBackRef.current = async () => {
-    if (cancelledRef.current) {
+  useEffect(() => {
+    if (remainingSeconds > 0 || cancelledRef.current || completedRef.current) {
       return;
     }
+    cancelAndGoBackRef.current();
+  }, [remainingSeconds]);
+
+  const cancelAndGoBackRef = useRef(async () => {});
+  cancelAndGoBackRef.current = async () => {
+    if (cancelledRef.current || completedRef.current) return;
     cancelledRef.current = true;
 
     if (token && snapshot?.orderId) {
       try {
         await cancelOrder(token, snapshot.orderId);
-      } catch {
-        /* proceed with local cleanup even if API fails */
+      } catch (error) {
+        console.error("Failed to cancel order:", error);
       }
     }
     clearPaymentSnapshot();
@@ -102,11 +110,32 @@ export default function PaymentPage() {
   };
 
   useEffect(() => {
-    if (remainingSeconds > 0 || cancelledRef.current) {
-      return;
-    }
+    if (snapshot) return;
+    const id = setTimeout(() => {
+      setPageError("결제 정보를 불러올 수 없습니다");
+    }, 10000);
+    return () => clearTimeout(id);
+  }, [snapshot]);
+
+  function handleCancel() {
+    if (!window.confirm("결제를 취소하시겠습니까?")) return;
     cancelAndGoBackRef.current();
-  }, [remainingSeconds]);
+  }
+
+  if (pageError) {
+    return (
+      <main className="flex min-h-dvh flex-col items-center justify-center bg-white px-6">
+        <p className="text-lg font-medium text-slate-900">{pageError}</p>
+        <button
+          type="button"
+          className="mt-4 rounded-xl bg-indigo-600 px-6 py-3 text-base font-bold text-white"
+          onClick={() => router.replace("/products")}
+        >
+          메뉴로 돌아가기
+        </button>
+      </main>
+    );
+  }
 
   if (!snapshot?.code || !snapshot.expiresAt) {
     return (
@@ -129,7 +158,7 @@ export default function PaymentPage() {
       )}
       remainingSeconds={remainingSeconds}
       isConnected={sseStatus === "connected"}
-      onCancel={() => cancelAndGoBackRef.current()}
+      onCancel={handleCancel}
     />
   );
 }
