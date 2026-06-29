@@ -6,8 +6,6 @@ import { getCurrentKiosk } from "@/features/kiosk-pairing/api/pair-kiosk";
 import { clearKioskData, getKioskSession } from "@/shared/model/storage";
 import { SessionRoutingStatus } from "@/widgets/kiosk-routing/ui/session-routing-status";
 
-const bypassKioskAuth = process.env.NEXT_PUBLIC_BYPASS_KIOSK_AUTH === "true";
-
 export default function Home() {
   const router = useRouter();
 
@@ -15,11 +13,6 @@ export default function Home() {
     let active = true;
 
     async function routeBySession() {
-      if (bypassKioskAuth) {
-        router.replace("/products");
-        return;
-      }
-
       const { token } = getKioskSession();
       if (!token) {
         router.replace("/pairing");
