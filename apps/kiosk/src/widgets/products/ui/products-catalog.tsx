@@ -1,5 +1,5 @@
 import type { CartItem } from "@/entities/cart/model/types";
-import type { Booth, Kiosk, Product } from "@/shared/api/types";
+import type { Product } from "@/shared/api/types";
 import { BrandHeader } from "@/shared/ui/brand-header";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Loading } from "@/shared/ui/loading";
@@ -8,13 +8,7 @@ import { ProductCard } from "./product-card";
 import { ProductsAlert } from "./products-alert";
 import { ProductsErrorState } from "./products-error-state";
 
-type KioskContext = {
-  kiosk: Kiosk;
-  booth: Booth;
-};
-
 type ProductsCatalogProps = {
-  context: KioskContext | null;
   products: Product[];
   isLoading: boolean;
   errorMessage: string | null;
@@ -31,7 +25,6 @@ type ProductsCatalogProps = {
 };
 
 export function ProductsCatalog({
-  context,
   products,
   isLoading,
   errorMessage,
@@ -56,18 +49,7 @@ export function ProductsCatalog({
 
   return (
     <main className="flex h-dvh flex-col bg-white">
-      <BrandHeader
-        right={
-          <div className="text-right">
-            <p className="text-sm font-bold text-slate-900">
-              {context?.booth.name}
-            </p>
-            <p className="text-xs font-semibold text-slate-500">
-              {context?.kiosk.name}
-            </p>
-          </div>
-        }
-      />
+      <BrandHeader />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <section className="flex-1 overflow-auto bg-white p-5">
           {errorMessage ? (
