@@ -1,44 +1,51 @@
 "use client";
 
+import { UtensilsCrossed } from "lucide-react";
 import type { Booth } from "@/entities/booth";
 import { useBoothProducts } from "@/entities/product";
-import { Card } from "@/shared/ui";
+import { EmptyState, Skeleton } from "@/shared/ui";
 import { AddProductForm } from "./add-product-form.tsx";
-import { BoothStatusBanner } from "./booth-status-banner.tsx";
-import { LogoutButton } from "./logout-button.tsx";
 import { ProductCard } from "./product-card.tsx";
 
 export function BoothDashboard({ booth }: { booth: Booth }) {
   const products = useBoothProducts(booth.id);
+  const count = products.data?.length ?? 0;
 
   return (
-    <div className="mx-auto max-w-2xl px-5 py-8">
-      <header className="mb-5 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold">{booth.name}</h1>
-          <p className="text-sm text-zinc-500">메뉴 관리</p>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">
+            메뉴 관리
+          </h1>
+          {count > 0 && <span className="text-sm text-muted">{count}</span>}
         </div>
-        <LogoutButton />
-      </header>
-
-      <div className="mb-6">
-        <BoothStatusBanner status={booth.status} />
-      </div>
-
-      <div className="space-y-2">
-        {products.data?.map((product) => (
-          <ProductCard key={product.id} product={product} boothId={booth.id} />
-        ))}
-        {products.data && products.data.length === 0 && (
-          <Card className="text-center text-sm text-zinc-400">
-            아직 등록한 메뉴가 없어요.
-          </Card>
-        )}
-      </div>
-
-      <div className="mt-4">
         <AddProductForm boothId={booth.id} />
       </div>
+
+      {products.isPending ? (
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      ) : products.data && products.data.length > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+          {products.data.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              boothId={booth.id}
+            />
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          icon={<UtensilsCrossed />}
+          title="아직 등록한 메뉴가 없어요"
+          description="첫 메뉴를 추가해 판매를 시작하세요."
+        />
+      )}
     </div>
   );
 }
