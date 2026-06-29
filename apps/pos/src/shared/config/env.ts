@@ -1,14 +1,24 @@
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000/v1";
+import { z } from "zod";
 
-export const DAUTH_AUTHORIZE_URL =
-  process.env.NEXT_PUBLIC_DAUTH_AUTHORIZE_URL ??
-  "https://dauth.b1nd.com/authorize";
+const envSchema = z.object({
+  NEXT_PUBLIC_API_BASE_URL: z.url(),
+  NEXT_PUBLIC_BASE_URL: z.url(),
+  NEXT_PUBLIC_DAUTH_AUTHORIZE_URL: z.url(),
+  NEXT_PUBLIC_DAUTH_CLIENT_ID: z.string().min(1),
+  NEXT_PUBLIC_DAUTH_REDIRECT_URI: z.url(),
+});
 
-export const DAUTH_CLIENT_ID = process.env.NEXT_PUBLIC_DAUTH_CLIENT_ID ?? "";
+const env = envSchema.parse({
+  NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+  NEXT_PUBLIC_DAUTH_AUTHORIZE_URL: process.env.NEXT_PUBLIC_DAUTH_AUTHORIZE_URL,
+  NEXT_PUBLIC_DAUTH_CLIENT_ID: process.env.NEXT_PUBLIC_DAUTH_CLIENT_ID,
+  NEXT_PUBLIC_DAUTH_REDIRECT_URI: process.env.NEXT_PUBLIC_DAUTH_REDIRECT_URI,
+});
 
-export const DAUTH_REDIRECT_URI =
-  process.env.NEXT_PUBLIC_DAUTH_REDIRECT_URI ??
-  "http://localhost:3002/api/auth/callback";
-
+export const API_BASE_URL = env.NEXT_PUBLIC_API_BASE_URL;
+export const BASE_URL = env.NEXT_PUBLIC_BASE_URL;
+export const DAUTH_AUTHORIZE_URL = env.NEXT_PUBLIC_DAUTH_AUTHORIZE_URL;
+export const DAUTH_CLIENT_ID = env.NEXT_PUBLIC_DAUTH_CLIENT_ID;
+export const DAUTH_REDIRECT_URI = env.NEXT_PUBLIC_DAUTH_REDIRECT_URI;
 export const DAUTH_SCOPE = "profile:read";
