@@ -1,6 +1,8 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
+import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
+import { getCorsOrigins } from "./config.ts";
 import { AppError } from "./lib/errors.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { boothsRoutes } from "./routes/booths.ts";
@@ -19,6 +21,16 @@ import { uploadsRoutes } from "./routes/uploads.ts";
 import { usersRoutes } from "./routes/users.ts";
 
 export const app = new OpenAPIHono();
+
+app.use(
+  "*",
+  cors({
+    origin: (origin) => (getCorsOrigins().includes(origin) ? origin : null),
+    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowHeaders: ["Authorization", "Content-Type"],
+    maxAge: 86400,
+  }),
+);
 
 app.onError((err, c) => {
   if (err instanceof AppError) {
