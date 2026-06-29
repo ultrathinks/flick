@@ -11,9 +11,8 @@ import {
   getCartTotalCount,
   updateCartQuantity,
 } from "@/features/cart/model/cart";
-import { getCurrentKiosk } from "@/features/kiosk-pairing/api/pair-kiosk";
 import { ApiError } from "@/shared/api/client";
-import type { Booth, Kiosk, Product } from "@/shared/api/types";
+import type { Product } from "@/shared/api/types";
 import {
   clearKioskData,
   getCartItems,
@@ -24,14 +23,8 @@ import {
 import { useLocalState } from "@/shared/model/use-local-state";
 import { ProductsCatalog } from "@/widgets/products/ui/products-catalog";
 
-type KioskContext = {
-  kiosk: Kiosk;
-  booth: Booth;
-};
-
 export default function ProductsPage() {
   const router = useRouter();
-  const [context, setContext] = useState<KioskContext | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -63,12 +56,8 @@ export default function ProductsPage() {
       }
 
       try {
-        const [currentKiosk, kioskProducts] = await Promise.all([
-          getCurrentKiosk(token),
-          getKioskProducts(token),
-        ]);
+        const kioskProducts = await getKioskProducts(token);
         if (active) {
-          setContext(currentKiosk);
           setProducts(kioskProducts);
           setIsLoading(false);
         }
@@ -105,11 +94,7 @@ export default function ProductsPage() {
     }
 
     try {
-      const [currentKiosk, kioskProducts] = await Promise.all([
-        getCurrentKiosk(token),
-        getKioskProducts(token),
-      ]);
-      setContext(currentKiosk);
+      const kioskProducts = await getKioskProducts(token);
       setProducts(kioskProducts);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
@@ -193,6 +178,7 @@ export default function ProductsPage() {
         code,
         expiresAt: payment.expiresAt,
         totalAmount: order.totalAmount,
+        items: resolvedCartItems,
       });
       router.push("/payment");
     } catch (error) {
@@ -213,7 +199,6 @@ export default function ProductsPage() {
 
   return (
     <ProductsCatalog
-      context={context}
       products={products}
       isLoading={isLoading}
       errorMessage={errorMessage}
