@@ -46,6 +46,13 @@ export function getBootstrapAdminPublicIds(): string[] {
     .filter(Boolean);
 }
 
+export function getCorsOrigins(): string[] {
+  return (process.env.CORS_ORIGIN ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
 export function getS3Config() {
   return {
     endpoint: requireEnv("S3_ENDPOINT"),
