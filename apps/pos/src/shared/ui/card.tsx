@@ -1,12 +1,18 @@
 import type { HTMLAttributes } from "react";
+import { cn } from "@/shared/lib/cn.ts";
 
 export function Card({
-  className = "",
+  className,
+  hover = false,
   ...props
-}: HTMLAttributes<HTMLDivElement>) {
+}: HTMLAttributes<HTMLDivElement> & { hover?: boolean }) {
   return (
     <div
-      className={`rounded-xl border border-zinc-100 bg-white p-4 shadow-sm ${className}`}
+      className={cn(
+        "rounded-[var(--radius-card)] border border-border bg-surface p-4",
+        hover && "transition-colors hover:border-muted/40",
+        className,
+      )}
       {...props}
     />
   );

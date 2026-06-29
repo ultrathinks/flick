@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useCreateBooth } from "@/entities/booth";
-import { Button, Card, Field } from "@/shared/ui";
+import { Button, Card, Field, Textarea } from "@/shared/ui";
 
 export function BoothOnboarding() {
   const [name, setName] = useState("");
@@ -10,9 +10,11 @@ export function BoothOnboarding() {
   const create = useCreateBooth();
 
   return (
-    <div className="mx-auto max-w-md px-5 py-16">
-      <h1 className="mb-2 text-2xl font-bold">부스 등록</h1>
-      <p className="mb-6 text-sm text-zinc-500">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-16">
+      <h1 className="mb-1.5 text-lg font-semibold tracking-tight text-foreground">
+        부스 등록
+      </h1>
+      <p className="mb-5 text-sm text-muted">
         먼저 부스를 등록하세요. 등록 후 관리자 승인을 받아야 판매를 시작할 수
         있어요.
       </p>
@@ -23,10 +25,11 @@ export function BoothOnboarding() {
           onChange={(e) => setName(e.target.value)}
           placeholder="예: 떡볶이 가게"
         />
-        <Field
+        <Textarea
           label="설명 (선택)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          placeholder="부스 소개를 입력하세요"
         />
         <Button
           className="w-full"
@@ -41,7 +44,7 @@ export function BoothOnboarding() {
           {create.isPending ? "등록 중…" : "부스 등록"}
         </Button>
         {create.isError && (
-          <p className="text-sm text-red-600">등록에 실패했어요.</p>
+          <p className="text-sm text-danger">등록에 실패했어요.</p>
         )}
       </Card>
     </div>
