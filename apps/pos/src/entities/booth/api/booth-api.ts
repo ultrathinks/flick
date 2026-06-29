@@ -25,13 +25,3 @@ export function updateBooth(
     json: input,
   });
 }
-
-export function createKioskPairing(
-  boothId: string,
-  name: string,
-): Promise<{ code: string }> {
-  return request(z.object({ code: z.string() }), `booths/${boothId}/kiosks`, {
-    method: "post",
-    json: { name },
-  });
-}
