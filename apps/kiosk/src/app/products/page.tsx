@@ -1,0 +1,203 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import type { CartItem } from "@/entities/cart/model/types";
+import { getKioskProducts } from "@/entities/product/api/products";
+import {
+  addProductToCart,
+  getCartTotalAmount,
+  getCartTotalCount,
+  updateCartQuantity,
+} from "@/features/cart/model/cart";
+import { getCurrentKiosk } from "@/features/kiosk-pairing/api/pair-kiosk";
+import type { Booth, Kiosk, Product } from "@/shared/api/types";
+import {
+  clearKioskData,
+  getCartItems,
+  getKioskSession,
+  setCartItems,
+} from "@/shared/model/storage";
+import { useLocalState } from "@/shared/model/use-local-state";
+import { ProductsCatalog } from "@/widgets/products/ui/products-catalog";
+
+type KioskContext = {
+  kiosk: Kiosk;
+  booth: Booth;
+};
+
+const bypassKioskAuth = process.env.NEXT_PUBLIC_BYPASS_KIOSK_AUTH === "true";
+
+const mockContext: KioskContext = {
+  kiosk: {
+    id: "mock-kiosk",
+    boothId: "mock-booth",
+    name: "개발용 키오스크",
+    revokedAt: null,
+    createdAt: new Date(0).toISOString(),
+  },
+  booth: {
+    id: "mock-booth",
+    name: "개발용 부스",
+    description: null,
+    status: "approved",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  },
+};
+
+const mockProducts: Product[] = [
+  {
+    id: "mock-product-1",
+    boothId: "mock-booth",
+    name: "아이스 아메리카노",
+    description: null,
+    imageUrl: null,
+    price: 2500,
+    stock: 24,
+    status: "available",
+    sortOrder: 1,
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  },
+  {
+    id: "mock-product-2",
+    boothId: "mock-booth",
+    name: "딸기 라떼",
+    description: null,
+    imageUrl: null,
+    price: 3500,
+    stock: 12,
+    status: "available",
+    sortOrder: 2,
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  },
+  {
+    id: "mock-product-3",
+    boothId: "mock-booth",
+    name: "초코 쿠키",
+    description: null,
+    imageUrl: null,
+    price: 1800,
+    stock: 18,
+    status: "available",
+    sortOrder: 3,
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  },
+  {
+    id: "mock-product-4",
+    boothId: "mock-booth",
+    name: "품절 상품",
+    description: null,
+    imageUrl: null,
+    price: 3000,
+    stock: 0,
+    status: "available",
+    sortOrder: 4,
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  },
+];
+
+export default function ProductsPage() {
+  const router = useRouter();
+  const [context, setContext] = useState<KioskContext | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [cartItems, setCartItemsState] = useLocalState<CartItem[]>(
+    getCartItems,
+    setCartItems,
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProducts() {
+      if (bypassKioskAuth) {
+        setContext(mockContext);
+        setProducts(mockProducts);
+        setIsLoading(false);
+        return;
+      }
+
+      const { token } = getKioskSession();
+      if (!token) {
+        router.replace("/pairing");
+        return;
+      }
+
+      try {
+        const [currentKiosk, kioskProducts] = await Promise.all([
+          getCurrentKiosk(token),
+          getKioskProducts(token),
+        ]);
+        if (active) {
+          setContext(currentKiosk);
+          setProducts(kioskProducts);
+          setIsLoading(false);
+        }
+      } catch {
+        clearKioskData();
+        if (active) {
+          router.replace("/pairing");
+        }
+      }
+    }
+
+    loadProducts();
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  const resolvedCartItems = cartItems ?? [];
+  const cartTotalCount = getCartTotalCount(resolvedCartItems);
+  const cartTotalAmount = getCartTotalAmount(resolvedCartItems);
+
+  function handleAddProduct(product: Product) {
+    if (product.stock <= 0) {
+      return;
+    }
+    const currentQuantity =
+      resolvedCartItems.find((item) => item.id === product.id)?.quantity ?? 0;
+    if (currentQuantity >= product.stock) {
+      return;
+    }
+    setCartItemsState((items) => addProductToCart(items, product));
+  }
+
+  function handleClearCart() {
+    setCartItemsState([]);
+  }
+
+  function handleUpdateCartQuantity(productId: string, quantity: number) {
+    if (quantity <= 0) {
+      setCartItemsState((items) => updateCartQuantity(items, productId, 0));
+      return;
+    }
+    const product = products.find((item) => item.id === productId);
+    if (product && quantity > product.stock) {
+      return;
+    }
+    setCartItemsState((items) =>
+      updateCartQuantity(items, productId, quantity),
+    );
+  }
+
+  return (
+    <ProductsCatalog
+      context={context}
+      products={products}
+      isLoading={isLoading}
+      cartItems={resolvedCartItems}
+      cartTotalAmount={cartTotalAmount}
+      cartTotalCount={cartTotalCount}
+      onAddProduct={handleAddProduct}
+      onClearCart={handleClearCart}
+      onUpdateCartQuantity={handleUpdateCartQuantity}
+    />
+  );
+}

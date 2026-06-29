@@ -1,0 +1,93 @@
+import type { CartItem } from "@/entities/cart/model/types";
+import type { Booth, Kiosk, Product } from "@/shared/api/types";
+import { BrandHeader } from "@/shared/ui/brand-header";
+import { EmptyState } from "@/shared/ui/empty-state";
+import { Loading } from "@/shared/ui/loading";
+import { CartPanel } from "./cart-panel";
+import { ProductCard } from "./product-card";
+
+type KioskContext = {
+  kiosk: Kiosk;
+  booth: Booth;
+};
+
+type ProductsCatalogProps = {
+  context: KioskContext | null;
+  products: Product[];
+  isLoading: boolean;
+  cartItems: CartItem[];
+  cartTotalAmount: number;
+  cartTotalCount: number;
+  onAddProduct: (product: Product) => void;
+  onClearCart: () => void;
+  onUpdateCartQuantity: (productId: string, quantity: number) => void;
+};
+
+export function ProductsCatalog({
+  context,
+  products,
+  isLoading,
+  cartItems,
+  cartTotalAmount,
+  cartTotalCount,
+  onAddProduct,
+  onClearCart,
+  onUpdateCartQuantity,
+}: ProductsCatalogProps) {
+  if (isLoading) {
+    return (
+      <main className="min-h-dvh bg-white">
+        <Loading label="상품을 불러오는 중입니다" />
+      </main>
+    );
+  }
+
+  return (
+    <main className="flex h-dvh flex-col bg-white">
+      <BrandHeader
+        right={
+          <div className="text-right">
+            <p className="text-sm font-bold text-slate-900">
+              {context?.booth.name}
+            </p>
+            <p className="text-xs font-semibold text-slate-500">
+              {context?.kiosk.name}
+            </p>
+          </div>
+        }
+      />
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <section className="flex-1 overflow-auto bg-white p-5">
+          {products.length === 0 ? (
+            <EmptyState
+              title="판매 중인 상품이 없습니다"
+              description="부스 관리 화면에서 상품 상태를 확인해주세요"
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  cartQuantity={
+                    cartItems.find((item) => item.id === product.id)
+                      ?.quantity ?? 0
+                  }
+                  onAddProduct={onAddProduct}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+        <CartPanel
+          items={cartItems}
+          products={products}
+          totalAmount={cartTotalAmount}
+          totalCount={cartTotalCount}
+          onClearCart={onClearCart}
+          onUpdateQuantity={onUpdateCartQuantity}
+        />
+      </div>
+    </main>
+  );
+}
