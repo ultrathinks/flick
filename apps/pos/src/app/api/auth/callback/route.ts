@@ -6,7 +6,7 @@ import {
   REFRESH_COOKIE,
 } from "@/shared/auth/cookies";
 import { exchangeDauthCode } from "@/shared/auth/server";
-import { DAUTH_REDIRECT_URI } from "@/shared/config";
+import { BASE_URL, DAUTH_REDIRECT_URI } from "@/shared/config";
 
 const VERIFIER_COOKIE = "flick_pos_verifier";
 const STATE_COOKIE = "flick_pos_state";
@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  const origin = url.origin;
 
   const cookieStore = await cookies();
   const expectedState = cookieStore.get(STATE_COOKIE)?.value;
@@ -25,7 +24,7 @@ export async function GET(request: NextRequest) {
   cookieStore.delete(VERIFIER_COOKIE);
 
   if (!code || !state || !verifier || state !== expectedState) {
-    return NextResponse.redirect(`${origin}/login?error=invalid_request`);
+    return NextResponse.redirect(`${BASE_URL}/login?error=invalid_request`);
   }
 
   try {
@@ -42,8 +41,8 @@ export async function GET(request: NextRequest) {
       ...COOKIE_OPTIONS,
       maxAge: 60 * 60 * 24 * 30,
     });
-    return NextResponse.redirect(`${origin}/`);
+    return NextResponse.redirect(`${BASE_URL}/`);
   } catch {
-    return NextResponse.redirect(`${origin}/login?error=exchange_failed`);
+    return NextResponse.redirect(`${BASE_URL}/login?error=exchange_failed`);
   }
 }
