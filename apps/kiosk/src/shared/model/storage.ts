@@ -1,6 +1,22 @@
-import type { CartItem } from "@/entities/cart/model/types";
-import type { KioskSession } from "@/entities/kiosk/model/types";
-import type { PaymentSnapshot } from "@/entities/payment/model/types";
+type CartItem = {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+};
+
+type KioskSession = {
+  token: string | null;
+};
+
+type PaymentSnapshot = {
+  orderId: string | null;
+  paymentId: string | null;
+  code: string | null;
+  expiresAt: string | null;
+  totalAmount: number;
+  items: CartItem[];
+};
 
 const KIOSK_SESSION_KEY = "flick:kiosk:session";
 const CART_KEY = "flick:kiosk:cart";
