@@ -1,28 +1,50 @@
+import { cva, type VariantProps } from "class-variance-authority";
 import type { ButtonHTMLAttributes } from "react";
+import { cn } from "@/shared/lib/cn.ts";
 
-type Variant = "primary" | "secondary" | "danger" | "ghost";
+const button = cva(
+  "inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-card-sm)] font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:cursor-not-allowed [&_svg]:shrink-0",
+  {
+    variants: {
+      variant: {
+        primary:
+          "bg-brand text-on-brand hover:bg-brand-strong disabled:opacity-50",
+        secondary:
+          "bg-surface-muted text-foreground hover:bg-border disabled:opacity-50",
+        outline:
+          "border border-border bg-surface text-foreground hover:bg-surface-muted disabled:opacity-50",
+        danger:
+          "bg-danger-soft text-danger hover:brightness-95 disabled:opacity-50",
+        ghost: "text-muted hover:bg-surface-muted hover:text-foreground",
+      },
+      size: {
+        sm: "h-8 px-3 text-sm",
+        md: "h-9 px-4 text-sm",
+        lg: "h-10 px-5 text-sm",
+      },
+    },
+    defaultVariants: {
+      variant: "primary",
+      size: "md",
+    },
+  },
+);
 
-const styles: Record<Variant, string> = {
-  primary: "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300",
-  secondary: "bg-zinc-100 text-zinc-800 hover:bg-zinc-200",
-  danger: "bg-red-50 text-red-600 hover:bg-red-100",
-  ghost: "text-zinc-500 hover:text-zinc-800",
-};
-
-interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant;
-}
+interface Props
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof button> {}
 
 export function Button({
-  variant = "primary",
-  className = "",
+  variant,
+  size,
+  className,
   type = "button",
   ...props
 }: Props) {
   return (
     <button
       type={type}
-      className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed ${styles[variant]} ${className}`}
+      className={cn(button({ variant, size }), className)}
       {...props}
     />
   );
