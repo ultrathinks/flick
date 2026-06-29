@@ -13,6 +13,7 @@ const emptyPayment: PaymentSnapshot = {
   code: null,
   expiresAt: null,
   totalAmount: 0,
+  items: [],
 };
 
 function readJson<T>(key: string, fallback: T): T {

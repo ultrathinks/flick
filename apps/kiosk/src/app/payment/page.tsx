@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import type { CartItem } from "@/entities/cart/model/types";
 import { cancelOrder } from "@/entities/order/api/orders";
 import type { PaymentSnapshot } from "@/entities/payment/model/types";
 import { usePaymentSSE } from "@/shared/api/use-payment-sse";
@@ -119,7 +120,13 @@ export default function PaymentPage() {
     <PaymentWaiting
       code={snapshot.code}
       totalAmount={snapshot.totalAmount}
-      items={[] satisfies OrderSummaryItem[]}
+      items={(snapshot.items ?? []).map(
+        (item: CartItem): OrderSummaryItem => ({
+          name: item.name,
+          quantity: item.quantity,
+          totalAmount: item.price * item.quantity,
+        }),
+      )}
       remainingSeconds={remainingSeconds}
       isConnected={sseStatus === "connected"}
       onCancel={() => cancelAndGoBackRef.current()}
