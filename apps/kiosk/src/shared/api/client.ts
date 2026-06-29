@@ -38,6 +38,7 @@ export async function apiRequest<T>(
     },
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
+    signal: AbortSignal.timeout(20000),
   });
 
   if (!response.ok) {
