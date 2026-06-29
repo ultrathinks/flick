@@ -1,6 +1,8 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
+import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
+import { logger } from "hono/logger";
 import { AppError } from "./lib/errors.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { boothsRoutes } from "./routes/booths.ts";
@@ -39,6 +41,9 @@ app.onError((err, c) => {
     500,
   );
 });
+
+app.use("/*", cors());
+app.use("*", logger());
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 
