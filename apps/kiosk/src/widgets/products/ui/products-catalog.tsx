@@ -22,6 +22,7 @@ type ProductsCatalogProps = {
   cartItems: CartItem[];
   cartTotalAmount: number;
   cartTotalCount: number;
+  isCheckingOut: boolean;
   onAddProduct: (product: Product) => void;
   onClearCart: () => void;
   onUpdateCartQuantity: (productId: string, quantity: number) => void;
@@ -38,6 +39,7 @@ export function ProductsCatalog({
   cartItems,
   cartTotalAmount,
   cartTotalCount,
+  isCheckingOut,
   onAddProduct,
   onClearCart,
   onUpdateCartQuantity,
@@ -96,6 +98,7 @@ export function ProductsCatalog({
           products={products}
           totalAmount={cartTotalAmount}
           totalCount={cartTotalCount}
+          isCheckingOut={isCheckingOut}
           onClearCart={onClearCart}
           onUpdateQuantity={onUpdateCartQuantity}
           onCheckout={onCheckout}
