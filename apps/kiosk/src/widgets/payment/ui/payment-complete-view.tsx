@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type PaymentCompleteViewProps = {
   totalAmount: number;
@@ -18,17 +18,19 @@ export function PaymentCompleteView({
   onBackToProducts,
 }: PaymentCompleteViewProps) {
   const [countdown, setCountdown] = useState(10);
+  const onBackToProductsRef = useRef(onBackToProducts);
+  onBackToProductsRef.current = onBackToProducts;
 
   useEffect(() => {
     if (countdown <= 0) {
-      onBackToProducts();
+      onBackToProductsRef.current();
       return;
     }
     const id = window.setTimeout(() => {
       setCountdown((prev) => prev - 1);
     }, 1000);
     return () => window.clearTimeout(id);
-  }, [countdown, onBackToProducts]);
+  }, [countdown]);
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-white px-6">
