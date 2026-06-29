@@ -1,14 +1,50 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { getCurrentKiosk } from "@/features/kiosk-pairing/api/pair-kiosk";
+import { clearKioskData, getKioskSession } from "@/shared/model/storage";
+import { SessionRoutingStatus } from "@/widgets/kiosk-routing/ui/session-routing-status";
+
+const bypassKioskAuth = process.env.NEXT_PUBLIC_BYPASS_KIOSK_AUTH === "true";
+
 export default function Home() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-col items-center gap-4 px-8 text-center">
-        <h1 className="text-4xl font-semibold tracking-tight text-black dark:text-zinc-50">
-          Flick Kiosk
-        </h1>
-        <p className="text-lg text-zinc-600 dark:text-zinc-400">
-          Edit src/app/page.tsx to get started.
-        </p>
-      </main>
-    </div>
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    let active = true;
+
+    async function routeBySession() {
+      if (bypassKioskAuth) {
+        router.replace("/products");
+        return;
+      }
+
+      const { token } = getKioskSession();
+      if (!token) {
+        router.replace("/pairing");
+        return;
+      }
+
+      try {
+        await getCurrentKiosk(token);
+        if (active) {
+          router.replace("/products");
+        }
+      } catch {
+        clearKioskData();
+        if (active) {
+          router.replace("/pairing");
+        }
+      }
+    }
+
+    routeBySession();
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  return <SessionRoutingStatus />;
 }
