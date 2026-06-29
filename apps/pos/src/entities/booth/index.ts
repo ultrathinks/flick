@@ -1,7 +1,6 @@
 export {
   type BoothInput,
   createBooth,
-  createKioskPairing,
   fetchBooths,
   updateBooth,
 } from "./api/booth-api.ts";
