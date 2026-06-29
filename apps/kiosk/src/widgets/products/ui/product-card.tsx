@@ -14,7 +14,6 @@ export function ProductCard({
 }: ProductCardProps) {
   const isSoldOut = product.stock <= 0;
   const isAtStockLimit = cartQuantity >= product.stock;
-  const isDisabled = isSoldOut || isAtStockLimit;
   const inCart = cartQuantity > 0;
 
   return (
@@ -22,9 +21,10 @@ export function ProductCard({
       type="button"
       className={`relative flex h-56 w-full flex-col overflow-hidden rounded-xl border bg-white text-left transition disabled:cursor-not-allowed ${
         inCart ? "border-2 border-indigo-600" : "border-slate-200"
-      } ${isSoldOut ? "opacity-70" : "hover:-translate-y-1 hover:shadow-md"}`}
+      } ${
+        isSoldOut ? "opacity-70" : "hover:-translate-y-1 hover:shadow-md"
+      } ${isAtStockLimit && !isSoldOut ? "bg-slate-50" : ""}`}
       onClick={() => onAddProduct(product)}
-      disabled={isDisabled}
     >
       <div className="relative h-36 w-full bg-slate-200">
         {product.imageUrl ? (
@@ -49,6 +49,11 @@ export function ProductCard({
         {inCart ? (
           <div className="absolute right-2 top-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-indigo-600 px-2 text-sm font-bold text-white">
             {cartQuantity}
+          </div>
+        ) : null}
+        {isAtStockLimit && !isSoldOut ? (
+          <div className="absolute bottom-2 right-2 rounded-full bg-slate-900/70 px-3 py-1 text-xs font-bold text-white">
+            최대
           </div>
         ) : null}
       </div>

@@ -11,6 +11,7 @@ import {
   updateCartQuantity,
 } from "@/features/cart/model/cart";
 import { getCurrentKiosk } from "@/features/kiosk-pairing/api/pair-kiosk";
+import { ApiError } from "@/shared/api/client";
 import type { Booth, Kiosk, Product } from "@/shared/api/types";
 import {
   clearKioskData,
@@ -106,19 +107,32 @@ export default function ProductsPage() {
   const [context, setContext] = useState<KioskContext | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [cartItems, setCartItemsState] = useLocalState<CartItem[]>(
     getCartItems,
     setCartItems,
   );
 
+  function showAlert(message: string) {
+    setAlertMessage(message);
+    window.setTimeout(() => {
+      setAlertMessage(null);
+    }, 3000);
+  }
+
   useEffect(() => {
     let active = true;
 
     async function loadProducts() {
+      setIsLoading(true);
+      setErrorMessage(null);
       if (bypassKioskAuth) {
-        setContext(mockContext);
-        setProducts(mockProducts);
-        setIsLoading(false);
+        if (active) {
+          setContext(mockContext);
+          setProducts(mockProducts);
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -138,10 +152,17 @@ export default function ProductsPage() {
           setProducts(kioskProducts);
           setIsLoading(false);
         }
-      } catch {
-        clearKioskData();
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          clearKioskData();
+          if (active) {
+            router.replace("/pairing");
+          }
+          return;
+        }
         if (active) {
-          router.replace("/pairing");
+          setErrorMessage("상품을 불러올 수 없습니다");
+          setIsLoading(false);
         }
       }
     }
@@ -153,17 +174,55 @@ export default function ProductsPage() {
     };
   }, [router]);
 
+  async function handleRetry() {
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    if (bypassKioskAuth) {
+      setContext(mockContext);
+      setProducts(mockProducts);
+      setIsLoading(false);
+      return;
+    }
+
+    const { token } = getKioskSession();
+    if (!token) {
+      router.replace("/pairing");
+      return;
+    }
+
+    try {
+      const [currentKiosk, kioskProducts] = await Promise.all([
+        getCurrentKiosk(token),
+        getKioskProducts(token),
+      ]);
+      setContext(currentKiosk);
+      setProducts(kioskProducts);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        clearKioskData();
+        router.replace("/pairing");
+        return;
+      }
+      setErrorMessage("상품을 불러올 수 없습니다");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   const resolvedCartItems = cartItems ?? [];
   const cartTotalCount = getCartTotalCount(resolvedCartItems);
   const cartTotalAmount = getCartTotalAmount(resolvedCartItems);
 
   function handleAddProduct(product: Product) {
     if (product.stock <= 0) {
+      showAlert("품절된 상품입니다");
       return;
     }
     const currentQuantity =
       resolvedCartItems.find((item) => item.id === product.id)?.quantity ?? 0;
     if (currentQuantity >= product.stock) {
+      showAlert("재고가 부족합니다");
       return;
     }
     setCartItemsState((items) => addProductToCart(items, product));
@@ -180,6 +239,7 @@ export default function ProductsPage() {
     }
     const product = products.find((item) => item.id === productId);
     if (product && quantity > product.stock) {
+      showAlert("재고가 부족합니다");
       return;
     }
     setCartItemsState((items) =>
@@ -187,17 +247,29 @@ export default function ProductsPage() {
     );
   }
 
+  function handleCheckout() {
+    if (cartTotalCount === 0) {
+      showAlert("상품을 선택해주세요");
+      return;
+    }
+    showAlert("결제 기능 준비 중입니다");
+  }
+
   return (
     <ProductsCatalog
       context={context}
       products={products}
       isLoading={isLoading}
+      errorMessage={errorMessage}
+      alertMessage={alertMessage}
       cartItems={resolvedCartItems}
       cartTotalAmount={cartTotalAmount}
       cartTotalCount={cartTotalCount}
       onAddProduct={handleAddProduct}
       onClearCart={handleClearCart}
       onUpdateCartQuantity={handleUpdateCartQuantity}
+      onCheckout={handleCheckout}
+      onRetry={handleRetry}
     />
   );
 }
