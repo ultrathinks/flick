@@ -5,6 +5,8 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import { Loading } from "@/shared/ui/loading";
 import { CartPanel } from "./cart-panel";
 import { ProductCard } from "./product-card";
+import { ProductsAlert } from "./products-alert";
+import { ProductsErrorState } from "./products-error-state";
 
 type KioskContext = {
   kiosk: Kiosk;
@@ -15,24 +17,32 @@ type ProductsCatalogProps = {
   context: KioskContext | null;
   products: Product[];
   isLoading: boolean;
+  errorMessage: string | null;
+  alertMessage: string | null;
   cartItems: CartItem[];
   cartTotalAmount: number;
   cartTotalCount: number;
   onAddProduct: (product: Product) => void;
   onClearCart: () => void;
   onUpdateCartQuantity: (productId: string, quantity: number) => void;
+  onCheckout: () => void;
+  onRetry: () => void;
 };
 
 export function ProductsCatalog({
   context,
   products,
   isLoading,
+  errorMessage,
+  alertMessage,
   cartItems,
   cartTotalAmount,
   cartTotalCount,
   onAddProduct,
   onClearCart,
   onUpdateCartQuantity,
+  onCheckout,
+  onRetry,
 }: ProductsCatalogProps) {
   if (isLoading) {
     return (
@@ -58,7 +68,9 @@ export function ProductsCatalog({
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <section className="flex-1 overflow-auto bg-white p-5">
-          {products.length === 0 ? (
+          {errorMessage ? (
+            <ProductsErrorState onRetry={onRetry} />
+          ) : products.length === 0 ? (
             <EmptyState
               title="판매 중인 상품이 없습니다"
               description="부스 관리 화면에서 상품 상태를 확인해주세요"
@@ -86,8 +98,10 @@ export function ProductsCatalog({
           totalCount={cartTotalCount}
           onClearCart={onClearCart}
           onUpdateQuantity={onUpdateCartQuantity}
+          onCheckout={onCheckout}
         />
       </div>
+      {alertMessage ? <ProductsAlert message={alertMessage} /> : null}
     </main>
   );
 }

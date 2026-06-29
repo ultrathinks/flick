@@ -9,6 +9,7 @@ type CartPanelProps = {
   totalCount: number;
   onClearCart: () => void;
   onUpdateQuantity: (productId: string, quantity: number) => void;
+  onCheckout: () => void;
 };
 
 export function CartPanel({
@@ -18,6 +19,7 @@ export function CartPanel({
   totalCount,
   onClearCart,
   onUpdateQuantity,
+  onCheckout,
 }: CartPanelProps) {
   return (
     <aside className="flex min-w-80 basis-1/4 flex-col border-l border-slate-100 bg-white">
@@ -63,7 +65,6 @@ export function CartPanel({
                   <button
                     type="button"
                     className="mr-2 min-w-0 flex-1 text-left"
-                    onClick={() => onUpdateQuantity(item.id, 0)}
                   >
                     <h3 className="truncate text-base font-semibold text-slate-900">
                       {item.name}
@@ -76,8 +77,13 @@ export function CartPanel({
                         ({formatMoney(item.price)}/개)
                       </span>
                     </div>
+                    {maxReached ? (
+                      <p className="mt-1 text-xs font-bold text-slate-400">
+                        최대 수량
+                      </p>
+                    ) : null}
                   </button>
-                  <div className="flex items-center">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500 text-lg font-bold leading-none text-white transition hover:bg-indigo-600"
@@ -99,6 +105,13 @@ export function CartPanel({
                       disabled={maxReached}
                     >
                       +
+                    </button>
+                    <button
+                      type="button"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-sm font-black text-red-500 transition hover:bg-red-100"
+                      onClick={() => onUpdateQuantity(item.id, 0)}
+                    >
+                      x
                     </button>
                   </div>
                 </div>
@@ -125,6 +138,7 @@ export function CartPanel({
           type="button"
           className="mt-4 flex w-full items-center justify-center rounded-xl bg-indigo-600 py-4 text-base font-semibold text-white transition hover:bg-indigo-700 disabled:bg-slate-300"
           disabled={items.length === 0}
+          onClick={onCheckout}
         >
           결제하기
         </button>
