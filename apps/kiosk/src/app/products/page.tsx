@@ -29,81 +29,6 @@ type KioskContext = {
   booth: Booth;
 };
 
-const bypassKioskAuth = process.env.NEXT_PUBLIC_BYPASS_KIOSK_AUTH === "true";
-
-const mockContext: KioskContext = {
-  kiosk: {
-    id: "mock-kiosk",
-    boothId: "mock-booth",
-    name: "개발용 키오스크",
-    revokedAt: null,
-    createdAt: new Date(0).toISOString(),
-  },
-  booth: {
-    id: "mock-booth",
-    name: "개발용 부스",
-    description: null,
-    status: "approved",
-    createdAt: new Date(0).toISOString(),
-    updatedAt: new Date(0).toISOString(),
-  },
-};
-
-const mockProducts: Product[] = [
-  {
-    id: "mock-product-1",
-    boothId: "mock-booth",
-    name: "아이스 아메리카노",
-    description: null,
-    imageUrl: null,
-    price: 2500,
-    stock: 24,
-    status: "available",
-    sortOrder: 1,
-    createdAt: new Date(0).toISOString(),
-    updatedAt: new Date(0).toISOString(),
-  },
-  {
-    id: "mock-product-2",
-    boothId: "mock-booth",
-    name: "딸기 라떼",
-    description: null,
-    imageUrl: null,
-    price: 3500,
-    stock: 12,
-    status: "available",
-    sortOrder: 2,
-    createdAt: new Date(0).toISOString(),
-    updatedAt: new Date(0).toISOString(),
-  },
-  {
-    id: "mock-product-3",
-    boothId: "mock-booth",
-    name: "초코 쿠키",
-    description: null,
-    imageUrl: null,
-    price: 1800,
-    stock: 18,
-    status: "available",
-    sortOrder: 3,
-    createdAt: new Date(0).toISOString(),
-    updatedAt: new Date(0).toISOString(),
-  },
-  {
-    id: "mock-product-4",
-    boothId: "mock-booth",
-    name: "품절 상품",
-    description: null,
-    imageUrl: null,
-    price: 3000,
-    stock: 0,
-    status: "available",
-    sortOrder: 4,
-    createdAt: new Date(0).toISOString(),
-    updatedAt: new Date(0).toISOString(),
-  },
-];
-
 export default function ProductsPage() {
   const router = useRouter();
   const [context, setContext] = useState<KioskContext | null>(null);
@@ -130,14 +55,6 @@ export default function ProductsPage() {
     async function loadProducts() {
       setIsLoading(true);
       setErrorMessage(null);
-      if (bypassKioskAuth) {
-        if (active) {
-          setContext(mockContext);
-          setProducts(mockProducts);
-          setIsLoading(false);
-        }
-        return;
-      }
 
       const { token } = getKioskSession();
       if (!token) {
@@ -180,13 +97,6 @@ export default function ProductsPage() {
   async function handleRetry() {
     setIsLoading(true);
     setErrorMessage(null);
-
-    if (bypassKioskAuth) {
-      setContext(mockContext);
-      setProducts(mockProducts);
-      setIsLoading(false);
-      return;
-    }
 
     const { token } = getKioskSession();
     if (!token) {
@@ -260,19 +170,6 @@ export default function ProductsPage() {
     }
 
     setIsCheckingOut(true);
-
-    if (bypassKioskAuth) {
-      setPaymentSnapshot({
-        orderId: "mock-order",
-        paymentId: "mock-payment",
-        code: "mock-kiosk-payment-code-001",
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        totalAmount: cartTotalAmount,
-      });
-      router.push("/payment");
-      setIsCheckingOut(false);
-      return;
-    }
 
     const { token } = getKioskSession();
     if (!token) {

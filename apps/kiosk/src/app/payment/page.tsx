@@ -14,13 +14,6 @@ import { Loading } from "@/shared/ui/loading";
 import type { OrderSummaryItem } from "@/widgets/payment/ui/order-summary-panel";
 import { PaymentWaiting } from "@/widgets/payment/ui/payment-waiting";
 
-const MOCK_ITEMS: OrderSummaryItem[] = [
-  { name: "아이스 아메리카노", quantity: 2, totalAmount: 5000 },
-  { name: "딸기 라떼", quantity: 1, totalAmount: 3500 },
-];
-
-const bypassKioskAuth = process.env.NEXT_PUBLIC_BYPASS_KIOSK_AUTH === "true";
-
 function getRemainingSeconds(expiresAt: string) {
   const timestamp = Date.parse(expiresAt);
   if (Number.isNaN(timestamp)) {
@@ -48,8 +41,8 @@ export default function PaymentPage() {
   const { token } = getKioskSession();
 
   const { status: sseStatus, lastEvent } = usePaymentSSE(
-    !bypassKioskAuth ? (snapshot?.paymentId ?? null) : null,
-    !bypassKioskAuth ? token : null,
+    snapshot?.paymentId ?? null,
+    token,
   );
 
   useEffect(() => {
@@ -96,7 +89,7 @@ export default function PaymentPage() {
     }
     cancelledRef.current = true;
 
-    if (!bypassKioskAuth && token && snapshot?.orderId) {
+    if (token && snapshot?.orderId) {
       try {
         await cancelOrder(token, snapshot.orderId);
       } catch {
@@ -123,24 +116,13 @@ export default function PaymentPage() {
   }
 
   return (
-    <>
-      <PaymentWaiting
-        code={snapshot.code}
-        totalAmount={snapshot.totalAmount}
-        items={MOCK_ITEMS}
-        remainingSeconds={remainingSeconds}
-        isConnected={sseStatus === "connected"}
-        onCancel={() => cancelAndGoBackRef.current()}
-      />
-      {bypassKioskAuth && remainingSeconds > 0 && (
-        <button
-          type="button"
-          className="fixed bottom-6 right-6 z-50 rounded-xl bg-green-500 px-5 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-green-600"
-          onClick={() => router.push("/payment/complete")}
-        >
-          테스트: 결제 완료
-        </button>
-      )}
-    </>
+    <PaymentWaiting
+      code={snapshot.code}
+      totalAmount={snapshot.totalAmount}
+      items={[] satisfies OrderSummaryItem[]}
+      remainingSeconds={remainingSeconds}
+      isConnected={sseStatus === "connected"}
+      onCancel={() => cancelAndGoBackRef.current()}
+    />
   );
 }
