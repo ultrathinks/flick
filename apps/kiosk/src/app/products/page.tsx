@@ -3,7 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { CartItem } from "@/entities/cart/model/types";
-import { createOrder, createOrderPayment } from "@/entities/order/api/orders";
+import {
+  cancelOrder,
+  createOrder,
+  createOrderPayment,
+} from "@/entities/order/api/orders";
 import { getKioskProducts } from "@/entities/product/api/products";
 import {
   addProductToCart,
@@ -17,6 +21,7 @@ import {
   clearKioskData,
   getCartItems,
   getKioskSession,
+  getPaymentSnapshot,
   setCartItems,
   setPaymentSnapshot,
 } from "@/shared/model/storage";
@@ -44,6 +49,24 @@ export default function ProductsPage() {
 
   useEffect(() => {
     let active = true;
+
+    const storedAlert = sessionStorage.getItem("flick:alert");
+    if (storedAlert) {
+      sessionStorage.removeItem("flick:alert");
+      setAlertMessage(storedAlert);
+    }
+
+    const paymentSnapshot = getPaymentSnapshot();
+    if (
+      paymentSnapshot.orderId &&
+      paymentSnapshot.expiresAt &&
+      Date.parse(paymentSnapshot.expiresAt) > Date.now()
+    ) {
+      if (active) {
+        router.replace("/payment");
+      }
+      return;
+    }
 
     async function loadProducts() {
       setIsLoading(true);
@@ -163,6 +186,8 @@ export default function ProductsPage() {
       return;
     }
 
+    let createdOrderId: string | null = null;
+
     try {
       const order = await createOrder(
         token,
@@ -171,6 +196,8 @@ export default function ProductsPage() {
           quantity: item.quantity,
         })),
       );
+      createdOrderId = order.id;
+
       const { payment, code } = await createOrderPayment(token, order.id);
       setPaymentSnapshot({
         orderId: order.id,
@@ -182,6 +209,13 @@ export default function ProductsPage() {
       });
       router.push("/payment");
     } catch (error) {
+      if (createdOrderId) {
+        try {
+          await cancelOrder(token, createdOrderId);
+        } catch {
+          /* cleanup best-effort */
+        }
+      }
       if (error instanceof ApiError && error.status === 401) {
         clearKioskData();
         router.replace("/pairing");
