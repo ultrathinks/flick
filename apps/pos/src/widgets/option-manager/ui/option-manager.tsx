@@ -1,9 +1,10 @@
 "use client";
 
+import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import type { OptionGroup } from "@/entities/option";
 import { useOptionMutations } from "@/entities/option";
-import { Button, Card, Field } from "@/shared/ui";
+import { Badge, Button, Card, Field } from "@/shared/ui";
 
 function ValueRow({
   productId,
@@ -20,22 +21,23 @@ function ValueRow({
 }) {
   const { removeValue } = useOptionMutations(productId);
   return (
-    <div className="flex items-center justify-between py-1.5">
-      <span className="text-sm text-zinc-700">
+    <div className="flex items-center justify-between py-2">
+      <span className="flex items-center gap-2 text-sm text-foreground">
         {name}
         {priceDelta > 0 && (
-          <span className="ml-2 text-xs text-zinc-400">
+          <span className="text-xs text-muted">
             +{priceDelta.toLocaleString()}원
           </span>
         )}
-        {isDefault && <span className="ml-2 text-xs text-blue-500">기본</span>}
+        {isDefault && <Badge tone="brand">기본</Badge>}
       </span>
       <Button
         variant="ghost"
-        className="text-xs"
+        size="sm"
+        aria-label="옵션값 삭제"
         onClick={() => removeValue.mutate(id)}
       >
-        삭제
+        <X className="size-4" />
       </Button>
     </div>
   );
@@ -70,7 +72,7 @@ function AddValue({
         value={price}
         onChange={(e) => setPrice(e.target.value)}
       />
-      <label className="flex items-center gap-1 pb-3 text-xs text-zinc-500">
+      <label className="flex items-center gap-1 pb-3 text-xs text-muted">
         <input
           type="checkbox"
           checked={isDefault}
@@ -79,7 +81,8 @@ function AddValue({
         기본
       </label>
       <Button
-        className="mb-0.5 text-xs"
+        size="sm"
+        className="mb-0.5"
         disabled={!valid || addValue.isPending}
         onClick={() =>
           addValue.mutate(
@@ -94,6 +97,7 @@ function AddValue({
           )
         }
       >
+        <Plus className="size-4" />
         추가
       </Button>
     </div>
@@ -111,21 +115,21 @@ function GroupCard({
   return (
     <Card className="space-y-1">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">
+        <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
           {group.name}
-          <span className="ml-2 text-xs text-zinc-400">
+          <Badge tone={group.required ? "brand" : "neutral"}>
             {group.required ? "필수" : "선택"}
-          </span>
+          </Badge>
         </p>
         <Button
           variant="ghost"
-          className="text-xs"
+          size="sm"
           onClick={() => removeGroup.mutate(group.id)}
         >
           그룹 삭제
         </Button>
       </div>
-      <div className="divide-y divide-zinc-50">
+      <div className="divide-y divide-border">
         {group.values.map((value) => (
           <ValueRow
             key={value.id}
@@ -156,7 +160,7 @@ function AddGroup({ productId }: { productId: string }) {
         onChange={(e) => setName(e.target.value)}
         placeholder="예: 사이즈"
       />
-      <label className="flex items-center gap-1 pb-3 text-xs text-zinc-500">
+      <label className="flex items-center gap-1 pb-3 text-xs text-muted">
         <input
           type="checkbox"
           checked={required}
@@ -165,7 +169,8 @@ function AddGroup({ productId }: { productId: string }) {
         필수
       </label>
       <Button
-        className="mb-0.5 text-xs"
+        size="sm"
+        className="mb-0.5"
         disabled={!name.trim() || addGroup.isPending}
         onClick={() =>
           addGroup.mutate(
@@ -174,6 +179,7 @@ function AddGroup({ productId }: { productId: string }) {
           )
         }
       >
+        <Plus className="size-4" />
         그룹 추가
       </Button>
     </Card>
