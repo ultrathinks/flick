@@ -7,7 +7,7 @@ import {
   persistSession,
   refreshSession,
 } from "@/shared/auth/server";
-import { API_BASE_URL } from "@/shared/config";
+import { API_INTERNAL_BASE_URL } from "@/shared/config";
 
 function unauthorized(): NextResponse {
   return NextResponse.json(
@@ -27,7 +27,7 @@ async function forward(
   }
 
   const search = new URL(request.url).search;
-  const target = `${API_BASE_URL}/${path.join("/")}${search}`;
+  const target = `${API_INTERNAL_BASE_URL}/${path.join("/")}${search}`;
   const body =
     request.method === "GET" || request.method === "HEAD"
       ? undefined
