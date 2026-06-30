@@ -12,7 +12,7 @@ Booth-operator management web app (Next.js 16 App Router + React 19). Operators 
 
 - Dev: `pnpm dev` (port 3002)
 - Build: `pnpm build` (`next build`); lint: `pnpm lint` (uses the root Biome config — no nested config)
-- Env: copy `.env.example`. Needs a registered DAuth client (`NEXT_PUBLIC_DAUTH_CLIENT_ID`) whose redirect URI matches `NEXT_PUBLIC_DAUTH_REDIRECT_URI` and the API's `DAUTH_POS_REDIRECT_URI`.
+- Env: copy `.env.example`. All config is server-side (no `NEXT_PUBLIC_` — nothing is read in client components). Needs a registered DAuth client (`DAUTH_CLIENT_ID`) whose redirect URI matches `DAUTH_REDIRECT_URI` and the API's `DAUTH_POS_REDIRECT_URI`. `BASE_API_URL` is the API URL; `BASE_INTERNAL_API_URL` (optional, falls back to `BASE_API_URL`) is used for server-to-server calls so deployments behind NAT can reach the API over an internal address instead of the public domain.
 
 ## Structure (FSD + App Router)
 
