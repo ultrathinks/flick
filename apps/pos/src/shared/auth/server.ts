@@ -1,5 +1,5 @@
 import type { cookies } from "next/headers";
-import { API_BASE_URL } from "@/shared/config";
+import { API_INTERNAL_BASE_URL } from "@/shared/config";
 import {
   ACCESS_COOKIE,
   COOKIE_OPTIONS,
@@ -16,7 +16,7 @@ export async function exchangeDauthCode(params: {
   codeVerifier: string;
   redirectUri: string;
 }): Promise<SessionTokens> {
-  const response = await fetch(`${API_BASE_URL}/auth/dauth`, {
+  const response = await fetch(`${API_INTERNAL_BASE_URL}/auth/dauth`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
@@ -30,7 +30,7 @@ export async function exchangeDauthCode(params: {
 export async function refreshSession(
   refreshToken: string,
 ): Promise<SessionTokens> {
-  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+  const response = await fetch(`${API_INTERNAL_BASE_URL}/auth/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refreshToken }),
@@ -42,7 +42,7 @@ export async function refreshSession(
 }
 
 export async function revokeSession(accessToken: string): Promise<void> {
-  await fetch(`${API_BASE_URL}/auth/logout`, {
+  await fetch(`${API_INTERNAL_BASE_URL}/auth/logout`, {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
