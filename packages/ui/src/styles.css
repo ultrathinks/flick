@@ -1,0 +1,121 @@
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #f9fafb;
+  --surface: #ffffff;
+  --surface-muted: #f2f4f6;
+  --sidebar: #f9fafb;
+  --border: #e5e8eb;
+  --border-strong: #d1d6db;
+
+  --foreground: #191f28;
+  --foreground-muted: #4e5968;
+  --foreground-subtle: #8b95a1;
+  --foreground-faint: #b0b8c1;
+
+  --brand: #3182f6;
+  --brand-hover: #2272eb;
+  --brand-foreground: #ffffff;
+  --brand-subtle: #e8f3ff;
+
+  --success: #03b26c;
+  --success-subtle: #e7f7f0;
+  --warning: #fe9800;
+  --warning-subtle: #fff3e0;
+  --danger: #f04452;
+  --danger-subtle: #ffeeee;
+
+  --shadow-card: 0 1px 3px rgb(23 31 40 / 0.05), 0 2px 8px rgb(23 31 40 / 0.04);
+}
+
+.dark {
+  --bg: #0f1013;
+  --surface: #17181c;
+  --surface-muted: #202126;
+  --sidebar: #131316;
+  --border: #26272d;
+  --border-strong: #34353c;
+
+  --foreground: #eef0f3;
+  --foreground-muted: #a7adb8;
+  --foreground-subtle: #6b7180;
+  --foreground-faint: #4e535e;
+
+  --brand: #4f8dff;
+  --brand-hover: #6b9dff;
+  --brand-foreground: #ffffff;
+  --brand-subtle: #1a2740;
+
+  --success: #2bd48a;
+  --success-subtle: #10251d;
+  --warning: #ffab35;
+  --warning-subtle: #2a2012;
+  --danger: #ff5c62;
+  --danger-subtle: #2a1416;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-sidebar: var(--sidebar);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-subtle: var(--foreground-subtle);
+  --color-foreground-faint: var(--foreground-faint);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-subtle: var(--brand-subtle);
+
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+
+  --radius-control: 0.875rem;
+  --radius-card-sm: 0.625rem;
+  --radius-card: 1rem;
+  --radius-sheet: 1.25rem;
+
+  --text-display: 1.875rem;
+  --text-display--line-height: 2.5rem;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.9375rem;
+  --text-subtitle: 1.25rem;
+  --text-subtitle--line-height: 1.8125rem;
+  --text-heading: 1.0625rem;
+  --text-heading--line-height: 1.59375rem;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.40625rem;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.21875rem;
+
+  --font-sans:
+    "Pretendard Variable", Pretendard, system-ui, -apple-system,
+    "Apple SD Gothic Neo", "Noto Sans KR", "Tossface", sans-serif;
+
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+html {
+  background: var(--bg);
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
