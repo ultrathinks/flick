@@ -55,7 +55,7 @@ export function AddProductForm({ boothId }: { boothId: string }) {
             value={price}
             onChange={(e) => setPrice(e.target.value)}
           />
-          <label className="flex items-center gap-2 text-sm text-muted">
+          <label className="flex items-center gap-2 text-sm text-foreground-subtle">
             <input
               type="checkbox"
               checked={unlimited}
@@ -78,7 +78,7 @@ export function AddProductForm({ boothId }: { boothId: string }) {
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"
-              className="text-sm text-muted"
+              className="text-sm text-foreground-subtle"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
           </label>
@@ -120,7 +120,7 @@ export function AddProductForm({ boothId }: { boothId: string }) {
             >
               {create.isPending || uploading ? "추가 중…" : "추가"}
             </Button>
-            <Button variant="secondary" onClick={() => setOpen(false)}>
+            <Button variant="neutral" onClick={() => setOpen(false)}>
               취소
             </Button>
           </div>

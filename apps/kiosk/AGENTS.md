@@ -10,3 +10,8 @@ Next 16 differs from older versions — APIs, conventions, and file structure ma
 - Other FSD layers live under `src/`: `shared`, `entities`, `features`, `widgets` — fill in as needed.
 - Import direction is strict: `shared → entities → features → widgets → app`. A lower layer never imports from a higher one, and a layer never imports a sibling slice directly.
 - Import alias: `@/*` → `./src/*`.
+
+## Design
+
+- UI comes from **`@flick/ui`**. Use semantic tokens only — no `slate-*`/`indigo-*`/hex. Kiosk is touch-first: prefer large sizes (`Button size="xl"|"lg"`, big typography). `globals.css` imports `@flick/ui/styles.css` and `@source`s the package.
+- `layout.tsx` loads Pretendard + Tossface via CDN `<link>` and holds the no-flash theme-init script; `ThemeProvider` (`@flick/ui/theme`) wraps the tree. `next.config.ts` sets `transpilePackages: ["@flick/ui"]`.

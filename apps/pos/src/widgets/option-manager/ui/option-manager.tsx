@@ -25,7 +25,7 @@ function ValueRow({
       <span className="flex items-center gap-2 text-sm text-foreground">
         {name}
         {priceDelta > 0 && (
-          <span className="text-xs text-muted">
+          <span className="text-xs text-foreground-subtle">
             +{priceDelta.toLocaleString()}원
           </span>
         )}
@@ -72,7 +72,7 @@ function AddValue({
         value={price}
         onChange={(e) => setPrice(e.target.value)}
       />
-      <label className="flex items-center gap-1 pb-3 text-xs text-muted">
+      <label className="flex items-center gap-1 pb-3 text-xs text-foreground-subtle">
         <input
           type="checkbox"
           checked={isDefault}
@@ -160,7 +160,7 @@ function AddGroup({ productId }: { productId: string }) {
         onChange={(e) => setName(e.target.value)}
         placeholder="예: 사이즈"
       />
-      <label className="flex items-center gap-1 pb-3 text-xs text-muted">
+      <label className="flex items-center gap-1 pb-3 text-xs text-foreground-subtle">
         <input
           type="checkbox"
           checked={required}

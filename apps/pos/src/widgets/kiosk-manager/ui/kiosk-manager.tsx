@@ -26,12 +26,12 @@ function PairingRow({ pairing }: { pairing: KioskPairing }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5">
       <div className="flex min-w-0 items-center gap-2.5">
-        <Monitor className="size-4 shrink-0 text-muted" />
+        <Monitor className="size-4 shrink-0 text-foreground-subtle" />
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-foreground">
             {pairing.kioskName}
           </p>
-          <p className="text-xs text-muted">
+          <p className="text-xs text-foreground-subtle">
             {claimed
               ? `연결됨 · ${formatDate(pairing.claimedAt as string)}`
               : `만료 ${formatDate(pairing.expiresAt)}`}
@@ -102,7 +102,7 @@ function CodeSheet({
     <Sheet open={result !== null} onClose={onClose} title="페어링 코드">
       {result && (
         <div className="space-y-4">
-          <p className="text-sm text-muted">
+          <p className="text-sm text-foreground-subtle">
             키오스크 기기에서 아래 코드를 입력해 연결하세요. 이 코드는 지금만
             확인할 수 있어요.
           </p>
@@ -133,7 +133,9 @@ export function KioskManager({ booth }: { booth: Booth }) {
             키오스크
           </h1>
           {pairings.data && pairings.data.length > 0 && (
-            <span className="text-sm text-muted">{pairings.data.length}</span>
+            <span className="text-sm text-foreground-subtle">
+              {pairings.data.length}
+            </span>
           )}
         </div>
         <Button onClick={() => setCreateOpen(true)}>

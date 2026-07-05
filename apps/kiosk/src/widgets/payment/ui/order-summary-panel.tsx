@@ -1,3 +1,5 @@
+import { Button, Money } from "@flick/ui";
+
 export type OrderSummaryItem = {
   name: string;
   quantity: number;
@@ -10,19 +12,15 @@ type OrderSummaryPanelProps = {
   onCancel: () => void;
 };
 
-function formatMoney(value: number) {
-  return `${value.toLocaleString("ko-KR")}원`;
-}
-
 export function OrderSummaryPanel({
   items,
   totalAmount,
   onCancel,
 }: OrderSummaryPanelProps) {
   return (
-    <aside className="flex w-full flex-col rounded-xl border border-slate-200 bg-white lg:w-[360px]">
-      <div className="border-b border-slate-100 px-5 py-4">
-        <h2 className="text-base font-bold text-slate-900">주문 내역</h2>
+    <aside className="flex w-full flex-col rounded-card border border-border bg-surface lg:w-[360px]">
+      <div className="border-b border-border px-5 py-4">
+        <h2 className="text-heading font-bold text-foreground">주문 내역</h2>
       </div>
       <ul className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
         {items.map((item) => (
@@ -31,33 +29,39 @@ export function OrderSummaryPanel({
             className="flex items-start justify-between gap-2"
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-slate-900">
+              <p className="truncate text-body font-semibold text-foreground">
                 {item.name}
               </p>
-              <p className="mt-0.5 text-xs font-medium text-slate-400">
+              <p className="mt-0.5 text-caption font-medium text-foreground-faint">
                 {item.quantity}개
               </p>
             </div>
-            <p className="shrink-0 text-sm font-bold text-slate-900">
-              {formatMoney(item.totalAmount)}
-            </p>
+            <Money
+              amount={item.totalAmount}
+              className="shrink-0 text-body font-bold text-foreground"
+            />
           </li>
         ))}
       </ul>
-      <div className="border-t border-slate-100 px-5 py-4">
+      <div className="border-t border-border px-5 py-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-slate-500">합계</span>
-          <span className="text-xl font-black text-indigo-600">
-            {formatMoney(totalAmount)}
+          <span className="text-body font-bold text-foreground-subtle">
+            합계
           </span>
+          <Money
+            amount={totalAmount}
+            className="text-title font-black text-brand"
+          />
         </div>
-        <button
-          type="button"
-          className="mt-4 flex w-full items-center justify-center rounded-xl bg-red-500 py-3.5 text-base font-bold text-white transition hover:bg-red-600"
+        <Button
+          variant="danger"
+          size="lg"
+          block
+          className="mt-4"
           onClick={onCancel}
         >
           결제 취소
-        </button>
+        </Button>
       </div>
     </aside>
   );

@@ -14,7 +14,8 @@
       "!**/.expo",
       "!**/expo-env.d.ts",
       "!**/assets",
-      "!**/drizzle"
+      "!**/drizzle",
+      "!**/public/mockServiceWorker.js"
     ]
   },
   "formatter": {
@@ -43,5 +44,20 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "apps/kiosk/src/app/layout.tsx",
+        "apps/pos/src/app/layout.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "security": {
+            "noDangerouslySetInnerHtml": "off"
+          }
+        }
+      }
+    }
+  ]
 }

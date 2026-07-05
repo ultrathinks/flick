@@ -18,7 +18,9 @@ export function BoothDashboard({ booth }: { booth: Booth }) {
           <h1 className="text-lg font-semibold tracking-tight text-foreground">
             메뉴 관리
           </h1>
-          {count > 0 && <span className="text-sm text-muted">{count}</span>}
+          {count > 0 && (
+            <span className="text-sm text-foreground-subtle">{count}</span>
+          )}
         </div>
         <AddProductForm boothId={booth.id} />
       </div>
