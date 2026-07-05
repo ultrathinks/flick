@@ -14,7 +14,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (session.isPending || !session.data) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted">
+      <div className="flex min-h-screen items-center justify-center text-sm text-foreground-subtle">
         불러오는 중…
       </div>
     );

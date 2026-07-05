@@ -1,5 +1,5 @@
 import { useRouter } from "@b1nd/aid-kit/navigation";
-import { Card, Money } from "@/shared/ui";
+import { Button, RollingNumber } from "@flick/ui";
 
 interface BalanceCardProps {
   name: string;
@@ -10,16 +10,19 @@ export const BalanceCard = ({ name, balance }: BalanceCardProps) => {
   const { stack } = useRouter();
 
   return (
-    <Card className="bg-blue-600 text-white">
-      <p className="text-sm text-blue-100">{name}님의 잔액</p>
-      <Money amount={balance} className="mt-1 block text-3xl font-bold" />
-      <button
-        type="button"
+    <div className="rounded-card bg-brand p-5 text-brand-foreground shadow-[var(--shadow-card)]">
+      <p className="text-body text-brand-foreground/70">{name}님의 잔액</p>
+      <RollingNumber
+        value={balance}
+        className="mt-1 block text-display font-bold"
+      />
+      <Button
+        size="sm"
         onClick={() => stack.push("/my-code")}
-        className="mt-4 inline-flex h-9 items-center rounded-full bg-white/15 px-4 text-sm font-semibold text-white active:bg-white/25"
+        className="mt-4 rounded-full bg-white/15 text-brand-foreground hover:bg-white/20 active:bg-white/25"
       >
         충전 코드 보기
-      </button>
-    </Card>
+      </Button>
+    </div>
   );
 };

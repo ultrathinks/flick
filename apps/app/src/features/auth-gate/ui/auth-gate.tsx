@@ -20,14 +20,14 @@ export const AuthGate = ({ children }: AuthGateProps) => {
       ) : (
         <>
           <div className="space-y-2">
-            <h1 className="text-xl font-bold text-zinc-900">
+            <h1 className="text-title font-bold text-foreground">
               로그인이 필요해요
             </h1>
-            <p className="text-sm text-zinc-500">
+            <p className="text-body text-foreground-subtle">
               도담 앱에서 다시 열어 주세요.
             </p>
           </div>
-          <Button fullWidth={false} onClick={retry}>
+          <Button size="lg" onClick={retry}>
             다시 시도
           </Button>
         </>

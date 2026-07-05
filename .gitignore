@@ -4,6 +4,7 @@ dist
 .next
 out
 build
+storybook-static
 *.log
 .DS_Store
 .env

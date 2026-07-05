@@ -24,7 +24,7 @@ export function PaymentWaiting({
 }: PaymentWaitingProps) {
   return (
     <motion.main
-      className="flex min-h-dvh flex-col bg-slate-50"
+      className="flex min-h-dvh flex-col bg-bg"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2 }}
@@ -33,8 +33,8 @@ export function PaymentWaiting({
         right={
           <div className="flex items-center gap-3">
             <div
-              className={`h-2 w-2 rounded-full ${
-                isConnected ? "bg-green-500" : "bg-amber-500"
+              className={`h-2.5 w-2.5 rounded-full ${
+                isConnected ? "bg-success" : "bg-warning"
               }`}
             />
             <PaymentTimer remainingSeconds={remainingSeconds} />
@@ -42,7 +42,7 @@ export function PaymentWaiting({
         }
       />
       <section className="flex flex-1 gap-6 p-6">
-        <div className="flex flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white">
+        <div className="flex flex-1 items-center justify-center rounded-card border border-border bg-surface">
           <QrSection code={code} totalAmount={totalAmount} />
         </div>
         <div className="hidden lg:block">

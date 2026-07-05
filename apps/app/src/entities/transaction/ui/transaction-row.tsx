@@ -1,4 +1,4 @@
-import { Money } from "@/shared/ui";
+import { ListRow, Money } from "@flick/ui";
 import { isIncome, transactionLabel } from "../lib/display.ts";
 import type { Transaction } from "../model/types.ts";
 
@@ -24,25 +24,20 @@ export const TransactionRow = ({
   const income = isIncome(transaction.amount);
 
   return (
-    <button
-      type="button"
+    <ListRow
+      title={transactionLabel(transaction.type)}
+      description={formatDate(transaction.createdAt)}
+      right={
+        <Money
+          amount={transaction.amount}
+          signed
+          className={`text-heading font-semibold ${
+            income ? "text-brand" : "text-foreground"
+          }`}
+        />
+      }
+      withArrow
       onClick={onClick}
-      className="flex w-full items-center justify-between rounded-2xl border border-zinc-100 bg-white px-5 py-3.5 text-left active:bg-zinc-50"
-    >
-      <span>
-        <span className="block text-sm font-medium text-zinc-800">
-          {transactionLabel(transaction.type)}
-        </span>
-        <span className="block text-xs text-zinc-400">
-          {formatDate(transaction.createdAt)}
-        </span>
-      </span>
-      <Money
-        amount={transaction.amount}
-        className={`text-sm font-semibold ${
-          income ? "text-blue-600" : "text-zinc-900"
-        }`}
-      />
-    </button>
+    />
   );
 };

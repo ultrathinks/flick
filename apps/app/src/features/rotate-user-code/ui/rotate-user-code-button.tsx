@@ -5,8 +5,15 @@ export const RotateUserCodeButton = () => {
   const { mutate, isPending } = useRotateUserCode();
 
   return (
-    <Button variant="secondary" onClick={() => mutate()} disabled={isPending}>
-      {isPending ? "재발급 중..." : "코드 재발급"}
+    <Button
+      variant="neutral"
+      size="lg"
+      block
+      onClick={() => mutate()}
+      disabled={isPending}
+      loading={isPending}
+    >
+      코드 재발급
     </Button>
   );
 };

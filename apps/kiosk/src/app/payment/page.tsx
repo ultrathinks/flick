@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@flick/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { CartItem } from "@/entities/cart/model/types";
@@ -124,22 +125,22 @@ export default function PaymentPage() {
 
   if (pageError) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center bg-white px-6">
-        <p className="text-lg font-medium text-slate-900">{pageError}</p>
-        <button
-          type="button"
-          className="mt-4 rounded-xl bg-indigo-600 px-6 py-3 text-base font-bold text-white"
+      <main className="flex min-h-dvh flex-col items-center justify-center bg-bg px-6">
+        <p className="text-subtitle font-medium text-foreground">{pageError}</p>
+        <Button
+          size="lg"
+          className="mt-6"
           onClick={() => router.replace("/products")}
         >
           메뉴로 돌아가기
-        </button>
+        </Button>
       </main>
     );
   }
 
   if (!snapshot?.code || !snapshot.expiresAt) {
     return (
-      <main className="min-h-dvh bg-white">
+      <main className="min-h-dvh bg-bg">
         <Loading label="결제 정보를 불러오는 중입니다" />
       </main>
     );
