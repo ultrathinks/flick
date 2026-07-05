@@ -36,10 +36,10 @@ export function AppShell({
   const current = activeTab(pathname);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-bg">
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-5">
         <div className="flex items-center gap-2">
-          <span className="flex size-6 items-center justify-center rounded-[var(--radius-card-sm)] bg-brand text-on-brand">
+          <span className="flex size-6 items-center justify-center rounded-[var(--radius-card-sm)] bg-brand text-brand-foreground">
             <Store className="size-3.5" />
           </span>
           <span className="text-base font-semibold tracking-tight text-foreground">
@@ -47,7 +47,7 @@ export function AppShell({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden max-w-40 truncate text-sm text-muted sm:block">
+          <span className="hidden max-w-40 truncate text-sm text-foreground-subtle sm:block">
             {booth.name}
           </span>
           <BoothBadge status={booth.status} />
@@ -60,7 +60,7 @@ export function AppShell({
           <nav className="flex flex-col gap-4">
             {SECTIONS.map((section) => (
               <div key={section}>
-                <p className="mb-1 ml-2.5 text-[11px] font-medium uppercase tracking-wide text-muted">
+                <p className="mb-1 ml-2.5 text-[11px] font-medium uppercase tracking-wide text-foreground-subtle">
                   {section}
                 </p>
                 <div className="flex flex-col gap-0.5">
@@ -92,7 +92,7 @@ export function AppShell({
             return (
               <span
                 key={tab.key}
-                className="flex flex-1 cursor-not-allowed flex-col items-center gap-0.5 py-2.5 text-xs font-medium text-muted opacity-40"
+                className="flex flex-1 cursor-not-allowed flex-col items-center gap-0.5 py-2.5 text-xs font-medium text-foreground-subtle opacity-40"
               >
                 <Icon className="size-5" />
                 {tab.shortLabel}
@@ -105,7 +105,7 @@ export function AppShell({
               href={tab.href}
               className={cn(
                 "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium transition-colors",
-                isActive ? "text-brand" : "text-muted",
+                isActive ? "text-brand" : "text-foreground-subtle",
               )}
             >
               <Icon className="size-5" />
@@ -131,7 +131,7 @@ function SidebarItem({
   if (locked) {
     return (
       <span
-        className="flex cursor-not-allowed items-center gap-2.5 rounded-[var(--radius-card-sm)] px-2.5 py-2 text-sm font-medium text-muted opacity-50"
+        className="flex cursor-not-allowed items-center gap-2.5 rounded-[var(--radius-card-sm)] px-2.5 py-2 text-sm font-medium text-foreground-subtle opacity-50"
         title="승인 후 이용할 수 있어요"
       >
         <Icon className="size-4" />
@@ -147,7 +147,7 @@ function SidebarItem({
         "flex items-center gap-2.5 rounded-[var(--radius-card-sm)] px-2.5 py-2 text-sm transition-colors",
         active
           ? "bg-surface-muted font-medium text-foreground"
-          : "font-normal text-muted hover:bg-surface-muted hover:text-foreground",
+          : "font-normal text-foreground-subtle hover:bg-surface-muted hover:text-foreground",
       )}
     >
       <Icon className={cn("size-4", active && "text-brand")} />

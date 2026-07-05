@@ -54,7 +54,9 @@ export function BoothSettings({ booth }: { booth: Booth }) {
         <h1 className="text-lg font-semibold tracking-tight text-foreground">
           부스 설정
         </h1>
-        <p className="mt-0.5 text-sm text-muted">부스 정보를 관리하세요.</p>
+        <p className="mt-0.5 text-sm text-foreground-subtle">
+          부스 정보를 관리하세요.
+        </p>
       </div>
 
       <StatusNote status={booth.status} />
@@ -85,7 +87,7 @@ export function BoothSettings({ booth }: { booth: Booth }) {
           <span className="mb-1.5 block text-[13px] font-medium text-foreground">
             대표 이미지 (선택)
           </span>
-          <label className="flex h-9 w-full cursor-pointer items-center gap-2 rounded-[var(--radius-card-sm)] border border-dashed border-border bg-surface px-3 text-sm text-muted transition-colors hover:border-brand hover:text-foreground">
+          <label className="flex h-9 w-full cursor-pointer items-center gap-2 rounded-[var(--radius-card-sm)] border border-dashed border-border bg-surface px-3 text-sm text-foreground-subtle transition-colors hover:border-brand hover:text-foreground">
             <Upload className="size-4" />
             <span className="truncate">
               {file ? file.name : "이미지 파일 선택"}

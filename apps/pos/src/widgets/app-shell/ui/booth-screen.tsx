@@ -27,7 +27,7 @@ export function BoothScreen({
 
   if (booth.isPending) {
     return (
-      <div className="min-h-screen bg-background px-5 py-6">
+      <div className="min-h-screen bg-bg px-5 py-6">
         <div className="mx-auto w-full max-w-5xl">
           <Skeleton className="h-8 w-40" />
           <div className="mt-6 space-y-3">

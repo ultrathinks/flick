@@ -20,6 +20,11 @@ Booth-operator management web app (Next.js 16 App Router + React 19). Operators 
 - Auth: DAuth Authorization Code + PKCE. `GET /api/auth/login` starts the flow (PKCE verifier/state in short-lived httpOnly cookies); `GET /api/auth/callback` exchanges the code via the API's `POST /v1/auth/dauth` and sets httpOnly session cookies. Tokens are never exposed to client JS.
 - `src/app/api/proxy/[...path]` — same-origin proxy that injects the bearer cookie into Flick API calls and refreshes on 401. The client `ky` instance targets `/api/proxy`.
 
+## Design
+
+- UI comes from **`@flick/ui`** (re-exported via `@/shared/ui`). Use semantic tokens only — no `zinc-*`/hex. `globals.css` imports `@flick/ui/styles.css` and `@source`s the package.
+- `layout.tsx` loads Pretendard + Tossface via CDN `<link>` and holds the no-flash theme-init script; `ThemeProvider` (`@flick/ui/theme`) wraps the tree. `next.config.ts` sets `transpilePackages: ["@flick/ui"]`.
+
 ## Notes
 
 - TS config extends `@flick/typescript-config/nextjs.json`. No nested lockfile/workspace/biome config — use the repo root.

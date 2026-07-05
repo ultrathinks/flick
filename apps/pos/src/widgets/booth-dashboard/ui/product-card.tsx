@@ -30,7 +30,7 @@ export function ProductCard({
             className="object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted">
+          <div className="flex h-full items-center justify-center text-sm text-foreground-subtle">
             이미지 없음
           </div>
         )}
@@ -49,7 +49,7 @@ export function ProductCard({
           <p className="text-sm font-medium tabular-nums text-foreground">
             {product.price.toLocaleString()}원
           </p>
-          <p className="text-xs text-muted">
+          <p className="text-xs text-foreground-subtle">
             {product.stock === null ? "재고 무제한" : `재고 ${product.stock}`}
           </p>
         </div>
@@ -57,13 +57,13 @@ export function ProductCard({
         <div className="mt-auto flex items-center gap-1 border-t border-border pt-2">
           <Link
             href={`/products/${product.id}/options`}
-            className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-card-sm)] px-2.5 text-xs font-medium text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+            className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-card-sm)] px-2.5 text-xs font-medium text-foreground-subtle transition-colors hover:bg-surface-muted hover:text-foreground"
           >
             <Settings2 className="size-3.5" />
             옵션
           </Link>
           <Button
-            variant={soldOut ? "secondary" : "outline"}
+            variant={soldOut ? "neutral" : "outline"}
             size="sm"
             className="ml-auto"
             disabled={update.isPending}
