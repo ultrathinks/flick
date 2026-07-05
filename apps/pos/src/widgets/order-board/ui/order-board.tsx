@@ -26,7 +26,9 @@ function OrderCard({ order }: { order: Order }) {
         <p className="text-sm font-medium tabular-nums text-foreground">
           {order.totalAmount.toLocaleString()}원
         </p>
-        <p className="text-xs text-muted">{formatTime(order.createdAt)}</p>
+        <p className="text-xs text-foreground-subtle">
+          {formatTime(order.createdAt)}
+        </p>
       </div>
       <Badge tone={STATUS_TONE[order.status]}>
         {STATUS_LABEL[order.status]}
@@ -57,7 +59,7 @@ export function OrderBoard({ booth }: { booth: Booth }) {
         <h1 className="text-lg font-semibold tracking-tight text-foreground">
           주문 · 매출
         </h1>
-        <p className="mt-0.5 text-sm text-muted">
+        <p className="mt-0.5 text-sm text-foreground-subtle">
           결제 내역과 매출을 확인하세요.
         </p>
       </div>
@@ -115,13 +117,13 @@ export function OrderBoard({ booth }: { booth: Booth }) {
             <table className="w-full">
               <thead className="border-b border-border">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-foreground-subtle">
                     주문 시각
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-foreground-subtle">
                     결제 금액
                   </th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted">
+                  <th className="px-4 py-2.5 text-right text-xs font-medium text-foreground-subtle">
                     상태
                   </th>
                 </tr>
@@ -132,7 +134,7 @@ export function OrderBoard({ booth }: { booth: Booth }) {
                     key={order.id}
                     className="transition-colors hover:bg-surface-muted/50"
                   >
-                    <td className="px-4 py-2.5 text-[13px] text-muted">
+                    <td className="px-4 py-2.5 text-[13px] text-foreground-subtle">
                       {formatTime(order.createdAt)}
                     </td>
                     <td className="px-4 py-2.5 text-[13px] font-medium tabular-nums text-foreground">

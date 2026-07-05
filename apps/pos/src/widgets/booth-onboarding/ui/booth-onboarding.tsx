@@ -14,7 +14,7 @@ export function BoothOnboarding() {
       <h1 className="mb-1.5 text-lg font-semibold tracking-tight text-foreground">
         부스 등록
       </h1>
-      <p className="mb-5 text-sm text-muted">
+      <p className="mb-5 text-sm text-foreground-subtle">
         먼저 부스를 등록하세요. 등록 후 관리자 승인을 받아야 판매를 시작할 수
         있어요.
       </p>

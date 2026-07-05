@@ -23,10 +23,10 @@ const STATUS_NOTE: Record<
 };
 
 const TONE_CLASS: Record<string, string> = {
-  neutral: "bg-surface-muted text-muted",
-  warning: "bg-warning-soft text-warning",
-  success: "bg-success-soft text-success",
-  danger: "bg-danger-soft text-danger",
+  neutral: "bg-surface-muted text-foreground-subtle",
+  warning: "bg-warning-subtle text-warning",
+  success: "bg-success-subtle text-success",
+  danger: "bg-danger-subtle text-danger",
 };
 
 export function StatusNote({ status }: { status: Booth["status"] }) {
