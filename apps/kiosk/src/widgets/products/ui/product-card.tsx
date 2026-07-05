@@ -1,5 +1,5 @@
+import { Money } from "@flick/ui";
 import type { Product } from "@/shared/api/types";
-import { formatMoney } from "@/shared/lib/format";
 
 type ProductCardProps = {
   product: Product;
@@ -19,14 +19,16 @@ export function ProductCard({
   return (
     <button
       type="button"
-      className={`relative flex h-56 w-full flex-col overflow-hidden rounded-xl border bg-white text-left transition disabled:cursor-not-allowed ${
-        inCart ? "border-2 border-indigo-600" : "border-slate-200"
+      className={`relative flex h-64 w-full flex-col overflow-hidden rounded-card border bg-surface text-left transition disabled:cursor-not-allowed ${
+        inCart ? "border-2 border-brand" : "border-border"
       } ${
-        isSoldOut ? "opacity-70" : "hover:-translate-y-1 hover:shadow-md"
-      } ${isAtStockLimit && !isSoldOut ? "bg-slate-50" : ""}`}
+        isSoldOut
+          ? "opacity-70"
+          : "hover:-translate-y-1 hover:shadow-[var(--shadow-card)]"
+      } ${isAtStockLimit && !isSoldOut ? "bg-surface-muted" : ""}`}
       onClick={() => onAddProduct(product)}
     >
-      <div className="relative h-36 w-full bg-slate-200">
+      <div className="relative h-40 w-full bg-surface-muted">
         {product.imageUrl ? (
           <div
             role="img"
@@ -35,42 +37,41 @@ export function ProductCard({
             style={{ backgroundImage: `url(${product.imageUrl})` }}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm font-bold text-slate-300">
+          <div className="flex h-full w-full items-center justify-center bg-surface-muted text-body font-bold text-foreground-faint">
             Flick
           </div>
         )}
         {isSoldOut ? (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-            <span className="rounded-full bg-black/60 px-4 py-2 text-lg font-bold text-white">
+            <span className="rounded-full bg-black/60 px-4 py-2 text-subtitle font-bold text-white">
               품절
             </span>
           </div>
         ) : null}
         {inCart ? (
-          <div className="absolute right-2 top-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-indigo-600 px-2 text-sm font-bold text-white">
+          <div className="absolute right-2 top-2 flex h-9 min-w-9 items-center justify-center rounded-full bg-brand px-2 text-heading font-bold text-brand-foreground">
             {cartQuantity}
           </div>
         ) : null}
         {isAtStockLimit && !isSoldOut ? (
-          <div className="absolute bottom-2 right-2 rounded-full bg-slate-900/70 px-3 py-1 text-xs font-bold text-white">
+          <div className="absolute bottom-2 right-2 rounded-full bg-black/70 px-3 py-1 text-caption font-bold text-white">
             최대
           </div>
         ) : null}
       </div>
-      <div className="flex flex-1 flex-col justify-between p-3">
-        <h2 className="truncate text-base font-semibold text-slate-900">
+      <div className="flex flex-1 flex-col justify-between p-4">
+        <h2 className="truncate text-subtitle font-semibold text-foreground">
           {product.name}
         </h2>
         <div>
-          <p
-            className={`text-base font-bold ${
-              isSoldOut ? "text-slate-500" : "text-indigo-600"
+          <Money
+            amount={product.price}
+            className={`block text-title font-bold ${
+              isSoldOut ? "text-foreground-subtle" : "text-brand"
             }`}
-          >
-            {formatMoney(product.price)}
-          </p>
+          />
           {!isSoldOut ? (
-            <p className="mt-1 text-xs font-medium text-slate-500">
+            <p className="mt-1 text-body font-medium text-foreground-subtle">
               재고: {product.stock}개
             </p>
           ) : null}
