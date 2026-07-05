@@ -8,8 +8,9 @@ import {
   useConfirmPayment,
 } from "@/features/pay-by-code";
 import { formatSeconds, useCountdown } from "@/shared/lib";
-import { Button, Card, Money, Spinner } from "@/shared/ui";
+import { Button, Card, Money, Screen, Spinner } from "@/shared/ui";
 import { PageHeader } from "@/widgets/page-header";
+import { PaymentComplete } from "./payment-complete.tsx";
 
 const failureMessages: Record<ConfirmFailure, string> = {
   expired: "결제 시간이 만료됐어요. 키오스크에서 코드를 다시 받아 주세요.",
@@ -31,15 +32,10 @@ const PaymentBody = ({ code }: { code: string }) => {
 
   if (done) {
     return (
-      <Card className="flex flex-col items-center gap-3 py-10 text-center">
-        <div className="flex size-14 items-center justify-center rounded-full bg-blue-50 text-2xl">
-          ✓
-        </div>
-        <p className="text-lg font-bold text-zinc-900">결제 완료</p>
-        <Button fullWidth={false} onClick={() => stack.pop()}>
-          확인
-        </Button>
-      </Card>
+      <PaymentComplete
+        amount={view.data?.order.totalAmount ?? 0}
+        onDone={() => stack.pop()}
+      />
     );
   }
 
@@ -54,8 +50,12 @@ const PaymentBody = ({ code }: { code: string }) => {
   if (view.isError || !view.data) {
     return (
       <Card className="space-y-4 py-8 text-center">
-        <p className="text-sm text-zinc-600">{failureMessages.expired}</p>
-        <Button onClick={() => stack.pop()}>다시 스캔하기</Button>
+        <p className="text-body text-foreground-muted">
+          {failureMessages.expired}
+        </p>
+        <Button block size="lg" onClick={() => stack.pop()}>
+          다시 스캔하기
+        </Button>
       </Card>
     );
   }
@@ -67,58 +67,63 @@ const PaymentBody = ({ code }: { code: string }) => {
     <div className="space-y-4">
       <Card>
         <div className="flex items-center justify-between">
-          <p className="font-semibold text-zinc-900">{booth.name}</p>
+          <p className="text-heading font-semibold text-foreground">
+            {booth.name}
+          </p>
           {!expired && (
-            <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium tabular-nums text-zinc-600">
+            <span className="rounded-full bg-surface-muted px-2.5 py-1 text-caption font-medium tabular-nums text-foreground-muted">
               {formatSeconds(remaining)}
             </span>
           )}
         </div>
         <ul className="mt-4 space-y-2">
           {items.map((item) => (
-            <li key={item.id} className="flex justify-between text-sm">
-              <span className="text-zinc-600">
+            <li key={item.id} className="flex justify-between text-body">
+              <span className="text-foreground-muted">
                 {item.name} × {item.quantity}
               </span>
-              <Money amount={item.totalAmount} className="text-zinc-800" />
+              <Money amount={item.totalAmount} className="text-foreground" />
             </li>
           ))}
         </ul>
-        <div className="mt-4 flex justify-between border-t border-zinc-100 pt-4">
-          <span className="font-semibold text-zinc-900">합계</span>
+        <div className="mt-4 flex justify-between border-t border-border pt-4">
+          <span className="text-heading font-semibold text-foreground">
+            합계
+          </span>
           <Money
             amount={order.totalAmount}
-            className="text-lg font-bold text-zinc-900"
+            className="text-title font-bold text-foreground"
           />
         </div>
       </Card>
 
       <Card className="flex justify-between py-3.5">
-        <span className="text-sm text-zinc-500">결제 후 잔액</span>
+        <span className="text-body text-foreground-subtle">결제 후 잔액</span>
         <Money
           amount={balance - order.totalAmount}
-          className="text-sm font-semibold text-zinc-800"
+          className="text-body font-semibold text-foreground"
         />
       </Card>
 
       {failure && (
-        <p className="px-1 text-sm text-red-600">{failureMessages[failure]}</p>
+        <p className="px-1 text-body text-danger">{failureMessages[failure]}</p>
       )}
 
       {expired ? (
-        <Button onClick={() => stack.pop()}>다시 스캔하기</Button>
+        <Button block size="lg" onClick={() => stack.pop()}>
+          다시 스캔하기
+        </Button>
       ) : (
         <Button
+          block
+          size="lg"
           onClick={() => {
             confirm.mutate(undefined, { onSuccess: () => setDone(true) });
           }}
+          loading={confirm.isPending}
           disabled={confirm.isPending || balance < order.totalAmount}
         >
-          {confirm.isPending
-            ? "결제 중..."
-            : balance < order.totalAmount
-              ? "잔액 부족"
-              : "결제하기"}
+          {balance < order.totalAmount ? "잔액 부족" : "결제하기"}
         </Button>
       )}
     </div>
@@ -130,17 +135,17 @@ export const PaymentPage = ({ params }: RouteProps) => {
   const code = raw ? decodeURIComponent(raw) : "";
 
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto bg-zinc-50">
+    <Screen className="flex-1 overflow-y-auto">
       <PageHeader title="결제 확인" back />
       <div className="px-5 pb-6">
         {code ? (
           <PaymentBody code={code} />
         ) : (
-          <Card className="text-center text-sm text-zinc-500">
+          <Card className="text-center text-body text-foreground-subtle">
             잘못된 결제 코드예요.
           </Card>
         )}
       </div>
-    </div>
+    </Screen>
   );
 };

@@ -1,11 +1,9 @@
+import { cn } from "@flick/ui";
 import type { HTMLAttributes } from "react";
 
 export const Screen = ({
-  className = "",
+  className,
   ...props
 }: HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={`flex min-h-full flex-col bg-zinc-50 ${className}`}
-    {...props}
-  />
+  <div className={cn("flex min-h-full flex-col bg-bg", className)} {...props} />
 );
