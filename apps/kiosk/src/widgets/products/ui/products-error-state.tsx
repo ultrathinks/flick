@@ -1,3 +1,6 @@
+import { Button } from "@flick/ui";
+import { TriangleAlert } from "lucide-react";
+
 type ProductsErrorStateProps = {
   onRetry: () => void;
 };
@@ -5,22 +8,18 @@ type ProductsErrorStateProps = {
 export function ProductsErrorState({ onRetry }: ProductsErrorStateProps) {
   return (
     <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-2xl font-black text-red-500">
-        !
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-danger-subtle text-danger">
+        <TriangleAlert className="size-8" strokeWidth={2} />
       </div>
-      <h2 className="mt-4 text-xl font-bold text-red-500">
-        상품을 불러올 수 없습니다
+      <h2 className="mt-4 text-title font-bold text-danger">
+        상품을 불러올 수 없어요
       </h2>
-      <p className="mt-2 text-sm font-medium text-slate-500">
+      <p className="mt-2 text-body font-medium text-foreground-subtle">
         서버 연결 상태를 확인한 뒤 다시 시도해주세요
       </p>
-      <button
-        type="button"
-        className="mt-6 rounded-xl bg-indigo-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-indigo-700"
-        onClick={onRetry}
-      >
+      <Button size="lg" className="mt-6" onClick={onRetry}>
         다시 시도
-      </button>
+      </Button>
     </div>
   );
 }
