@@ -48,6 +48,7 @@
   "overrides": [
     {
       "includes": [
+        "apps/admin/src/app/layout.tsx",
         "apps/kiosk/src/app/layout.tsx",
         "apps/pos/src/app/layout.tsx"
       ],
