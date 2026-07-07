@@ -43,7 +43,10 @@ export async function presignUpload(params: {
   contentType: string;
 }): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
   const config = getS3Config();
-  const extension = EXTENSION_BY_CONTENT_TYPE[params.contentType] ?? "bin";
+  const extension = EXTENSION_BY_CONTENT_TYPE[params.contentType];
+  if (!extension) {
+    throw new Error(`unsupported content type: ${params.contentType}`);
+  }
   const key = `${params.kind}/${params.targetId}/${randomUUID()}.${extension}`;
   const uploadUrl = await getSignedUrl(
     getClient(),
