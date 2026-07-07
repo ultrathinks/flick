@@ -1,8 +1,5 @@
+import { API_BASE_URL } from "@/shared/config/env";
 import type { ApiErrorBody } from "./types";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ??
-  "http://localhost:3000/v1";
 
 export class ApiError extends Error {
   code: string;
