@@ -53,13 +53,6 @@ export function getEncryptionKey(): Buffer {
   return key;
 }
 
-export function getBootstrapAdminPublicIds(): string[] {
-  return (process.env.DAUTH_ADMIN_PUBLIC_IDS ?? "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
 export function getCorsOrigins(): string[] {
   return (process.env.CORS_ORIGIN ?? "")
     .split(",")
