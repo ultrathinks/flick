@@ -204,7 +204,6 @@ describe("payment confirm", () => {
 
 describe("refund", () => {
   it("refunds a paid order once and credits the buyer", async () => {
-    const admin = await createUser({ isAdmin: true });
     const owner = await createUser();
     const buyer = await createUser({ balance: 5000 });
     const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
@@ -225,7 +224,7 @@ describe("refund", () => {
 
     const first = await app.request("/v1/refunds", {
       method: "POST",
-      headers: authHeaders(admin.accessToken),
+      headers: authHeaders(owner.accessToken),
       body: JSON.stringify({ orderId }),
     });
     expect(first.status).toBe(201);
@@ -233,7 +232,7 @@ describe("refund", () => {
 
     const second = await app.request("/v1/refunds", {
       method: "POST",
-      headers: authHeaders(admin.accessToken),
+      headers: authHeaders(owner.accessToken),
       body: JSON.stringify({ orderId }),
     });
     expect(second.status).toBe(400);
