@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   type AuthVariables,
   requireAdmin,
@@ -12,7 +12,6 @@ import {
   orders,
   refunds,
   transactions,
-  userCodes,
   users,
 } from "../db/schema/index.ts";
 import {
@@ -21,7 +20,6 @@ import {
   NotFoundError,
 } from "../lib/errors.ts";
 import { rateLimit } from "../lib/rate-limit.ts";
-import { hashSecret } from "../lib/security.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   refundSchema,
@@ -63,27 +61,21 @@ moneyRoutes.openapi(
   }),
   async (c) => {
     const { code } = c.req.valid("json");
-    const [row] = await getDb()
-      .select({ code: userCodes, user: users })
-      .from(userCodes)
-      .innerJoin(users, eq(userCodes.userId, users.id))
-      .where(
-        and(
-          eq(userCodes.codeHash, hashSecret(code)),
-          isNull(userCodes.revokedAt),
-        ),
-      )
+    const [user] = await getDb()
+      .select()
+      .from(users)
+      .where(eq(users.code, code))
       .limit(1);
-    if (!row || row.code.expiresAt <= new Date()) {
+    if (!user) {
       throw new NotFoundError("user code not found");
     }
     return c.json(
       {
-        userId: row.user.id,
-        name: row.user.name,
-        roles: row.user.roles,
-        studentNumber: row.user.studentNumber,
-        balance: row.user.balance,
+        userId: user.id,
+        name: user.name,
+        roles: user.roles,
+        studentNumber: user.studentNumber,
+        balance: user.balance,
       },
       200,
     );

@@ -15,6 +15,7 @@ export const users = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     dauthPublicId: text("dauth_public_id").notNull().unique(),
+    code: text("code").notNull().unique(),
     username: text("username").notNull(),
     name: text("name").notNull(),
     profileImageUrl: text("profile_image_url"),

@@ -100,7 +100,6 @@ export const meSchema = z
 export const userCodeSchema = z
   .object({
     code: z.string(),
-    expiresAt: z.date(),
   })
   .openapi("UserCode");
 

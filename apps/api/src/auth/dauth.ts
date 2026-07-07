@@ -187,7 +187,11 @@ function toStudentNumber(student: DodamStudent | null): string | null {
   return `${student.grade}${student.room}${String(student.number).padStart(2, "0")}`;
 }
 
-export async function getUserInfo(oauthAccessToken: string): Promise<NewUser> {
+export type DauthProfile = Omit<NewUser, "code">;
+
+export async function getUserInfo(
+  oauthAccessToken: string,
+): Promise<DauthProfile> {
   const response = await fetch(DODAM_USER_INFO_URL, {
     headers: { Authorization: `Bearer ${oauthAccessToken}` },
   });
