@@ -321,30 +321,6 @@ export const transactions = pgTable(
   ],
 );
 
-export const userCodes = pgTable(
-  "user_codes",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    codeHash: text("code_hash").notNull().unique(),
-    codeEncrypted: text("code_encrypted").notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    rotatedAt: timestamp("rotated_at", { withTimezone: true }),
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    index("user_codes_user_id_idx").on(table.userId),
-    uniqueIndex("user_codes_one_active_per_user_idx")
-      .on(table.userId)
-      .where(sql`${table.revokedAt} is null`),
-  ],
-);
-
 export const refunds = pgTable("refunds", {
   id: uuid("id").primaryKey().defaultRandom(),
   orderId: uuid("order_id")

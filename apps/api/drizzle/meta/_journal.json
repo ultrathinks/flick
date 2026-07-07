@@ -29,6 +29,13 @@
       "when": 1783403818691,
       "tag": "0003_third_vargas",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783410502687,
+      "tag": "0004_bitter_the_hunter",
+      "breakpoints": true
     }
   ]
 }

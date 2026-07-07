@@ -43,6 +43,7 @@ describe("GET /v1/users (admin search)", () => {
       .values([
         {
           dauthPublicId: "p-a",
+          code: "code-a",
           username: "kim",
           name: "김철수",
           roles: ["STUDENT"],
@@ -50,6 +51,7 @@ describe("GET /v1/users (admin search)", () => {
         },
         {
           dauthPublicId: "p-b",
+          code: "code-b",
           username: "lee",
           name: "이영희",
           roles: ["STUDENT"],
@@ -84,6 +86,7 @@ describe("GET /v1/users (admin search)", () => {
       .insert(users)
       .values({
         dauthPublicId: "p-c",
+        code: "code-c",
         username: "x",
         name: "plain",
         roles: ["STUDENT"],
@@ -258,6 +261,67 @@ describe("POST /v1/refunds (booth owner only)", () => {
       body: JSON.stringify({ orderId }),
     });
     expect(res.status).toBe(403);
+  });
+});
+
+describe("user code (stable per-user identifier)", () => {
+  it("returns the caller's own code and never rotates it", async () => {
+    const user = await createUser();
+    const first = await app.request("/v1/users/me/code", {
+      headers: authHeaders(user.accessToken),
+    });
+    expect(first.status).toBe(200);
+    expect(await first.json()).toEqual({ code: user.code });
+
+    const second = await app.request("/v1/users/me/code", {
+      headers: authHeaders(user.accessToken),
+    });
+    expect(await second.json()).toEqual({ code: user.code });
+  });
+
+  it("resolves a user by code and credits their balance", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const target = await createUser({ code: "scan-me-123", balance: 1000 });
+
+    const resolved = await app.request("/v1/user-codes/resolve", {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+      body: JSON.stringify({ code: "scan-me-123" }),
+    });
+    expect(resolved.status).toBe(200);
+    const resolvedBody = await resolved.json();
+    expect(resolvedBody.userId).toBe(target.id);
+
+    const charge = await app.request("/v1/charges", {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+      body: JSON.stringify({
+        userId: resolvedBody.userId,
+        amount: 5000,
+        idempotencyKey: "k-1",
+      }),
+    });
+    expect(charge.status).toBe(201);
+    expect(await balanceOf(target.id)).toBe(6000);
+  });
+
+  it("returns 404 for an unknown code", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const res = await app.request("/v1/user-codes/resolve", {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+      body: JSON.stringify({ code: "does-not-exist" }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("rotate endpoint no longer exists", async () => {
+    const user = await createUser();
+    const res = await app.request("/v1/users/me/code/rotate", {
+      method: "POST",
+      headers: authHeaders(user.accessToken),
+    });
+    expect(res.status).toBe(404);
   });
 });
 

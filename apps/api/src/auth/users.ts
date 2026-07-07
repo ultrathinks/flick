@@ -1,18 +1,15 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.ts";
-import {
-  type NewUser,
-  transactions,
-  type User,
-  users,
-} from "../db/schema/index.ts";
+import { transactions, type User, users } from "../db/schema/index.ts";
 import { BASE_GRANT_AMOUNT } from "../lib/constants.ts";
+import { generateSecret } from "../lib/security.ts";
+import type { DauthProfile } from "./dauth.ts";
 
-export async function upsertByDauthId(user: NewUser): Promise<User> {
+export async function upsertByDauthId(user: DauthProfile): Promise<User> {
   return getDb().transaction(async (tx) => {
     const [row] = await tx
       .insert(users)
-      .values(user)
+      .values({ ...user, code: generateSecret(24) })
       .onConflictDoUpdate({
         target: users.dauthPublicId,
         set: {
