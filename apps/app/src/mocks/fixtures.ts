@@ -63,7 +63,6 @@ export const transactions: Transaction[] = [
 
 export const userCode: UserCode = {
   code: "FLICK-4821-9930",
-  expiresAt: "2026-07-05T12:05:00+09:00",
 };
 
 const booth: Booth = {

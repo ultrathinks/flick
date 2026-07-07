@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { getCorsOrigins } from "./config.ts";
 import { AppError } from "./lib/errors.ts";
+import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { boothsRoutes } from "./routes/booths.ts";
 import { kiosksRoutes } from "./routes/kiosks.ts";
@@ -69,6 +70,7 @@ v1.route("/payments", paymentsRoutes);
 v1.route("/", moneyRoutes);
 v1.route("/", payoutsRoutes);
 v1.route("/", statsRoutes);
+v1.route("/", adminRoutes);
 
 const appRoutes = app.route("/v1", v1);
 

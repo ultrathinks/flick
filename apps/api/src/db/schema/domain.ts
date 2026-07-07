@@ -209,6 +209,20 @@ export const orders = pgTable(
     index("orders_booth_id_idx").on(table.boothId),
     index("orders_kiosk_id_idx").on(table.kioskId),
     index("orders_buyer_id_idx").on(table.buyerId),
+    index("orders_created_at_id_idx").on(
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+    index("orders_status_created_at_id_idx").on(
+      table.status,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+    index("orders_booth_created_at_id_idx").on(
+      table.boothId,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
   ],
 );
 
@@ -307,30 +321,6 @@ export const transactions = pgTable(
   ],
 );
 
-export const userCodes = pgTable(
-  "user_codes",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    codeHash: text("code_hash").notNull().unique(),
-    codeEncrypted: text("code_encrypted").notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    rotatedAt: timestamp("rotated_at", { withTimezone: true }),
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    index("user_codes_user_id_idx").on(table.userId),
-    uniqueIndex("user_codes_one_active_per_user_idx")
-      .on(table.userId)
-      .where(sql`${table.revokedAt} is null`),
-  ],
-);
-
 export const refunds = pgTable("refunds", {
   id: uuid("id").primaryKey().defaultRandom(),
   orderId: uuid("order_id")
@@ -380,19 +370,38 @@ export const payouts = pgTable(
   ],
 );
 
-export const auditLogs = pgTable("audit_logs", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  actorId: uuid("actor_id")
-    .notNull()
-    .references(() => users.id),
-  action: text("action").notNull(),
-  targetType: text("target_type").notNull(),
-  targetId: uuid("target_id").notNull(),
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorId: uuid("actor_id")
+      .notNull()
+      .references(() => users.id),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("audit_logs_created_at_id_idx").on(
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+    index("audit_logs_actor_created_at_id_idx").on(
+      table.actorId,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+    index("audit_logs_action_created_at_id_idx").on(
+      table.action,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+  ],
+);
 
 export const boothsRelations = relations(booths, ({ one, many }) => ({
   owner: one(users, { fields: [booths.ownerId], references: [users.id] }),

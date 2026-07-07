@@ -3,7 +3,7 @@ import {
   exchangeAuthorizationCode,
   exchangeDodamToken,
   getUserInfo,
-} from "../auth/dodam.ts";
+} from "../auth/dauth.ts";
 import {
   type AuthVariables,
   extractBearerToken,
@@ -11,12 +11,17 @@ import {
 } from "../auth/middleware.ts";
 import { issueSession, revokeSession, rotateRefresh } from "../auth/session.ts";
 import { upsertByDauthId } from "../auth/users.ts";
+import {
+  type DauthConfig,
+  getAdminDauthConfig,
+  getPosDauthConfig,
+} from "../config.ts";
 import { UnauthorizedError } from "../lib/errors.ts";
 import { rateLimit } from "../lib/rate-limit.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import { sessionSchema } from "../openapi/schemas.ts";
 
-const dodamSchema = z.object({
+const appSchema = z.object({
   token: z.string().min(1),
 });
 
@@ -35,11 +40,11 @@ export const authRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
 authRoutes.openapi(
   createRoute({
     method: "post",
-    path: "/dodam",
+    path: "/app",
     tags: ["auth"],
-    middleware: [rateLimit(20, "auth:dodam")] as const,
+    middleware: [rateLimit(20, "auth:app")] as const,
     request: {
-      body: { content: { "application/json": { schema: dodamSchema } } },
+      body: { content: { "application/json": { schema: appSchema } } },
     },
     responses: {
       200: jsonContent(sessionSchema, "Issued session"),
@@ -57,35 +62,43 @@ authRoutes.openapi(
   },
 );
 
-authRoutes.openapi(
-  createRoute({
-    method: "post",
-    path: "/dauth",
-    tags: ["auth"],
-    middleware: [rateLimit(20, "auth:dauth")] as const,
-    request: {
-      body: { content: { "application/json": { schema: dauthSchema } } },
+function pkceRoute(
+  path: string,
+  rateLimitKey: string,
+  config: () => DauthConfig,
+) {
+  return authRoutes.openapi(
+    createRoute({
+      method: "post",
+      path,
+      tags: ["auth"],
+      middleware: [rateLimit(20, rateLimitKey)] as const,
+      request: {
+        body: { content: { "application/json": { schema: dauthSchema } } },
+      },
+      responses: {
+        200: jsonContent(sessionSchema, "Issued session"),
+        400: errorResponse("Bad request"),
+        401: errorResponse("Unauthorized"),
+        429: errorResponse("Too many requests"),
+      },
+    }),
+    async (c) => {
+      const { code, codeVerifier, redirectUri } = c.req.valid("json");
+      const oauthAccessToken = await exchangeAuthorizationCode(
+        { code, codeVerifier, redirectUri },
+        config(),
+      );
+      const userInfo = await getUserInfo(oauthAccessToken);
+      const user = await upsertByDauthId(userInfo);
+      const session = await issueSession(user.id);
+      return c.json(session, 200);
     },
-    responses: {
-      200: jsonContent(sessionSchema, "Issued session"),
-      400: errorResponse("Bad request"),
-      401: errorResponse("Unauthorized"),
-      429: errorResponse("Too many requests"),
-    },
-  }),
-  async (c) => {
-    const { code, codeVerifier, redirectUri } = c.req.valid("json");
-    const oauthAccessToken = await exchangeAuthorizationCode({
-      code,
-      codeVerifier,
-      redirectUri,
-    });
-    const userInfo = await getUserInfo(oauthAccessToken);
-    const user = await upsertByDauthId(userInfo);
-    const session = await issueSession(user.id);
-    return c.json(session, 200);
-  },
-);
+  );
+}
+
+pkceRoute("/pos", "auth:pos", getPosDauthConfig);
+pkceRoute("/admin", "auth:admin", getAdminDauthConfig);
 
 authRoutes.openapi(
   createRoute({

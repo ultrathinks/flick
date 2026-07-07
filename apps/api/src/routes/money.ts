@@ -1,18 +1,25 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { and, eq, isNull, sql } from "drizzle-orm";
-import { type AuthVariables, requireAdmin } from "../auth/middleware.ts";
+import { and, eq, sql } from "drizzle-orm";
+import {
+  type AuthVariables,
+  requireAdmin,
+  requireAuth,
+} from "../auth/middleware.ts";
 import { getDb } from "../db/index.ts";
 import {
   auditLogs,
+  booths,
   orders,
   refunds,
   transactions,
-  userCodes,
   users,
 } from "../db/schema/index.ts";
-import { BadRequestError, NotFoundError } from "../lib/errors.ts";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../lib/errors.ts";
 import { rateLimit } from "../lib/rate-limit.ts";
-import { hashSecret } from "../lib/security.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   refundSchema,
@@ -54,27 +61,21 @@ moneyRoutes.openapi(
   }),
   async (c) => {
     const { code } = c.req.valid("json");
-    const [row] = await getDb()
-      .select({ code: userCodes, user: users })
-      .from(userCodes)
-      .innerJoin(users, eq(userCodes.userId, users.id))
-      .where(
-        and(
-          eq(userCodes.codeHash, hashSecret(code)),
-          isNull(userCodes.revokedAt),
-        ),
-      )
+    const [user] = await getDb()
+      .select()
+      .from(users)
+      .where(eq(users.code, code))
       .limit(1);
-    if (!row || row.code.expiresAt <= new Date()) {
+    if (!user) {
       throw new NotFoundError("user code not found");
     }
     return c.json(
       {
-        userId: row.user.id,
-        name: row.user.name,
-        roles: row.user.roles,
-        studentNumber: row.user.studentNumber,
-        balance: row.user.balance,
+        userId: user.id,
+        name: user.name,
+        roles: user.roles,
+        studentNumber: user.studentNumber,
+        balance: user.balance,
       },
       200,
     );
@@ -161,7 +162,7 @@ moneyRoutes.openapi(
     path: "/refunds",
     tags: ["money"],
     security: [{ Bearer: [] }],
-    middleware: [requireAdmin] as const,
+    middleware: [requireAuth] as const,
     request: {
       body: { content: { "application/json": { schema: refundBodySchema } } },
     },
@@ -170,17 +171,28 @@ moneyRoutes.openapi(
       400: errorResponse("Bad request"),
       401: errorResponse("Unauthorized"),
       403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
     },
   }),
   async (c) => {
-    const admin = c.get("user");
+    const actor = c.get("user");
     const { orderId, reason } = c.req.valid("json");
     const result = await getDb().transaction(async (tx) => {
       const [order] = await tx
         .select()
         .from(orders)
         .where(eq(orders.id, orderId));
-      if (order?.status !== "paid" || !order.buyerId) {
+      if (!order) {
+        throw new NotFoundError("order not found");
+      }
+      const [booth] = await tx
+        .select({ ownerId: booths.ownerId })
+        .from(booths)
+        .where(eq(booths.id, order.boothId));
+      if (!booth || booth.ownerId !== actor.id) {
+        throw new ForbiddenError();
+      }
+      if (order.status !== "paid" || !order.buyerId) {
         throw new BadRequestError("order is not refundable");
       }
       const [purchase] = await tx
@@ -204,7 +216,7 @@ moneyRoutes.openapi(
           type: "refund",
           orderId,
           paymentId: purchase.paymentId,
-          adminId: admin.id,
+          adminId: actor.id,
           refundedTransactionId: purchase.id,
         })
         .returning();
@@ -226,7 +238,7 @@ moneyRoutes.openapi(
           refundTransactionId: refundTransaction.id,
           amount: order.totalAmount,
           reason,
-          adminId: admin.id,
+          adminId: actor.id,
         })
         .returning();
       await tx
@@ -234,7 +246,7 @@ moneyRoutes.openapi(
         .set({ status: "refunded", refundedAt: new Date() })
         .where(eq(orders.id, orderId));
       await tx.insert(auditLogs).values({
-        actorId: admin.id,
+        actorId: actor.id,
         action: "refund.create",
         targetType: "order",
         targetId: orderId,
