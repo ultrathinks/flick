@@ -622,6 +622,41 @@ describe("menu soft-delete", () => {
   });
 });
 
+describe("booth product visibility", () => {
+  it("hides hidden products from non-owners but shows them to the owner", async () => {
+    const owner = await createUser();
+    const other = await createUser();
+    const { boothId } = await createBoothWithKiosk(owner.id);
+    const availableId = await createProduct(boothId, { price: 1000 });
+    const [hidden] = await getDb()
+      .insert(products)
+      .values({
+        boothId,
+        name: "Secret",
+        price: 2000,
+        stock: 5,
+        status: "hidden",
+      })
+      .returning();
+
+    const ownerRes = await app.request(`/v1/booths/${boothId}/products`, {
+      headers: authHeaders(owner.accessToken),
+    });
+    expect(ownerRes.status).toBe(200);
+    const ownerList = (await ownerRes.json()) as Array<{ id: string }>;
+    expect(ownerList.map((p) => p.id).sort()).toEqual(
+      [availableId, hidden?.id].sort(),
+    );
+
+    const otherRes = await app.request(`/v1/booths/${boothId}/products`, {
+      headers: authHeaders(other.accessToken),
+    });
+    expect(otherRes.status).toBe(200);
+    const otherList = (await otherRes.json()) as Array<{ id: string }>;
+    expect(otherList.map((p) => p.id)).toEqual([availableId]);
+  });
+});
+
 describe("response field exposure", () => {
   it("omits tokenHash from kiosk pairing and kiosk responses", async () => {
     const owner = await createUser();
