@@ -5,6 +5,7 @@ import { getDb } from "../src/db/index.ts";
 import {
   booths,
   payouts,
+  products,
   transactions,
   users,
 } from "../src/db/schema/index.ts";
@@ -32,6 +33,14 @@ async function ledgerOf(userId: string): Promise<number> {
     .from(transactions)
     .where(eq(transactions.userId, userId));
   return row?.total ?? 0;
+}
+
+async function stockOf(productId: string): Promise<number | null> {
+  const [row] = await getDb()
+    .select({ stock: products.stock })
+    .from(products)
+    .where(eq(products.id, productId));
+  return row?.stock ?? null;
 }
 
 beforeAll(() => {
@@ -237,6 +246,61 @@ describe("refund", () => {
     });
     expect(second.status).toBe(400);
     expect(await balanceOf(buyer.id)).toBe(5000);
+  });
+
+  it("restores product stock when refunding", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 5000 });
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 5 });
+    const { orderId, code } = await createOrderWithPayment(
+      boothId,
+      kioskId,
+      productId,
+      { price: 1000, quantity: 2 },
+    );
+    await app.request(`/v1/payment-codes/${code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+    expect(await stockOf(productId)).toBe(3);
+
+    const refund = await app.request("/v1/refunds", {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ orderId }),
+    });
+    expect(refund.status).toBe(201);
+    expect(await stockOf(productId)).toBe(5);
+  });
+
+  it("leaves unlimited (null) stock untouched on refund", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 5000 });
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, {
+      price: 1000,
+      stock: null,
+    });
+    const { orderId, code } = await createOrderWithPayment(
+      boothId,
+      kioskId,
+      productId,
+      { price: 1000 },
+    );
+    await app.request(`/v1/payment-codes/${code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+    expect(await stockOf(productId)).toBeNull();
+
+    const refund = await app.request("/v1/refunds", {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ orderId }),
+    });
+    expect(refund.status).toBe(201);
+    expect(await stockOf(productId)).toBeNull();
   });
 });
 
