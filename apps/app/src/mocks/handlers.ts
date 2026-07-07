@@ -19,7 +19,7 @@ export const handlers = [
   ),
   http.post("/v1/payment-codes/:code/confirm", () => HttpResponse.json(order)),
   http.get("/v1/orders/:id", () => HttpResponse.json(orderWithItems)),
-  http.post("/v1/auth/dodam", () => HttpResponse.json(session)),
+  http.post("/v1/auth/app", () => HttpResponse.json(session)),
   http.post("/v1/auth/refresh", () => HttpResponse.json(session)),
   http.post("/v1/auth/logout", () => new HttpResponse(null, { status: 204 })),
 ];

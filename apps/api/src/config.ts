@@ -15,7 +15,13 @@ export const DODAM_USER_INFO_URL = `${DODAM_API_BASE}/user/me`;
 
 export const DODAM_SCOPE = "profile:read";
 
-export function getDodamConfig() {
+export type DauthConfig = {
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+};
+
+export function getAppDauthConfig(): DauthConfig {
   return {
     clientId: requireEnv("DAUTH_CLIENT_ID"),
     clientSecret: requireEnv("DAUTH_CLIENT_SECRET"),
@@ -23,11 +29,19 @@ export function getDodamConfig() {
   };
 }
 
-export function getDodamPosConfig() {
+export function getPosDauthConfig(): DauthConfig {
   return {
     clientId: requireEnv("DAUTH_POS_CLIENT_ID"),
     clientSecret: requireEnv("DAUTH_POS_CLIENT_SECRET"),
     redirectUri: requireEnv("DAUTH_POS_REDIRECT_URI"),
+  };
+}
+
+export function getAdminDauthConfig(): DauthConfig {
+  return {
+    clientId: requireEnv("DAUTH_ADMIN_CLIENT_ID"),
+    clientSecret: requireEnv("DAUTH_ADMIN_CLIENT_SECRET"),
+    redirectUri: requireEnv("DAUTH_ADMIN_REDIRECT_URI"),
   };
 }
 
