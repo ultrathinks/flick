@@ -13,7 +13,6 @@ export const handlers = [
   http.get("/v1/users/me", () => HttpResponse.json(me)),
   http.get("/v1/users/me/transactions", () => HttpResponse.json(transactions)),
   http.get("/v1/users/me/code", () => HttpResponse.json(userCode)),
-  http.post("/v1/users/me/code/rotate", () => HttpResponse.json(userCode)),
   http.get("/v1/payment-codes/:code", () =>
     HttpResponse.json(paymentCodeView()),
   ),
