@@ -10,7 +10,7 @@
 | # | 주제 | 결정 |
 |---|---|---|
 | 1 | 인증 | auth 라우트를 앱 기준으로 통일(`/auth/app`·`/auth/pos`·`/auth/admin`), config·파일명 리네임, 프론트는 pos 복제+치환 |
-| 2 | 게이트 | `src/middleware.ts`(미로그인 차단) + `(protected)/layout.tsx` 서버 게이트(비-admin 차단). admin 여부는 **DB `isAdmin` 직접 관리** |
+| 2 | 게이트 | `src/proxy.ts`(미로그인 차단, Next 16 규칙) + `(protected)/layout.tsx` 서버 게이트(비-admin 차단). admin 여부는 **DB `isAdmin` 직접 관리** |
 | 3 | 신설 API | `GET /v1/users`·`/orders`·`/audit-logs` — 커서 페이지네이션 + 인덱스 신설 |
 | 4 | 구조/네비 | 좌측 사이드바, admin 로컬 `data-table`, FSD 레이어 |
 | 5 | 화면 | 대시보드·부스승인·주문(조회 전용)·환급(payout)·충전·사용자·감사 7개 |
@@ -79,15 +79,15 @@ DAuth(도담 OAuth)는 앱마다 클라이언트를 따로 발급 → API가 클
 - `roles`(도담 role 복사본)는 권한에 사용 안 함. 권한 신호는 `isAdmin` 단일. admin/일반 2단계.
 
 ### 결정: 미들웨어 + 서버 레이아웃 게이트 (깜빡임 0)
-- **미로그인 차단 = `src/middleware.ts`**: 세션 쿠키 없으면 렌더 진입 전 `/login`.
-  - ⚠️ 위치는 반드시 **`src/middleware.ts`**(프로젝트 src 루트). `src/app/` 안에 두면 실행 안 됨(죽은 코드).
+- **미로그인 차단 = `src/proxy.ts`**: 세션 쿠키 없으면 렌더 진입 전 `/login`.
+  - ⚠️ Next 16에서 `middleware` 규칙은 deprecated → **`proxy.ts`**(함수명 `proxy`). 위치는 프로젝트 `src` 루트(`src/app/` 안 아님). matcher로 login/api/static 제외.
   - ⚠️ **matcher 필수**: `/login`·`/api/*`(특히 `/api/auth/*`·`/api/proxy/*`)·static 제외. 안 하면 로그인/프록시 라우트를 가로채 로그인 자체가 깨짐.
 - **비-admin 차단 = `(protected)/layout.tsx`**(서버 컴포넌트): 쿠키로 `/me` 서버 호출 → `isAdmin=false`면 `redirect('/login?error=forbidden')`. 클라 auth-gate(pos 방식)는 마운트 후 판정=깜빡임이라 불채택.
 
 ### 라우트 구조
 ```
 src/
-  middleware.ts               # 세션 쿠키 없으면 /login (matcher로 login/api/static 제외)
+  proxy.ts                    # 세션 쿠키 없으면 /login (Next 16 규칙, matcher로 login/api/static 제외)
   app/
     login/page.tsx            # 공개 (?error=forbidden 처리)
     (protected)/

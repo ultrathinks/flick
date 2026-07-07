@@ -12,6 +12,7 @@ Flick — pnpm + Turborepo monorepo. Three web frontends (Vite + Next.js) + Hono
 - `apps/app` — customer web app (Vite + React 19, `@b1nd/aid-kit` navigation). See `apps/app/AGENTS.md`.
 - `apps/kiosk` — touch kiosk web app (Next.js 16). See `apps/kiosk/AGENTS.md`.
 - `apps/pos` — booth-operator web app (Next.js 16). See `apps/pos/AGENTS.md`.
+- `apps/admin` — platform-operator back-office web app (Next.js 16). See `apps/admin/AGENTS.md`.
 - `apps/api` — Hono + Drizzle (PostgreSQL) API. See `apps/api/AGENTS.md`.
 - `packages/ui` — shared `@flick/ui` design system: token CSS (`@flick/ui/styles.css`), CVA components, theme provider (`@flick/ui/theme`), Storybook catalog.
 - `packages/typescript-config` — shared `@flick/typescript-config` presets.
