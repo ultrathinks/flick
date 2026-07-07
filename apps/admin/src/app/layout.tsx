@@ -1,3 +1,4 @@
+import { themeInitScript } from "@flick/ui/theme";
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers.tsx";
@@ -25,7 +26,7 @@ export default function RootLayout({
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('flick-theme')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`,
+            __html: themeInitScript(),
           }}
         />
       </head>

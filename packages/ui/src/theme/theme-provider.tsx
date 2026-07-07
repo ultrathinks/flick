@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { DEFAULT_THEME_STORAGE_KEY } from "./theme-script";
 
 export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
@@ -36,7 +37,7 @@ function resolve(theme: Theme): ResolvedTheme {
 
 export function ThemeProvider({
   children,
-  storageKey = "flick-theme",
+  storageKey = DEFAULT_THEME_STORAGE_KEY,
   defaultTheme = "system",
 }: {
   children: ReactNode;
@@ -102,8 +103,4 @@ export function useTheme() {
     throw new Error("useTheme must be used within a ThemeProvider");
   }
   return ctx;
-}
-
-export function themeInitScript(storageKey = "flick-theme") {
-  return `(function(){try{var t=localStorage.getItem('${storageKey}')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
 }
