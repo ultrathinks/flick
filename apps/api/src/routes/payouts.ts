@@ -19,11 +19,7 @@ import {
   ConflictError,
   NotFoundError,
 } from "../lib/errors.ts";
-import {
-  decryptText,
-  encryptText,
-  maskAccountNumber,
-} from "../lib/security.ts";
+import { maskAccountNumber } from "../lib/security.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   maskedPayoutSchema,
@@ -52,9 +48,9 @@ function maskedPayout(row: Payout) {
     userId: row.userId,
     amount: row.amount,
     status: row.status,
-    accountHolder: decryptText(row.accountHolder),
-    bankName: decryptText(row.bankName),
-    accountNumber: maskAccountNumber(decryptText(row.accountNumber)),
+    accountHolder: row.accountHolder,
+    bankName: row.bankName,
+    accountNumber: maskAccountNumber(row.accountNumber),
     paidAt: row.paidAt,
     paidBy: row.paidBy,
     createdAt: row.createdAt,
@@ -140,9 +136,9 @@ payoutsRoutes.openapi(
         .values({
           userId: user.id,
           amount,
-          bankName: encryptText(body.bankName),
-          accountNumber: encryptText(body.accountNumber),
-          accountHolder: encryptText(body.accountHolder),
+          bankName: body.bankName,
+          accountNumber: body.accountNumber,
+          accountHolder: body.accountHolder,
         })
         .onConflictDoNothing()
         .returning();
@@ -225,9 +221,9 @@ payoutsRoutes.openapi(
     });
     return c.json(
       {
-        bankName: decryptText(row.bankName),
-        accountNumber: decryptText(row.accountNumber),
-        accountHolder: decryptText(row.accountHolder),
+        bankName: row.bankName,
+        accountNumber: row.accountNumber,
+        accountHolder: row.accountHolder,
       },
       200,
     );

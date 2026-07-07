@@ -45,14 +45,6 @@ export function getAdminDauthConfig(): DauthConfig {
   };
 }
 
-export function getEncryptionKey(): Buffer {
-  const key = Buffer.from(requireEnv("PAYOUT_ENCRYPTION_KEY"), "base64");
-  if (key.length !== 32) {
-    throw new Error("PAYOUT_ENCRYPTION_KEY must be 32 bytes base64");
-  }
-  return key;
-}
-
 export function getCorsOrigins(): string[] {
   return (process.env.CORS_ORIGIN ?? "")
     .split(",")
