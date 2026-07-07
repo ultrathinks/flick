@@ -217,3 +217,59 @@ export const paymentWithOrderSchema = z
 export const createPaymentSchema = z
   .object({ payment: paymentSchema, code: z.string() })
   .openapi("CreatePayment");
+
+export const adminUserSchema = z
+  .object({
+    id: z.string(),
+    username: z.string(),
+    name: z.string(),
+    profileImageUrl: z.string().nullable(),
+    roles: z.array(z.string()),
+    isAdmin: z.boolean(),
+    studentNumber: z.string().nullable(),
+    balance: z.number(),
+    createdAt: z.date(),
+  })
+  .openapi("AdminUser");
+
+export const adminUserPageSchema = z
+  .object({
+    items: z.array(adminUserSchema),
+    nextCursor: z.string().nullable(),
+  })
+  .openapi("AdminUserPage");
+
+export const adminOrderSchema = z
+  .object({
+    ...orderSchema.shape,
+    boothName: z.string(),
+    buyerName: z.string().nullable(),
+  })
+  .openapi("AdminOrder");
+
+export const adminOrderPageSchema = z
+  .object({
+    items: z.array(adminOrderSchema),
+    nextCursor: z.string().nullable(),
+  })
+  .openapi("AdminOrderPage");
+
+export const auditLogSchema = z
+  .object({
+    id: z.string(),
+    actorId: z.string(),
+    actorName: z.string(),
+    action: z.string(),
+    targetType: z.string(),
+    targetId: z.string(),
+    metadata: z.unknown().nullable(),
+    createdAt: z.date(),
+  })
+  .openapi("AuditLog");
+
+export const auditLogPageSchema = z
+  .object({
+    items: z.array(auditLogSchema),
+    nextCursor: z.string().nullable(),
+  })
+  .openapi("AuditLogPage");
