@@ -209,6 +209,20 @@ export const orders = pgTable(
     index("orders_booth_id_idx").on(table.boothId),
     index("orders_kiosk_id_idx").on(table.kioskId),
     index("orders_buyer_id_idx").on(table.buyerId),
+    index("orders_created_at_id_idx").on(
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+    index("orders_status_created_at_id_idx").on(
+      table.status,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+    index("orders_booth_created_at_id_idx").on(
+      table.boothId,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
   ],
 );
 
@@ -380,19 +394,38 @@ export const payouts = pgTable(
   ],
 );
 
-export const auditLogs = pgTable("audit_logs", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  actorId: uuid("actor_id")
-    .notNull()
-    .references(() => users.id),
-  action: text("action").notNull(),
-  targetType: text("target_type").notNull(),
-  targetId: uuid("target_id").notNull(),
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorId: uuid("actor_id")
+      .notNull()
+      .references(() => users.id),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("audit_logs_created_at_id_idx").on(
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+    index("audit_logs_actor_created_at_id_idx").on(
+      table.actorId,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+    index("audit_logs_action_created_at_id_idx").on(
+      table.action,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+  ],
+);
 
 export const boothsRelations = relations(booths, ({ one, many }) => ({
   owner: one(users, { fields: [booths.ownerId], references: [users.id] }),
