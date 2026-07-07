@@ -16,7 +16,7 @@ export async function exchangeDauthCode(params: {
   codeVerifier: string;
   redirectUri: string;
 }): Promise<SessionTokens> {
-  const response = await fetch(`${API_INTERNAL_BASE_URL}/auth/dauth`, {
+  const response = await fetch(`${API_INTERNAL_BASE_URL}/auth/pos`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),

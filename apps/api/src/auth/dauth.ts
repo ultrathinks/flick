@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import {
+  type DauthConfig,
   DODAM_AUTHORIZE_URL,
   DODAM_CONSENT_URL,
   DODAM_SCOPE,
   DODAM_TOKEN_URL,
   DODAM_USER_INFO_URL,
-  getDodamConfig,
-  getDodamPosConfig,
+  getAppDauthConfig,
 } from "../config.ts";
 import type { NewUser } from "../db/schema/index.ts";
 import { AppError } from "../lib/errors.ts";
@@ -51,7 +51,7 @@ type DodamUserInfoResponse = {
 };
 
 async function authorize(dodamAccessToken: string, state: string) {
-  const config = getDodamConfig();
+  const config = getAppDauthConfig();
   const params = new URLSearchParams({
     response_type: "code",
     client_id: config.clientId,
@@ -76,7 +76,7 @@ async function consent(
   dodamAccessToken: string,
   state: string,
 ): Promise<string> {
-  const config = getDodamConfig();
+  const config = getAppDauthConfig();
   const response = await fetch(DODAM_CONSENT_URL, {
     method: "POST",
     headers: {
@@ -108,7 +108,7 @@ async function consent(
 }
 
 async function exchangeCodeForToken(code: string): Promise<string> {
-  const config = getDodamConfig();
+  const config = getAppDauthConfig();
   const response = await fetch(DODAM_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -141,12 +141,14 @@ export async function exchangeDodamToken(
   return exchangeCodeForToken(code);
 }
 
-export async function exchangeAuthorizationCode(params: {
-  code: string;
-  codeVerifier: string;
-  redirectUri: string;
-}): Promise<string> {
-  const config = getDodamPosConfig();
+export async function exchangeAuthorizationCode(
+  params: {
+    code: string;
+    codeVerifier: string;
+    redirectUri: string;
+  },
+  config: DauthConfig,
+): Promise<string> {
   if (params.redirectUri !== config.redirectUri) {
     throw new DodamError("invalid redirect uri");
   }
