@@ -1,6 +1,5 @@
 import { QRCodeSVG } from "qrcode.react";
 import { useUserCode } from "@/entities/user-code";
-import { RotateUserCodeButton } from "@/features/rotate-user-code";
 import { Card, Screen, Spinner } from "@/shared/ui";
 import { PageHeader } from "@/widgets/page-header";
 
@@ -42,8 +41,6 @@ export const MyCodePage = () => {
             </p>
           )}
         </Card>
-
-        <RotateUserCodeButton />
       </div>
     </Screen>
   );
