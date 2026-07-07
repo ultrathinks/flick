@@ -1,9 +1,10 @@
 import { cookies } from "next/headers";
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/shared/auth/cookies";
 import { revokeSession } from "@/shared/auth/server";
+import { BASE_URL } from "@/shared/config";
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(ACCESS_COOKIE)?.value;
   if (accessToken) {
@@ -13,5 +14,5 @@ export async function POST(request: NextRequest) {
   }
   cookieStore.delete(ACCESS_COOKIE);
   cookieStore.delete(REFRESH_COOKIE);
-  return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
+  return NextResponse.redirect(`${BASE_URL}/login`, { status: 303 });
 }
