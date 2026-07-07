@@ -409,6 +409,9 @@ boothsRoutes.openapi(
       .insert(products)
       .values({ ...c.req.valid("json"), boothId })
       .returning();
+    if (!row) {
+      throw new Error("failed to create product");
+    }
     return c.json(row, 201);
   },
 );
