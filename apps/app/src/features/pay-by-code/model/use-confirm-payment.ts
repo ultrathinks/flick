@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { confirmPaymentCode } from "@/entities/payment";
 import { transactionsQueryKey } from "@/entities/transaction";
 import { meQueryKey } from "@/entities/user";
-import { ApiError, isApiError } from "@/shared/api";
+import { isApiError } from "@/shared/api";
 
 export type ConfirmFailure =
   | "expired"
@@ -38,8 +38,7 @@ export function useConfirmPayment(code: string) {
 
   return useMutation({
     mutationFn: () => confirmPaymentCode(code),
-    retry: (failureCount, error) =>
-      failureCount < 1 && !(error instanceof ApiError),
+    retry: false,
     onSuccess: () => {
       send(Actions.HAPTIC, { style: "success" });
       void queryClient.invalidateQueries({ queryKey: meQueryKey });

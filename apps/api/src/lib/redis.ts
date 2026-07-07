@@ -1,11 +1,19 @@
 import { Redis } from "ioredis";
+import { isProduction } from "../config.ts";
 
 let client: Redis | null | undefined;
 
 export function getRedis(): Redis | null {
   if (client === undefined) {
     const url = process.env.REDIS_URL;
-    client = url ? new Redis(url, { maxRetriesPerRequest: 2 }) : null;
+    if (!url) {
+      if (isProduction()) {
+        throw new Error("REDIS_URL is required in production");
+      }
+      client = null;
+    } else {
+      client = new Redis(url, { maxRetriesPerRequest: 2 });
+    }
   }
   return client;
 }

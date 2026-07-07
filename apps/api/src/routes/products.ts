@@ -58,6 +58,9 @@ productsRoutes.openapi(
       .set({ ...c.req.valid("json"), updatedAt: new Date() })
       .where(eq(products.id, productId))
       .returning();
+    if (!row) {
+      throw new NotFoundError("product not found");
+    }
     return c.json(row, 200);
   },
 );

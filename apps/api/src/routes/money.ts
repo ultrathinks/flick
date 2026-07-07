@@ -9,7 +9,9 @@ import { getDb } from "../db/index.ts";
 import {
   auditLogs,
   booths,
+  orderItems,
   orders,
+  products,
   refunds,
   transactions,
   users,
@@ -241,6 +243,24 @@ moneyRoutes.openapi(
           adminId: actor.id,
         })
         .returning();
+      const refundedItems = await tx
+        .select({
+          productId: orderItems.productId,
+          quantity: orderItems.quantity,
+        })
+        .from(orderItems)
+        .where(eq(orderItems.orderId, orderId));
+      for (const item of refundedItems) {
+        await tx
+          .update(products)
+          .set({ stock: sql<number>`${products.stock} + ${item.quantity}` })
+          .where(
+            and(
+              eq(products.id, item.productId),
+              sql`${products.stock} is not null`,
+            ),
+          );
+      }
       await tx
         .update(orders)
         .set({ status: "refunded", refundedAt: new Date() })

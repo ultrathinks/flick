@@ -5,7 +5,7 @@ Hono API with Drizzle ORM over node-postgres. ESM (`"type": "module"`).
 ## Run
 
 - Infra up (repo root): `docker compose up -d` (Postgres host 5432, Redis host 6379)
-- Env: copy `apps/api/.env.example` and fill values; `PAYOUT_ENCRYPTION_KEY` must be 32-byte base64. `REDIS_URL` optional (rate limit falls back to in-memory when unset).
+- Env: copy `apps/api/.env.example` and fill values. `REDIS_URL` optional (rate limit falls back to in-memory when unset).
 - Dev (watch): `pnpm dev` (tsx)
 - Build: `pnpm build` (tsc → `dist/`); start: `pnpm start`
 - Migrations: `pnpm db:generate` then `pnpm db:migrate` (drizzle-kit)
