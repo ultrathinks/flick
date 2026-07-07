@@ -1,5 +1,4 @@
 import { sql } from "drizzle-orm";
-import { getBootstrapAdminPublicIds } from "../config.ts";
 import { getDb } from "../db/index.ts";
 import {
   type NewUser,
@@ -9,16 +8,11 @@ import {
 } from "../db/schema/index.ts";
 import { BASE_GRANT_AMOUNT } from "../lib/constants.ts";
 
-function isBootstrapAdmin(dauthPublicId: string): boolean {
-  return getBootstrapAdminPublicIds().includes(dauthPublicId);
-}
-
 export async function upsertByDauthId(user: NewUser): Promise<User> {
-  const admin = isBootstrapAdmin(user.dauthPublicId);
   return getDb().transaction(async (tx) => {
     const [row] = await tx
       .insert(users)
-      .values({ ...user, isAdmin: admin })
+      .values(user)
       .onConflictDoUpdate({
         target: users.dauthPublicId,
         set: {
@@ -27,7 +21,6 @@ export async function upsertByDauthId(user: NewUser): Promise<User> {
           profileImageUrl: user.profileImageUrl,
           roles: user.roles,
           studentNumber: user.studentNumber,
-          isAdmin: admin ? true : sql`${users.isAdmin}`,
           updatedAt: new Date(),
         },
       })
