@@ -2,7 +2,6 @@ import { Router } from "@b1nd/aid-kit/navigation";
 import { installSessionAuth } from "@/entities/session";
 import { AuthGate } from "@/features/auth-gate";
 import { installBridgeMock } from "@/shared/lib";
-import { BottomTabBar } from "@/widgets/bottom-tab-bar";
 import { resetRouterStack } from "./lib/reset-router-stack.ts";
 import { Providers } from "./providers";
 import { routes } from "./routes";
@@ -18,7 +17,6 @@ export const App = () => (
         <div className="relative flex-1 overflow-hidden">
           <Router routes={routes} />
         </div>
-        <BottomTabBar />
       </div>
     </AuthGate>
   </Providers>

@@ -3,4 +3,4 @@ export {
   classifyConfirmFailure,
   useConfirmPayment,
 } from "./model/use-confirm-payment.ts";
-export { PayByCode } from "./ui/pay-by-code.tsx";
+export { usePayByCode } from "./model/use-pay-by-code.ts";

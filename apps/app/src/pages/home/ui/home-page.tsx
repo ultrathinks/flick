@@ -1,29 +1,23 @@
 import { useRouter } from "@b1nd/aid-kit/navigation";
 import { TransactionRow, useMyTransactions } from "@/entities/transaction";
 import { useMe } from "@/entities/user";
-import {
-  Button,
-  Card,
-  QueryState,
-  Screen,
-  SectionHeader,
-  Skeleton,
-} from "@/shared/ui";
+import { Button, Card, QueryState, Screen, Skeleton } from "@/shared/ui";
 import { BalanceCard } from "@/widgets/balance-card";
-import { PageHeader } from "@/widgets/page-header";
 
 export const HomePage = () => {
-  const { stack, tab } = useRouter();
+  const { stack } = useRouter();
   const me = useMe();
   const transactions = useMyTransactions();
-  const recent = transactions.data?.slice(0, 5) ?? [];
+  const list = transactions.data ?? [];
 
   return (
     <Screen className="flex-1 overflow-y-auto">
-      <PageHeader title="Flick" />
-      <div className="space-y-6 px-5 pb-6 pt-2">
+      <div className="mx-auto w-full max-w-md space-y-6 px-5 pb-10 pt-6">
         {me.isPending ? (
-          <Skeleton className="h-40 rounded-card" />
+          <div className="space-y-4">
+            <Skeleton className="aspect-[1.586/1] w-full rounded-card" />
+            <Skeleton className="h-[72px] rounded-card" />
+          </div>
         ) : me.isError || !me.data ? (
           <Card className="flex items-center justify-between gap-3">
             <span className="text-body text-foreground-subtle">
@@ -34,28 +28,17 @@ export const HomePage = () => {
             </Button>
           </Card>
         ) : (
-          <BalanceCard name={me.data.name} balance={me.data.balance} />
+          <BalanceCard balance={me.data.balance} />
         )}
 
-        <div>
-          <SectionHeader
-            title="최근 거래"
-            action={
-              recent.length > 0 ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => tab.move("/transactions")}
-                >
-                  전체 보기
-                </Button>
-              ) : undefined
-            }
-          />
+        <section>
+          <h2 className="mb-2 px-1 text-heading font-bold text-foreground">
+            최근 거래
+          </h2>
           <QueryState
             isPending={transactions.isPending}
             isError={transactions.isError}
-            isEmpty={recent.length === 0}
+            isEmpty={list.length === 0}
             onRetry={() => transactions.refetch()}
             loading={
               <div className="space-y-2 rounded-card border border-border bg-surface p-4">
@@ -71,7 +54,7 @@ export const HomePage = () => {
             }
           >
             <div className="divide-y divide-border rounded-card border border-border bg-surface px-4">
-              {recent.map((tx) => (
+              {list.map((tx) => (
                 <TransactionRow
                   key={tx.id}
                   transaction={tx}
@@ -84,7 +67,7 @@ export const HomePage = () => {
               ))}
             </div>
           </QueryState>
-        </div>
+        </section>
       </div>
     </Screen>
   );

@@ -5,7 +5,7 @@ interface BridgeRequest {
   payload?: unknown;
 }
 
-type MockResponder = (request: BridgeRequest) => unknown;
+type MockResponder = (request: BridgeRequest) => object;
 
 const responders: Record<string, MockResponder> = {
   HAPTIC: () => ({}),
@@ -16,13 +16,13 @@ const responders: Record<string, MockResponder> = {
   },
 };
 
-function dispatchResponse(request: BridgeRequest, data: unknown): void {
+function dispatchResponse(request: BridgeRequest, data: object): void {
   const response = {
     id: request.id,
     type: request.type,
     timestamp: Date.now(),
     success: true,
-    data,
+    ...data,
   };
   window.dispatchEvent(
     new MessageEvent("message", { data: JSON.stringify(response) }),
