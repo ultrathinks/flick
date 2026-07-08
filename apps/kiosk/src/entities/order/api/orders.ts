@@ -27,3 +27,10 @@ export function createOrderPayment(token: string, orderId: string) {
     { token, method: "POST" },
   );
 }
+
+export function fetchPayment(token: string, paymentId: string) {
+  return apiRequest<{ payment: Payment; order: Order }>(
+    `/payments/${paymentId}`,
+    { token },
+  );
+}

@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CartItem } from "@/entities/cart/model/types";
-import { cancelOrder } from "@/entities/order/api/orders";
+import { cancelOrder, fetchPayment } from "@/entities/order/api/orders";
 import type { PaymentSnapshot } from "@/entities/payment/model/types";
 import { usePaymentSSE } from "@/shared/api/use-payment-sse";
 import {
@@ -70,23 +70,46 @@ export default function PaymentPage() {
     return () => window.clearInterval(intervalId);
   }, [snapshot?.expiresAt]);
 
+  const resolvePayment = useCallback(
+    (event: string) => {
+      if (completedRef.current) return;
+      if (event === "completed") {
+        completedRef.current = true;
+        router.push("/payment/complete");
+        return;
+      }
+      if (event === "expired" || event === "canceled") {
+        completedRef.current = true;
+        clearPaymentSnapshot();
+        sessionStorage.setItem("flick:alert", "결제가 취소되었습니다");
+        router.replace("/products");
+      }
+    },
+    [router],
+  );
+
   useEffect(() => {
     if (!lastEvent) return;
+    resolvePayment(lastEvent.event);
+  }, [lastEvent, resolvePayment]);
 
-    if (completedRef.current) return;
+  useEffect(() => {
+    const paymentId = snapshot?.paymentId;
+    if (!paymentId || !token) return;
 
-    if (lastEvent.event === "completed") {
-      completedRef.current = true;
-      router.push("/payment/complete");
-      return;
-    }
-    if (lastEvent.event === "expired" || lastEvent.event === "canceled") {
-      completedRef.current = true;
-      clearPaymentSnapshot();
-      sessionStorage.setItem("flick:alert", "결제가 취소되었습니다");
-      router.replace("/products");
-    }
-  }, [lastEvent, router]);
+    const poll = async () => {
+      if (completedRef.current || cancelledRef.current) return;
+      try {
+        const { payment } = await fetchPayment(token, paymentId);
+        if (payment.status !== "pending") {
+          resolvePayment(payment.status);
+        }
+      } catch {}
+    };
+
+    const intervalId = window.setInterval(poll, 5000);
+    return () => window.clearInterval(intervalId);
+  }, [snapshot?.paymentId, token, resolvePayment]);
 
   useEffect(() => {
     if (!snapshot?.expiresAt) {
