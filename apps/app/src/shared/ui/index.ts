@@ -3,6 +3,8 @@ export {
   Badge,
   Button,
   Card,
+  CodeDisplay,
+  CopyButton,
   cn,
   EmptyState,
   Icon,

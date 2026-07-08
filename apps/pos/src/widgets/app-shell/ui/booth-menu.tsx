@@ -25,32 +25,21 @@ export function BoothMenu({ booth }: { booth: Booth }) {
         </button>
       )}
     >
-      {(close) => (
-        <>
-          <div className="flex items-center gap-3 px-3 py-2.5">
-            <Avatar name={booth.name} size="md" />
-            <div className="min-w-0">
-              <p className="truncate text-body font-semibold text-foreground">
-                {booth.name}
-              </p>
-              <div className="mt-1">
-                <BoothBadge status={booth.status} />
-              </div>
-            </div>
+      <div className="flex items-center gap-3 px-3 py-2.5">
+        <Avatar name={booth.name} size="md" />
+        <div className="min-w-0">
+          <p className="truncate text-body font-semibold text-foreground">
+            {booth.name}
+          </p>
+          <div className="mt-1">
+            <BoothBadge status={booth.status} />
           </div>
-          <div className="my-1 h-px bg-border" />
-          <MenuItem
-            tone="danger"
-            icon={<LogOut />}
-            onClick={() => {
-              close();
-              logout();
-            }}
-          >
-            로그아웃
-          </MenuItem>
-        </>
-      )}
+        </div>
+      </div>
+      <div className="my-1 h-px bg-border" />
+      <MenuItem tone="danger" icon={<LogOut />} onClick={logout}>
+        로그아웃
+      </MenuItem>
     </Menu>
   );
 }

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Button } from "./button";
 import { EmptyState } from "./empty-state";
 import { Loader } from "./loader";
 
@@ -47,7 +48,13 @@ export function QueryState({
         emoji="⚠️"
         title={errorTitle}
         description={errorDescription}
-        action={onRetry ? <RetryButton onRetry={onRetry} /> : undefined}
+        action={
+          onRetry ? (
+            <Button variant="weak" size="sm" onClick={onRetry}>
+              다시 시도
+            </Button>
+          ) : undefined
+        }
       />
     );
   }
@@ -65,16 +72,4 @@ export function QueryState({
   }
 
   return <>{children}</>;
-}
-
-function RetryButton({ onRetry }: { onRetry: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onRetry}
-      className="rounded-control px-4 py-2 text-body font-semibold text-brand transition-colors hover:bg-brand-subtle"
-    >
-      다시 시도
-    </button>
-  );
 }

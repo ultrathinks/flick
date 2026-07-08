@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useId } from "react";
 import { cn } from "../lib/cn";
 
 export function Sheet({
@@ -17,6 +17,8 @@ export function Sheet({
   children: ReactNode;
   className?: string;
 }) {
+  const titleId = useId();
+
   useEffect(() => {
     if (!open) {
       return;
@@ -27,7 +29,12 @@ export function Sheet({
       }
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open, onClose]);
 
   if (!open) {
@@ -39,29 +46,35 @@ export function Sheet({
       <button
         type="button"
         aria-label="닫기"
+        tabIndex={-1}
         className="absolute inset-0 animate-scrim-in bg-scrim"
         onClick={onClose}
       />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
         className={cn(
-          "relative z-10 max-h-[88vh] w-full animate-sheet-in overflow-y-auto rounded-t-sheet border border-border bg-surface shadow-[var(--shadow-overlay)] sm:m-4 sm:max-w-md sm:rounded-sheet",
+          "relative z-10 flex max-h-[88vh] w-full animate-sheet-in flex-col overflow-hidden rounded-t-sheet border border-border bg-surface shadow-[var(--shadow-overlay)] sm:m-4 sm:max-w-md sm:rounded-sheet",
           className,
         )}
       >
         {title && (
-          <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <h2 className="text-heading font-bold text-foreground">{title}</h2>
+          <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
+            <h2 id={titleId} className="text-heading font-bold text-foreground">
+              {title}
+            </h2>
             <button
               type="button"
               aria-label="닫기"
-              className="flex size-9 items-center justify-center rounded-full text-foreground-subtle transition-colors hover:bg-surface-muted hover:text-foreground"
+              className="flex size-9 items-center justify-center rounded-full text-foreground-subtle outline-none transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand/40"
               onClick={onClose}
             >
-              <X className="size-5" />
+              <X className="size-5" strokeWidth={1.75} />
             </button>
           </div>
         )}
-        <div className="p-5">{children}</div>
+        <div className="overflow-y-auto p-5">{children}</div>
       </div>
     </div>
   );

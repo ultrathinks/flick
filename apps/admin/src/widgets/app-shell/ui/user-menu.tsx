@@ -24,34 +24,23 @@ export function UserMenu({ user }: { user: Me }) {
         </button>
       )}
     >
-      {(close) => (
-        <>
-          <div className="flex items-center gap-3 px-3 py-2.5">
-            <Avatar name={user.name} src={user.profileImageUrl} size="md" />
-            <div className="min-w-0">
-              <p className="truncate text-body font-semibold text-foreground">
-                {user.name}
-              </p>
-              {user.studentNumber && (
-                <p className="truncate text-caption text-foreground-subtle">
-                  {user.studentNumber}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="my-1 h-px bg-border" />
-          <MenuItem
-            tone="danger"
-            icon={<LogOut />}
-            onClick={() => {
-              close();
-              logout();
-            }}
-          >
-            로그아웃
-          </MenuItem>
-        </>
-      )}
+      <div className="flex items-center gap-3 px-3 py-2.5">
+        <Avatar name={user.name} src={user.profileImageUrl} size="md" />
+        <div className="min-w-0">
+          <p className="truncate text-body font-semibold text-foreground">
+            {user.name}
+          </p>
+          {user.studentNumber && (
+            <p className="truncate text-caption text-foreground-subtle">
+              {user.studentNumber}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="my-1 h-px bg-border" />
+      <MenuItem tone="danger" icon={<LogOut />} onClick={logout}>
+        로그아웃
+      </MenuItem>
     </Menu>
   );
 }

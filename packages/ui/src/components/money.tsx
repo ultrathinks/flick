@@ -11,5 +11,9 @@ export function Money({ amount, signed = false, className }: Props) {
   const text = signed
     ? `${amount > 0 ? "+" : amount < 0 ? "-" : ""}${formatWon(Math.abs(amount))}`
     : formatWon(amount);
-  return <span className={cn("tabular-nums", className)}>{text}</span>;
+  return (
+    <span className={cn("whitespace-nowrap tabular-nums", className)}>
+      {text}
+    </span>
+  );
 }

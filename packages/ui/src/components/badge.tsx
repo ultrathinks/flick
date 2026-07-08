@@ -29,7 +29,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-caption font-semibold leading-none [&>svg]:size-3.5",
+        "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-caption font-semibold leading-none [&>svg]:size-3.5",
         (variant === "fill" ? fill : weak)[tone],
         className,
       )}

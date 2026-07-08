@@ -1,5 +1,7 @@
 export {
   Button,
+  CodeDisplay,
+  CopyButton,
   EmptyState,
   Icon,
   Input,

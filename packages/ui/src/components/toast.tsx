@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { cn } from "../lib/cn";
 
 type ToastTone = "success" | "danger" | "neutral";
 
@@ -68,16 +69,23 @@ export function ToastProvider({
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 top-6 z-50 flex flex-col items-center gap-2 px-4">
+      <div
+        role="status"
+        aria-live="polite"
+        className="pointer-events-none fixed inset-x-0 top-6 z-[60] flex flex-col items-center gap-2 px-4"
+      >
         {toasts.map((toast) => (
           <button
             key={toast.id}
             type="button"
             onClick={() => dismiss(toast.id)}
-            className="pointer-events-auto flex max-w-md animate-toast-in items-center gap-2.5 rounded-card border border-border bg-surface px-5 py-3.5 text-left text-body font-medium text-foreground shadow-[var(--shadow-overlay)]"
+            className="pointer-events-auto flex max-w-md animate-toast-in items-center gap-2.5 rounded-card border border-border bg-surface px-5 py-3.5 text-left text-body font-medium text-foreground shadow-[var(--shadow-overlay)] outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           >
             <span
-              className={`size-2 shrink-0 rounded-full ${toneDot[toast.tone]}`}
+              className={cn(
+                "size-2 shrink-0 rounded-full",
+                toneDot[toast.tone],
+              )}
             />
             <span>{toast.message}</span>
           </button>

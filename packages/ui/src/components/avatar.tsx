@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { cn } from "../lib/cn";
 
 type Size = "sm" | "md" | "lg";
@@ -9,7 +12,7 @@ const sizes: Record<Size, string> = {
 };
 
 function initial(name: string): string {
-  return name.trim().slice(0, 1) || "?";
+  return name.trim().slice(0, 1).toUpperCase() || "?";
 }
 
 export function Avatar({
@@ -23,6 +26,9 @@ export function Avatar({
   size?: Size;
   className?: string;
 }) {
+  const [failed, setFailed] = useState(false);
+  const showImage = src && !failed;
+
   return (
     <span
       className={cn(
@@ -31,8 +37,13 @@ export function Avatar({
         className,
       )}
     >
-      {src ? (
-        <img src={src} alt="" className="size-full object-cover" />
+      {showImage ? (
+        <img
+          src={src}
+          alt=""
+          className="size-full object-cover"
+          onError={() => setFailed(true)}
+        />
       ) : (
         initial(name)
       )}

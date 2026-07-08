@@ -46,6 +46,7 @@ export function ListRow({
           {withArrow && (
             <ChevronRight
               aria-hidden
+              strokeWidth={1.75}
               className="size-5 shrink-0 text-foreground-subtle"
             />
           )}
@@ -63,7 +64,7 @@ export function ListRow({
         onClick={onClick}
         className={cn(
           base,
-          "-mx-2 rounded-card-sm px-2 transition-colors active:bg-surface-muted",
+          "-mx-2 rounded-card-sm px-2 outline-none transition-colors hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-brand/40 active:bg-surface-muted",
           className,
         )}
       >
