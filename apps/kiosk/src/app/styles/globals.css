@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@import "@flick/ui/styles.css";
+@source "../../../../../packages/ui/src";
+
+html,
+body {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}

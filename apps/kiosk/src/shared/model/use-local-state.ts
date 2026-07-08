@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 
 export function useLocalState<T>(load: () => T, save: (value: T) => void) {

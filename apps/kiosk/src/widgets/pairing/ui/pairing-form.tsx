@@ -1,6 +1,6 @@
+import { Store } from "lucide-react";
 import type { FormEvent } from "react";
 import { Button, Input } from "@/shared/ui";
-import { BrandHeader } from "@/shared/ui/brand-header";
 
 type PairingFormProps = {
   code: string;
@@ -18,54 +18,54 @@ export function PairingForm({
   onSubmit,
 }: PairingFormProps) {
   return (
-    <main className="flex min-h-dvh flex-col bg-bg">
-      <BrandHeader />
-      <section className="flex flex-1 items-center justify-center px-6 py-10">
-        <form className="w-full max-w-md" onSubmit={onSubmit}>
-          <div className="mb-8 text-center">
-            <h2 className="text-display font-bold text-foreground">
-              키오스크 페어링
-            </h2>
-            <p className="mt-3 text-heading font-medium text-foreground-subtle">
-              부스 관리 화면에서 발급된 코드를 입력해주세요
-            </p>
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-bg px-6">
+      <form className="w-full max-w-md" onSubmit={onSubmit}>
+        <div className="mb-10 flex flex-col items-center text-center">
+          <span className="flex size-16 items-center justify-center rounded-card bg-brand text-brand-foreground">
+            <Store className="size-8" strokeWidth={2} />
+          </span>
+          <h1 className="mt-6 text-display font-bold text-foreground">
+            키오스크 연결
+          </h1>
+          <p className="mt-3 text-heading font-medium text-foreground-subtle">
+            부스 관리 화면에서 발급된 코드를 입력해주세요
+          </p>
+        </div>
+
+        {errorMessage ? (
+          <div className="mb-5 rounded-card-sm border border-danger/20 bg-danger-subtle px-4 py-3 text-center text-body font-semibold text-danger">
+            {errorMessage}
           </div>
+        ) : null}
 
-          {errorMessage ? (
-            <div className="mb-5 rounded-card-sm border border-danger/20 bg-danger-subtle px-4 py-3 text-body font-semibold text-danger">
-              {errorMessage}
-            </div>
-          ) : null}
+        <label
+          className="mb-2 block text-body font-semibold text-foreground-muted"
+          htmlFor="pairing-code"
+        >
+          페어링 코드
+        </label>
+        <Input
+          id="pairing-code"
+          className="h-16 text-center text-title font-bold uppercase tracking-[0.2em]"
+          value={code}
+          onChange={(event) => onCodeChange(event.target.value)}
+          placeholder="CODE"
+          autoCapitalize="characters"
+          autoComplete="one-time-code"
+          disabled={isPairing}
+        />
 
-          <label
-            className="mb-2 block text-body font-semibold text-foreground-muted"
-            htmlFor="pairing-code"
-          >
-            페어링 코드
-          </label>
-          <Input
-            id="pairing-code"
-            className="h-14 text-center text-subtitle font-bold tracking-[0.18em]"
-            value={code}
-            onChange={(event) => onCodeChange(event.target.value)}
-            placeholder="CODE"
-            autoCapitalize="characters"
-            autoComplete="one-time-code"
-            disabled={isPairing}
-          />
-
-          <Button
-            type="submit"
-            size="xl"
-            block
-            className="mt-6"
-            loading={isPairing}
-            disabled={!code.trim()}
-          >
-            페어링 시작
-          </Button>
-        </form>
-      </section>
+        <Button
+          type="submit"
+          size="xl"
+          block
+          className="mt-6"
+          loading={isPairing}
+          disabled={!code.trim()}
+        >
+          연결하기
+        </Button>
+      </form>
     </main>
   );
 }

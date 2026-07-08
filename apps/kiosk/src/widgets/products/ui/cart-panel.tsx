@@ -1,6 +1,6 @@
-import { Minus, Plus, X } from "lucide-react";
-import type { CartItem } from "@/entities/cart/model/types";
+import { Minus, Plus, ShoppingCart, X } from "lucide-react";
 import type { Product } from "@/shared/api/types";
+import type { CartItem } from "@/shared/model/types";
 import { Button, Money, useConfirm } from "@/shared/ui";
 
 type CartPanelProps = {
@@ -25,6 +25,7 @@ export function CartPanel({
   onCheckout,
 }: CartPanelProps) {
   const confirm = useConfirm();
+  const isEmpty = items.length === 0;
 
   async function handleClearCart() {
     const ok = await confirm({
@@ -39,14 +40,19 @@ export function CartPanel({
   }
 
   return (
-    <aside className="flex min-w-80 basis-1/4 flex-col border-l border-border bg-surface">
-      <div className="flex h-20 items-center justify-between border-b border-border p-5">
-        <h2 className="text-title font-bold text-foreground">장바구니</h2>
-        {items.length > 0 ? (
+    <aside className="flex w-[380px] shrink-0 flex-col border-l border-border bg-surface">
+      <div className="flex h-20 items-center justify-between border-b border-border px-6">
+        <h2 className="text-title font-bold text-foreground">
+          장바구니
+          {totalCount > 0 ? (
+            <span className="ml-2 text-brand">{totalCount}</span>
+          ) : null}
+        </h2>
+        {!isEmpty ? (
           <Button
-            variant="weak"
-            size="md"
-            className="h-12 bg-danger-subtle text-danger hover:brightness-95"
+            variant="ghost"
+            size="sm"
+            className="text-foreground-subtle hover:text-danger"
             onClick={handleClearCart}
           >
             비우기
@@ -55,20 +61,20 @@ export function CartPanel({
       </div>
 
       <div className="flex-1 overflow-auto">
-        {items.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-muted text-title font-black text-foreground-faint">
-              0
-            </div>
+        {isEmpty ? (
+          <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+            <span className="flex size-16 items-center justify-center rounded-full bg-surface-muted text-foreground-faint">
+              <ShoppingCart className="size-8" strokeWidth={1.75} />
+            </span>
             <p className="mt-4 text-heading font-semibold text-foreground-subtle">
-              장바구니가 비어 있어요
+              담긴 상품이 없어요
             </p>
-            <p className="mt-2 text-body font-medium text-foreground-subtle">
-              상품을 선택해주세요
+            <p className="mt-1 text-body font-medium text-foreground-faint">
+              메뉴를 선택해주세요
             </p>
           </div>
         ) : (
-          <div className="px-5">
+          <div className="px-6">
             {items.map((item) => {
               const product = products.find((entry) => entry.id === item.id);
               const maxReached = product
@@ -145,30 +151,21 @@ export function CartPanel({
         )}
       </div>
 
-      <div className="border-t border-border bg-surface p-5">
-        <div className="mb-2.5 flex justify-between">
+      <div className="border-t border-border bg-surface p-6">
+        <div className="mb-4 flex items-baseline justify-between">
           <span className="text-heading font-medium text-foreground-subtle">
-            총 수량
-          </span>
-          <span className="text-heading font-semibold text-foreground">
-            {totalCount}개
-          </span>
-        </div>
-        <div className="mb-2.5 flex justify-between">
-          <span className="text-heading font-medium text-foreground-subtle">
-            총 금액
+            총 결제 금액
           </span>
           <Money
             amount={totalAmount}
-            className="text-title font-bold text-brand"
+            className="text-display font-black text-brand"
           />
         </div>
         <Button
           size="xl"
           block
-          className="mt-4"
           loading={isCheckingOut}
-          disabled={items.length === 0}
+          disabled={isEmpty}
           onClick={onCheckout}
         >
           결제하기

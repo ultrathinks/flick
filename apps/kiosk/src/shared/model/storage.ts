@@ -1,29 +1,10 @@
-type CartItem = {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-};
-
-type KioskSession = {
-  token: string | null;
-};
-
-type PaymentSnapshot = {
-  orderId: string | null;
-  paymentId: string | null;
-  code: string | null;
-  expiresAt: string | null;
-  totalAmount: number;
-  items: CartItem[];
-};
+import type { CartItem, KioskSession, PaymentSnapshot } from "./types";
 
 const KIOSK_SESSION_KEY = "flick:kiosk:session";
 const CART_KEY = "flick:kiosk:cart";
 const PAYMENT_KEY = "flick:kiosk:payment";
 const ALERT_KEY = "flick:kiosk:alert";
 
-const emptySession: KioskSession = { token: null };
 const emptyPayment: PaymentSnapshot = {
   orderId: null,
   paymentId: null,
@@ -34,11 +15,8 @@ const emptyPayment: PaymentSnapshot = {
 };
 
 function readJson<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") {
-    return fallback;
-  }
   try {
-    const value = window.localStorage.getItem(key);
+    const value = localStorage.getItem(key);
     return value ? (JSON.parse(value) as T) : fallback;
   } catch {
     return fallback;
@@ -46,14 +24,11 @@ function readJson<T>(key: string, fallback: T): T {
 }
 
 function writeJson<T>(key: string, value: T) {
-  if (typeof window === "undefined") {
-    return;
-  }
-  window.localStorage.setItem(key, JSON.stringify(value));
+  localStorage.setItem(key, JSON.stringify(value));
 }
 
-export function getKioskSession() {
-  return readJson<KioskSession>(KIOSK_SESSION_KEY, emptySession);
+export function getKioskSession(): KioskSession {
+  return readJson<KioskSession>(KIOSK_SESSION_KEY, { token: null });
 }
 
 export function setKioskToken(token: string | null) {
@@ -91,19 +66,13 @@ export function clearKioskData() {
 }
 
 export function takeAlert(): string | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  const value = window.sessionStorage.getItem(ALERT_KEY);
+  const value = sessionStorage.getItem(ALERT_KEY);
   if (value) {
-    window.sessionStorage.removeItem(ALERT_KEY);
+    sessionStorage.removeItem(ALERT_KEY);
   }
   return value;
 }
 
 export function setAlert(message: string) {
-  if (typeof window === "undefined") {
-    return;
-  }
-  window.sessionStorage.setItem(ALERT_KEY, message);
+  sessionStorage.setItem(ALERT_KEY, message);
 }

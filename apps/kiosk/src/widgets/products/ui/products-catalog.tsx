@@ -1,18 +1,16 @@
-import type { CartItem } from "@/entities/cart/model/types";
 import type { Product } from "@/shared/api/types";
+import type { CartItem } from "@/shared/model/types";
 import { BrandHeader } from "@/shared/ui/brand-header";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Loading } from "@/shared/ui/loading";
 import { CartPanel } from "./cart-panel";
 import { ProductCard } from "./product-card";
-import { ProductsAlert } from "./products-alert";
 import { ProductsErrorState } from "./products-error-state";
 
 type ProductsCatalogProps = {
   products: Product[];
   isLoading: boolean;
   errorMessage: string | null;
-  alertMessage: string | null;
   cartItems: CartItem[];
   cartTotalAmount: number;
   cartTotalCount: number;
@@ -28,7 +26,6 @@ export function ProductsCatalog({
   products,
   isLoading,
   errorMessage,
-  alertMessage,
   cartItems,
   cartTotalAmount,
   cartTotalCount,
@@ -61,7 +58,7 @@ export function ProductsCatalog({
               description="부스 관리 화면에서 상품 상태를 확인해주세요"
             />
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
               {products.map((product) => (
                 <ProductCard
                   key={product.id}
@@ -87,7 +84,6 @@ export function ProductsCatalog({
           onCheckout={onCheckout}
         />
       </div>
-      {alertMessage ? <ProductsAlert message={alertMessage} /> : null}
     </main>
   );
 }

@@ -1,4 +1,4 @@
-import { Button, Money } from "@/shared/ui";
+import { Button, Money, useConfirm } from "@/shared/ui";
 
 export type OrderSummaryItem = {
   name: string;
@@ -17,19 +17,33 @@ export function OrderSummaryPanel({
   totalAmount,
   onCancel,
 }: OrderSummaryPanelProps) {
+  const confirm = useConfirm();
+
+  async function handleCancel() {
+    const ok = await confirm({
+      tone: "danger",
+      title: "결제를 취소할까요?",
+      description: "진행 중인 결제가 취소돼요.",
+      confirmLabel: "결제 취소",
+    });
+    if (ok) {
+      onCancel();
+    }
+  }
+
   return (
-    <aside className="flex w-full flex-col rounded-card border border-border bg-surface lg:w-[360px]">
-      <div className="border-b border-border px-5 py-4">
-        <h2 className="text-heading font-bold text-foreground">주문 내역</h2>
+    <aside className="flex w-[380px] shrink-0 flex-col rounded-card border border-border bg-surface">
+      <div className="border-b border-border px-6 py-5">
+        <h2 className="text-title font-bold text-foreground">주문 내역</h2>
       </div>
-      <ul className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+      <ul className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
         {items.map((item) => (
           <li
             key={item.name}
             className="flex items-start justify-between gap-2"
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate text-body font-semibold text-foreground">
+              <p className="truncate text-heading font-semibold text-foreground">
                 {item.name}
               </p>
               <p className="mt-0.5 text-caption font-medium text-foreground-faint">
@@ -38,14 +52,14 @@ export function OrderSummaryPanel({
             </div>
             <Money
               amount={item.totalAmount}
-              className="shrink-0 text-body font-bold text-foreground"
+              className="shrink-0 text-heading font-bold text-foreground"
             />
           </li>
         ))}
       </ul>
-      <div className="border-t border-border px-5 py-4">
+      <div className="border-t border-border px-6 py-5">
         <div className="flex items-center justify-between">
-          <span className="text-body font-bold text-foreground-subtle">
+          <span className="text-heading font-bold text-foreground-subtle">
             합계
           </span>
           <Money
@@ -55,10 +69,10 @@ export function OrderSummaryPanel({
         </div>
         <Button
           variant="danger"
-          size="lg"
+          size="xl"
           block
           className="mt-4"
-          onClick={onCancel}
+          onClick={handleCancel}
         >
           결제 취소
         </Button>
