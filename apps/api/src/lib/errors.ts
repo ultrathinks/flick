@@ -40,6 +40,30 @@ export class NotFoundError extends AppError {
   }
 }
 
+export class PaymentExpiredError extends AppError {
+  constructor(message = "Payment expired") {
+    super(404, "PAYMENT_EXPIRED", message);
+  }
+}
+
+export class PaymentNotPendingError extends AppError {
+  constructor(message = "Payment is not pending") {
+    super(400, "PAYMENT_NOT_PENDING", message);
+  }
+}
+
+export class InsufficientBalanceError extends AppError {
+  constructor(message = "Insufficient balance") {
+    super(400, "INSUFFICIENT_BALANCE", message);
+  }
+}
+
+export class OutOfStockError extends AppError {
+  constructor(message = "Out of stock") {
+    super(400, "OUT_OF_STOCK", message);
+  }
+}
+
 export class ConflictError extends AppError {
   constructor(message = "Conflict") {
     super(409, "CONFLICT", message);
