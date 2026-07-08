@@ -34,7 +34,7 @@ export function ThemeToggle({ className }: { className?: string }) {
             aria-label={option.label}
             onClick={() => setTheme(option.value)}
             className={cn(
-              "flex size-9 items-center justify-center rounded-[calc(var(--radius-control)-0.25rem)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 [&>svg]:size-[18px]",
+              "flex size-9 items-center justify-center rounded-[calc(var(--radius-control)-0.25rem)] outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 [&>svg]:size-[18px]",
               active
                 ? "bg-surface text-brand"
                 : "text-foreground-subtle hover:text-foreground",
