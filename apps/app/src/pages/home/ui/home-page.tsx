@@ -23,7 +23,7 @@ export const HomePage = () => {
       <PageHeader title="Flick" />
       <div className="space-y-6 px-5 pb-6 pt-2">
         {me.isPending ? (
-          <Skeleton className="h-32 rounded-card" />
+          <Skeleton className="h-40 rounded-card" />
         ) : me.isError || !me.data ? (
           <Card className="flex items-center justify-between gap-3">
             <span className="text-body text-foreground-subtle">

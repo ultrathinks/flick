@@ -5,6 +5,7 @@ import {
   Avatar,
   Card,
   EmptyState,
+  ListRow,
   Money,
   Screen,
   SectionHeader,
@@ -18,7 +19,7 @@ export const ProfilePage = () => {
   return (
     <Screen className="flex-1 overflow-y-auto">
       <PageHeader title="프로필" />
-      <div className="space-y-6 px-5 pb-6">
+      <div className="space-y-6 px-5 pb-6 pt-2">
         {me.isPending ? (
           <Card className="flex justify-center py-12">
             <Spinner />
@@ -46,21 +47,16 @@ export const ProfilePage = () => {
             <div>
               <SectionHeader title="설정" />
               <div className="divide-y divide-border rounded-card border border-border bg-surface px-4">
-                <div className="flex items-center justify-between py-3.5">
-                  <span className="text-heading font-medium text-foreground">
-                    잔액
-                  </span>
-                  <Money
-                    amount={me.data.balance}
-                    className="text-heading font-semibold text-foreground"
-                  />
-                </div>
-                <div className="flex items-center justify-between py-3">
-                  <span className="text-heading font-medium text-foreground">
-                    화면 테마
-                  </span>
-                  <ThemeToggle />
-                </div>
+                <ListRow
+                  title="잔액"
+                  right={
+                    <Money
+                      amount={me.data.balance}
+                      className="text-heading font-semibold text-foreground"
+                    />
+                  }
+                />
+                <ListRow title="화면 테마" right={<ThemeToggle />} />
               </div>
             </div>
           </>

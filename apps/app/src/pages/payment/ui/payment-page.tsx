@@ -78,11 +78,17 @@ const PaymentBody = ({ code }: { code: string }) => {
         </div>
         <ul className="mt-4 space-y-2">
           {items.map((item) => (
-            <li key={item.id} className="flex justify-between text-body">
-              <span className="text-foreground-muted">
+            <li
+              key={item.id}
+              className="flex items-baseline justify-between gap-3 text-body"
+            >
+              <span className="truncate text-foreground-muted">
                 {item.name} × {item.quantity}
               </span>
-              <Money amount={item.totalAmount} className="text-foreground" />
+              <Money
+                amount={item.totalAmount}
+                className="shrink-0 text-foreground"
+              />
             </li>
           ))}
         </ul>

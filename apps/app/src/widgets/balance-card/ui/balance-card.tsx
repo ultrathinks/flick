@@ -11,7 +11,9 @@ export const BalanceCard = ({ name, balance }: BalanceCardProps) => {
 
   return (
     <div className="rounded-card bg-brand p-5 text-brand-foreground">
-      <p className="text-body text-brand-foreground/70">{name}님의 잔액</p>
+      <p className="truncate text-body text-brand-foreground/70">
+        {name}님의 잔액
+      </p>
       <RollingNumber
         value={balance}
         className="mt-1 block text-display font-bold"

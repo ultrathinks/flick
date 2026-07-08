@@ -1,7 +1,10 @@
 import type { RouteProps } from "@b1nd/aid-kit/navigation";
 import { useOrder } from "@/entities/payment";
-import { parseTransaction, transactionLabel } from "@/entities/transaction";
-import { formatWon } from "@/shared/lib";
+import {
+  isIncome,
+  parseTransaction,
+  transactionLabel,
+} from "@/entities/transaction";
 import { Card, EmptyState, Money, Screen, Spinner } from "@/shared/ui";
 import { PageHeader } from "@/widgets/page-header";
 
@@ -46,11 +49,17 @@ const OrderItems = ({ orderId }: { orderId: string }) => {
       </p>
       <ul className="space-y-2">
         {order.data.items.map((item) => (
-          <li key={item.id} className="flex justify-between text-body">
-            <span className="text-foreground-muted">
+          <li
+            key={item.id}
+            className="flex items-baseline justify-between gap-3 text-body"
+          >
+            <span className="truncate text-foreground-muted">
               {item.name} × {item.quantity}
             </span>
-            <Money amount={item.totalAmount} className="text-foreground" />
+            <Money
+              amount={item.totalAmount}
+              className="shrink-0 text-foreground"
+            />
           </li>
         ))}
       </ul>
@@ -76,9 +85,15 @@ export const TransactionDetailPage = ({ state }: RouteProps) => {
               </div>
               <div className="flex justify-between">
                 <span className="text-body text-foreground-subtle">금액</span>
-                <span className="text-body font-bold text-foreground">
-                  {formatWon(transaction.amount)}
-                </span>
+                <Money
+                  amount={transaction.amount}
+                  signed
+                  className={`text-body font-bold ${
+                    isIncome(transaction.amount)
+                      ? "text-brand"
+                      : "text-foreground"
+                  }`}
+                />
               </div>
               <div className="flex justify-between">
                 <span className="text-body text-foreground-subtle">일시</span>
