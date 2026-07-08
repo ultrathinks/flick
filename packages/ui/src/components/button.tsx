@@ -1,7 +1,7 @@
 "use client";
 
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 import { cn } from "../lib/cn";
 import { Loader } from "./loader";
 
@@ -38,6 +38,7 @@ interface Props
   extends ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof button> {
   loading?: boolean;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 export function Button({
@@ -49,10 +50,12 @@ export function Button({
   type = "button",
   children,
   disabled,
+  ref,
   ...props
 }: Props) {
   return (
     <button
+      ref={ref}
       type={type}
       disabled={disabled || loading}
       className={cn(button({ variant, size, block }), className)}
