@@ -8,7 +8,7 @@ import {
   resolveUserCode,
 } from "@/features/charge";
 import { ApiError } from "@/shared/api";
-import { Button, formatWon, Input } from "@/shared/ui";
+import { Button, Card, formatWon, Input, useToast } from "@/shared/ui";
 import { QrScanner } from "./qr-scanner.tsx";
 
 type Stage =
@@ -22,6 +22,7 @@ export function ChargePanel() {
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function resolve(code: string) {
     if (busy) {
@@ -63,6 +64,9 @@ export function ChargePanel() {
       });
       setStage({ name: "done", user: stage.user, result });
       setAmount("");
+      toast.success(
+        `${stage.user.name} 님에게 ${formatWon(result.amount)}을 충전했어요`,
+      );
     } catch {
       setError("충전에 실패했어요. 다시 시도해 주세요.");
     } finally {
@@ -102,7 +106,7 @@ export function ChargePanel() {
       )}
 
       {stage.name === "confirm" && (
-        <div className="flex flex-col gap-4 rounded-card border border-border bg-surface p-5">
+        <Card className="flex flex-col gap-4">
           <div>
             <p className="text-body font-semibold text-foreground">
               {stage.user.name}
@@ -124,15 +128,15 @@ export function ChargePanel() {
             <Button variant="outline" block onClick={reset} disabled={busy}>
               취소
             </Button>
-            <Button block onClick={charge} disabled={busy}>
+            <Button block onClick={charge} loading={busy}>
               충전
             </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {stage.name === "done" && (
-        <div className="flex flex-col items-center gap-4 rounded-card border border-border bg-surface p-6 text-center">
+        <Card className="flex flex-col items-center gap-4 p-6 text-center">
           <p className="text-heading font-semibold text-foreground">
             충전 완료
           </p>
@@ -143,7 +147,7 @@ export function ChargePanel() {
           <Button block onClick={reset}>
             다음 사용자 충전
           </Button>
-        </div>
+        </Card>
       )}
 
       {error && <p className="text-center text-caption text-danger">{error}</p>}

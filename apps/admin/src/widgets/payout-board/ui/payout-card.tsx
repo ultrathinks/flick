@@ -3,11 +3,20 @@
 import { useState } from "react";
 import type { MaskedPayout, PayoutAccount } from "@/entities/payout";
 import { fetchPayoutAccount, usePayoutAction } from "@/features/payout-actions";
-import { Badge, Button, formatWon } from "@/shared/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  formatWon,
+  useConfirm,
+  useToast,
+} from "@/shared/ui";
 import { PAYOUT_STATUS_LABEL, PAYOUT_STATUS_TONE } from "../model/labels.ts";
 
 export function PayoutCard({ payout }: { payout: MaskedPayout }) {
   const action = usePayoutAction();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [account, setAccount] = useState<PayoutAccount | null>(null);
   const [revealing, setRevealing] = useState(false);
 
@@ -20,10 +29,42 @@ export function PayoutCard({ payout }: { payout: MaskedPayout }) {
     }
   }
 
+  async function pay() {
+    const ok = await confirm({
+      title: "환급을 지급할까요?",
+      description: `${payout.accountHolder} 님에게 ${formatWon(payout.amount)}을 지급해요. 지급 후에는 되돌릴 수 없어요.`,
+      confirmLabel: "지급",
+      tone: "brand",
+    });
+    if (!ok) {
+      return;
+    }
+    action.mutate(
+      { payoutId: payout.id, action: "pay" },
+      { onSuccess: () => toast.success("환급을 지급했어요") },
+    );
+  }
+
+  async function reject() {
+    const ok = await confirm({
+      title: "환급 요청을 거절할까요?",
+      description: `${payout.accountHolder} 님의 ${formatWon(payout.amount)} 환급 요청을 거절해요.`,
+      confirmLabel: "거절",
+      tone: "danger",
+    });
+    if (!ok) {
+      return;
+    }
+    action.mutate(
+      { payoutId: payout.id, action: "reject" },
+      { onSuccess: () => toast.success("환급 요청을 거절했어요") },
+    );
+  }
+
   const isRequested = payout.status === "requested";
 
   return (
-    <div className="flex flex-col gap-3 rounded-card border border-border bg-surface px-4 py-3.5">
+    <Card className="flex flex-col gap-3 px-4 py-3.5">
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
@@ -44,20 +85,12 @@ export function PayoutCard({ payout }: { payout: MaskedPayout }) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                action.mutate({ payoutId: payout.id, action: "reject" })
-              }
+              onClick={reject}
               disabled={action.isPending}
             >
               거절
             </Button>
-            <Button
-              size="sm"
-              onClick={() =>
-                action.mutate({ payoutId: payout.id, action: "pay" })
-              }
-              disabled={action.isPending}
-            >
+            <Button size="sm" onClick={pay} disabled={action.isPending}>
               지급
             </Button>
           </div>
@@ -65,15 +98,16 @@ export function PayoutCard({ payout }: { payout: MaskedPayout }) {
       </div>
 
       {!account && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={reveal}
           disabled={revealing}
-          className="self-start text-caption text-brand transition-colors hover:text-brand-hover disabled:opacity-50"
+          className="self-start"
         >
           {revealing ? "불러오는 중…" : "전체 계좌번호 보기 (조회 기록 남음)"}
-        </button>
+        </Button>
       )}
-    </div>
+    </Card>
   );
 }

@@ -3,7 +3,7 @@
 import { Inbox } from "lucide-react";
 import type { Key, ReactNode } from "react";
 import { cn } from "@/shared/lib/cn.ts";
-import { Button, EmptyState, Skeleton } from "@/shared/ui";
+import { Button, Card, EmptyState, Skeleton } from "@/shared/ui";
 import type { Column } from "../model/column.ts";
 
 interface DataTableProps<T> {
@@ -40,7 +40,7 @@ export function DataTable<T>({
   return (
     <div className="flex flex-col gap-3">
       {toolbar}
-      <div className="overflow-hidden rounded-card border border-border bg-surface">
+      <Card className="p-0 overflow-hidden">
         <table className="w-full border-collapse text-body">
           <thead>
             <tr className="border-b border-border">
@@ -73,6 +73,18 @@ export function DataTable<T>({
                   <tr
                     key={rowKey(row)}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    onKeyDown={
+                      onRowClick
+                        ? (event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              onRowClick(row);
+                            }
+                          }
+                        : undefined
+                    }
+                    role={onRowClick ? "button" : undefined}
+                    tabIndex={onRowClick ? 0 : undefined}
                     className={cn(
                       "border-b border-border last:border-b-0",
                       onRowClick &&
@@ -110,7 +122,7 @@ export function DataTable<T>({
             description={emptyDescription}
           />
         )}
-      </div>
+      </Card>
 
       {hasMore && (
         <div className="flex justify-center">

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { type PayoutStatus, usePayouts } from "@/entities/payout";
-import { EmptyState, Loader } from "@/shared/ui";
+import { Button, EmptyState, Loader, QueryState } from "@/shared/ui";
 import { PAYOUT_TABS } from "../model/labels.ts";
 import { PayoutCard } from "./payout-card.tsx";
 
@@ -14,34 +14,35 @@ export function PayoutBoard() {
     <div className="flex flex-col gap-4">
       <div className="flex gap-1">
         {PAYOUT_TABS.map((item) => (
-          <button
+          <Button
             key={item.value || "all"}
-            type="button"
+            size="sm"
+            variant={status === item.value ? "fill" : "neutral"}
             onClick={() => setStatus(item.value)}
-            className={
-              status === item.value
-                ? "rounded-full bg-brand px-3.5 py-1.5 text-caption font-semibold text-brand-foreground"
-                : "rounded-full px-3.5 py-1.5 text-caption font-medium text-foreground-subtle transition-colors hover:bg-surface-muted"
-            }
           >
             {item.label}
-          </button>
+          </Button>
         ))}
       </div>
 
-      {payouts.isPending ? (
-        <div className="flex justify-center py-20">
-          <Loader />
-        </div>
-      ) : (payouts.data?.length ?? 0) === 0 ? (
-        <EmptyState title="환급 요청이 없어요" />
-      ) : (
+      <QueryState
+        isPending={payouts.isPending}
+        isError={payouts.isError}
+        isEmpty={(payouts.data?.length ?? 0) === 0}
+        onRetry={() => payouts.refetch()}
+        loading={
+          <div className="flex justify-center py-12">
+            <Loader />
+          </div>
+        }
+        empty={<EmptyState title="환급 요청이 없어요" />}
+      >
         <div className="flex flex-col gap-2">
           {payouts.data?.map((payout) => (
             <PayoutCard key={payout.id} payout={payout} />
           ))}
         </div>
-      )}
+      </QueryState>
     </div>
   );
 }

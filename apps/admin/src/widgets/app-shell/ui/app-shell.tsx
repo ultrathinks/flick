@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import type { Me } from "@/shared/auth/me";
 import { cn } from "@/shared/lib/cn.ts";
 import { NAV_ITEMS, NAV_SECTIONS } from "../model/nav.ts";
+import { UserMenu } from "./user-menu.tsx";
 
 export function AppShell({
   user,
@@ -19,36 +20,24 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-5">
-        <div className="flex items-center gap-2">
-          <span className="flex size-6 items-center justify-center rounded-[var(--radius-card-sm)] bg-brand text-brand-foreground">
-            <ShieldCheck className="size-3.5" />
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface px-6">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-7 items-center justify-center rounded-card-sm bg-brand text-brand-foreground">
+            <ShieldCheck className="size-4" />
           </span>
-          <span className="text-base font-semibold tracking-tight text-foreground">
+          <span className="text-heading font-semibold tracking-tight text-foreground">
             Flick Admin
           </span>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden max-w-40 truncate text-sm text-foreground-subtle sm:block">
-            {user.name}
-          </span>
-          <form action="/api/auth/logout" method="post">
-            <button
-              type="submit"
-              className="rounded-[var(--radius-card-sm)] px-2.5 py-1.5 text-sm text-foreground-subtle transition-colors hover:bg-surface-muted hover:text-foreground"
-            >
-              로그아웃
-            </button>
-          </form>
-        </div>
+        <UserMenu user={user} />
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-sidebar px-3 py-4 lg:flex">
-          <nav className="flex flex-col gap-4">
+        <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar px-4 py-6 lg:flex">
+          <nav className="flex flex-col gap-6">
             {NAV_SECTIONS.map((section) => (
               <div key={section}>
-                <p className="mb-1 ml-2.5 text-[11px] font-medium uppercase tracking-wide text-foreground-subtle">
+                <p className="mb-1.5 ml-3 text-caption font-medium uppercase tracking-wide text-foreground-subtle">
                   {section}
                 </p>
                 <div className="flex flex-col gap-0.5">
@@ -61,14 +50,17 @@ export function AppShell({
                           key={item.href}
                           href={item.href}
                           className={cn(
-                            "flex items-center gap-2.5 rounded-[var(--radius-card-sm)] px-2.5 py-2 text-sm transition-colors",
+                            "flex items-center gap-3 rounded-card-sm px-3 py-2.5 text-body transition-colors",
                             active
                               ? "bg-surface-muted font-medium text-foreground"
                               : "font-normal text-foreground-subtle hover:bg-surface-muted hover:text-foreground",
                           )}
                         >
                           <Icon
-                            className={cn("size-4", active && "text-brand")}
+                            className={cn(
+                              "size-[18px]",
+                              active && "text-brand",
+                            )}
                           />
                           {item.label}
                         </Link>
@@ -81,7 +73,7 @@ export function AppShell({
           </nav>
         </aside>
 
-        <main className="flex-1 overflow-y-auto px-5 py-6 lg:px-8">
+        <main className="flex-1 overflow-y-auto px-6 py-8 lg:px-10">
           <div className="mx-auto w-full max-w-6xl">{children}</div>
         </main>
       </div>
