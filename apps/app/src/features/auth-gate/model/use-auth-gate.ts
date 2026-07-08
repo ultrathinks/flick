@@ -1,31 +1,18 @@
-import {
-  Actions,
-  useBridgeProvider,
-  useBridgeResponse,
-} from "@b1nd/aid-kit/bridge-kit/web";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   exchangeDodamToken,
   readTokens,
+  subscribeSessionCleared,
   writeTokens,
 } from "@/entities/session";
 import { clearDodamTokenFromUrl, readDodamTokenFromUrl } from "@/shared/lib";
 
 type Status = "checking" | "authenticated" | "unauthenticated" | "error";
 
-function parseOAuthToken(data: unknown): string | null {
-  if (typeof data !== "object" || data === null) {
-    return null;
-  }
-  const token = Reflect.get(data, "token");
-  return typeof token === "string" && token.length > 0 ? token : null;
-}
-
 export function useAuthGate() {
   const [status, setStatus] = useState<Status>(() =>
     readTokens() ? "authenticated" : "checking",
   );
-  const { send } = useBridgeProvider();
   const exchanging = useRef(false);
 
   const exchange = useCallback(async (dodamToken: string) => {
@@ -45,15 +32,11 @@ export function useAuthGate() {
     }
   }, []);
 
-  useBridgeResponse(Actions.OAUTH_GET_TOKEN, async (data) => {
-    const token = parseOAuthToken(data);
-    if (token) {
-      await exchange(token);
-    } else {
+  useEffect(() => {
+    return subscribeSessionCleared(() => {
       setStatus("unauthenticated");
-    }
-    return {};
-  });
+    });
+  }, []);
 
   useEffect(() => {
     if (status !== "checking") {
@@ -64,8 +47,8 @@ export function useAuthGate() {
       void exchange(urlToken);
       return;
     }
-    send(Actions.OAUTH_GET_TOKEN);
-  }, [status, exchange, send]);
+    setStatus(readTokens() ? "authenticated" : "unauthenticated");
+  }, [status, exchange]);
 
   const retry = useCallback(() => {
     setStatus("checking");
