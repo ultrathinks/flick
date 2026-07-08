@@ -18,6 +18,7 @@ interface DataTableProps<T> {
   hasMore?: boolean;
   isFetchingMore?: boolean;
   onLoadMore?: () => void;
+  loadMoreError?: boolean;
   toolbar?: ReactNode;
 }
 
@@ -35,6 +36,7 @@ export function DataTable<T>({
   hasMore = false,
   isFetchingMore = false,
   onLoadMore,
+  loadMoreError = false,
   toolbar,
 }: DataTableProps<T>) {
   const showTable = isLoading || (!isError && rows.length > 0);
@@ -131,7 +133,12 @@ export function DataTable<T>({
       </Card>
 
       {hasMore && (
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-2">
+          {loadMoreError && (
+            <p className="text-caption text-danger">
+              더 불러오지 못했어요. 다시 시도해 주세요.
+            </p>
+          )}
           <Button
             variant="weak"
             size="sm"

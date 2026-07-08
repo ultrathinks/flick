@@ -17,8 +17,28 @@ export function Dashboard() {
             <Card key={index} className="flex flex-col gap-2 p-4">
               <Skeleton className="h-3 w-16" />
               <Skeleton className="h-6 w-24" />
+              <Skeleton className="h-3 w-12" />
             </Card>
           ))}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <SectionHeader
+            title="부스 매출"
+            description="환불 반영 전 구매 총액 기준"
+          />
+          <Card className="flex flex-col gap-4 p-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no stable id
+                key={index}
+                className="flex items-center justify-between gap-3"
+              >
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ))}
+          </Card>
         </div>
       </div>
     );

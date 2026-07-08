@@ -128,13 +128,12 @@ export function ChargePanel() {
               onChange={(event) => setAmount(event.target.value)}
               error={error ?? undefined}
             />
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 grid grid-cols-2 gap-2">
               {QUICK_AMOUNTS.map((preset) => (
                 <Button
                   key={preset}
                   variant="neutral"
                   size="sm"
-                  block
                   onClick={() => setAmount(String(preset))}
                   disabled={busy}
                 >

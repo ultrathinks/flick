@@ -76,7 +76,7 @@ export function PayoutCard({ payout }: { payout: MaskedPayout }) {
               {PAYOUT_STATUS_LABEL[payout.status]}
             </Badge>
           </div>
-          <p className="min-w-0 break-all text-caption text-foreground-subtle">
+          <p className="min-w-0 break-words text-caption text-foreground-subtle">
             {payout.bankName} · {payout.accountNumber} · {payout.accountHolder}
           </p>
         </div>

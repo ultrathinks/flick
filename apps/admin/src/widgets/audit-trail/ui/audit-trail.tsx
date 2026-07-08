@@ -63,6 +63,7 @@ export function AuditTrail() {
       hasMore={logs.hasNextPage}
       isFetchingMore={logs.isFetchingNextPage}
       onLoadMore={() => logs.fetchNextPage()}
+      loadMoreError={logs.isFetchNextPageError}
       toolbar={
         <Select
           value={action}

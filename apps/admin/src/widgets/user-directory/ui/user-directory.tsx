@@ -51,6 +51,7 @@ export function UserDirectory() {
       hasMore={users.hasNextPage}
       isFetchingMore={users.isFetchingNextPage}
       onLoadMore={() => users.fetchNextPage()}
+      loadMoreError={users.isFetchNextPageError}
       toolbar={
         <Input
           placeholder="이름 또는 학번으로 검색"
