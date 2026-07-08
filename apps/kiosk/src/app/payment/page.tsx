@@ -10,6 +10,7 @@ import {
   clearPaymentSnapshot,
   getKioskSession,
   getPaymentSnapshot,
+  setAlert,
 } from "@/shared/model/storage";
 import { Button, useConfirm } from "@/shared/ui";
 import { Loading } from "@/shared/ui/loading";
@@ -81,7 +82,7 @@ export default function PaymentPage() {
       if (event === "expired" || event === "canceled") {
         completedRef.current = true;
         clearPaymentSnapshot();
-        sessionStorage.setItem("flick:alert", "결제가 취소되었습니다");
+        setAlert("결제가 취소되었습니다");
         router.replace("/products");
       }
     },
