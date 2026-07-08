@@ -26,7 +26,9 @@ const PaymentBody = ({ code }: { code: string }) => {
   const confirm = useConfirmPayment(code);
   const [done, setDone] = useState(false);
 
-  const expiresAt = view.data ? new Date(view.data.payment.expiresAt) : null;
+  const expiresAt = view.data
+    ? new Date(view.data.payment.expiresAt).getTime()
+    : null;
   const remaining = useCountdown(expiresAt);
   const expired = expiresAt !== null && remaining <= 0;
 

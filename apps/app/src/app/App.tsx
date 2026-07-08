@@ -1,6 +1,7 @@
 import { Router } from "@b1nd/aid-kit/navigation";
 import { installSessionAuth } from "@/entities/session";
 import { AuthGate } from "@/features/auth-gate";
+import { PayByCodeProvider, QrScannerHost } from "@/features/pay-by-code";
 import { installBridgeMock } from "@/shared/lib";
 import { resetRouterStack } from "./lib/reset-router-stack.ts";
 import { Providers } from "./providers";
@@ -13,11 +14,14 @@ resetRouterStack();
 export const App = () => (
   <Providers>
     <AuthGate>
-      <div className="relative flex h-dvh flex-col overflow-hidden">
-        <div className="relative flex-1 overflow-hidden">
-          <Router routes={routes} />
+      <PayByCodeProvider>
+        <div className="relative flex h-dvh flex-col overflow-hidden">
+          <div className="relative flex-1 overflow-hidden">
+            <Router routes={routes} />
+          </div>
         </div>
-      </div>
+        <QrScannerHost />
+      </PayByCodeProvider>
     </AuthGate>
   </Providers>
 );
