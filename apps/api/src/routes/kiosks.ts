@@ -149,7 +149,8 @@ kiosksRoutes.openapi(
           eq(products.status, "available"),
           isNull(products.archivedAt),
         ),
-      );
+      )
+      .orderBy(asc(products.sortOrder), asc(products.createdAt));
     const productIds = rows.map((product) => product.id);
     const groups =
       productIds.length > 0

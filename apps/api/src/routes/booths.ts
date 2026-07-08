@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import {
   type AuthVariables,
   requireAdmin,
@@ -344,7 +344,8 @@ boothsRoutes.openapi(
           isNull(products.archivedAt),
           canSeeHidden ? undefined : eq(products.status, "available"),
         ),
-      );
+      )
+      .orderBy(asc(products.sortOrder), asc(products.createdAt));
     return c.json(rows, 200);
   },
 );
