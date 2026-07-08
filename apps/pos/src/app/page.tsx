@@ -1,14 +1,22 @@
 "use client";
 
 import { AuthGate } from "@/features/auth-gate";
+import { Page } from "@/shared/ui";
 import { BoothScreen } from "@/widgets/app-shell";
-import { BoothDashboard } from "@/widgets/booth-dashboard";
+import { AddProductForm, BoothDashboard } from "@/widgets/booth-dashboard";
 
-export default function Page() {
+export default function MenuPage() {
   return (
     <AuthGate>
       <BoothScreen tab="menu">
-        {(booth) => <BoothDashboard booth={booth} />}
+        {(booth) => (
+          <Page
+            title="메뉴 관리"
+            actions={<AddProductForm boothId={booth.id} />}
+          >
+            <BoothDashboard booth={booth} />
+          </Page>
+        )}
       </BoothScreen>
     </AuthGate>
   );

@@ -39,6 +39,32 @@ export function BoothScreen({
     );
   }
 
+  if (booth.isError) {
+    const unauthorized =
+      booth.error instanceof ApiError && booth.error.status === 401;
+    if (unauthorized) {
+      return null;
+    }
+    return (
+      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-16">
+        <EmptyState
+          emoji="⚠️"
+          title="부스 정보를 불러오지 못했어요"
+          description="잠시 후 다시 시도해 주세요."
+          action={
+            <button
+              type="button"
+              onClick={() => booth.refetch()}
+              className="rounded-control px-4 py-2 text-body font-semibold text-brand transition-colors hover:bg-brand-subtle"
+            >
+              다시 시도
+            </button>
+          }
+        />
+      </div>
+    );
+  }
+
   if (!booth.data) {
     return <BoothOnboarding />;
   }

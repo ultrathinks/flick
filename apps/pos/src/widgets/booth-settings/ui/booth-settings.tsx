@@ -6,7 +6,7 @@ import { useState } from "react";
 import type { Booth } from "@/entities/booth";
 import { useUpdateBooth } from "@/entities/booth";
 import { uploadImage } from "@/features/image-upload";
-import { Button, Card, Field, Textarea } from "@/shared/ui";
+import { Button, Card, Field, Textarea, useToast } from "@/shared/ui";
 import { StatusNote } from "./status-note.tsx";
 
 export function BoothSettings({ booth }: { booth: Booth }) {
@@ -15,6 +15,7 @@ export function BoothSettings({ booth }: { booth: Booth }) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const update = useUpdateBooth(booth.id);
+  const toast = useToast();
 
   const dirty =
     name.trim() !== booth.name ||
@@ -34,6 +35,7 @@ export function BoothSettings({ booth }: { booth: Booth }) {
         });
       } catch {
         setUploading(false);
+        toast.error("이미지 업로드에 실패했어요.");
         return;
       }
       setUploading(false);
@@ -44,21 +46,18 @@ export function BoothSettings({ booth }: { booth: Booth }) {
         description: description.trim() || undefined,
         ...(imageUrl ? { imageUrl } : {}),
       },
-      { onSuccess: () => setFile(null) },
+      {
+        onSuccess: () => {
+          setFile(null);
+          toast.success("부스 정보를 저장했어요.");
+        },
+        onError: () => toast.error("저장에 실패했어요."),
+      },
     );
   };
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight text-foreground">
-          부스 설정
-        </h1>
-        <p className="mt-0.5 text-sm text-foreground-subtle">
-          부스 정보를 관리하세요.
-        </p>
-      </div>
-
       <StatusNote status={booth.status} />
 
       <Card className="max-w-xl space-y-4">
@@ -69,7 +68,7 @@ export function BoothSettings({ booth }: { booth: Booth }) {
             width={640}
             height={160}
             unoptimized
-            className="h-36 w-full rounded-[var(--radius-card-sm)] object-cover"
+            className="h-36 w-full rounded-card-sm object-cover"
           />
         )}
         <Field
@@ -84,10 +83,10 @@ export function BoothSettings({ booth }: { booth: Booth }) {
           placeholder="부스 소개를 입력하세요 (선택)"
         />
         <label className="block">
-          <span className="mb-1.5 block text-[13px] font-medium text-foreground">
+          <span className="mb-1.5 block text-caption font-medium text-foreground">
             대표 이미지 (선택)
           </span>
-          <label className="flex h-9 w-full cursor-pointer items-center gap-2 rounded-[var(--radius-card-sm)] border border-dashed border-border bg-surface px-3 text-sm text-foreground-subtle transition-colors hover:border-brand hover:text-foreground">
+          <label className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-card-sm border border-dashed border-border bg-surface px-3 text-body text-foreground-subtle transition-colors hover:border-brand hover:text-foreground">
             <Upload className="size-4" />
             <span className="truncate">
               {file ? file.name : "이미지 파일 선택"}
@@ -102,14 +101,15 @@ export function BoothSettings({ booth }: { booth: Booth }) {
         </label>
         <div className="flex items-center gap-3">
           <Button
-            disabled={!dirty || !valid || update.isPending || uploading}
+            loading={update.isPending || uploading}
+            disabled={!dirty || !valid}
             onClick={save}
           >
             <Save className="size-4" />
-            {update.isPending || uploading ? "저장 중…" : "저장"}
+            저장
           </Button>
           {update.isError && (
-            <p className="text-sm text-danger">저장에 실패했어요.</p>
+            <p className="text-body text-danger">저장에 실패했어요.</p>
           )}
         </div>
       </Card>

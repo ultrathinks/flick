@@ -1,10 +1,10 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { useState } from "react";
 import { useCreateProduct, useUpdateProduct } from "@/entities/product";
 import { uploadImage } from "@/features/image-upload";
-import { Button, Field, Sheet } from "@/shared/ui";
+import { Button, Field, Sheet, useToast } from "@/shared/ui";
 
 export function AddProductForm({ boothId }: { boothId: string }) {
   const [open, setOpen] = useState(false);
@@ -16,6 +16,7 @@ export function AddProductForm({ boothId }: { boothId: string }) {
   const [uploading, setUploading] = useState(false);
   const create = useCreateProduct(boothId);
   const update = useUpdateProduct(boothId);
+  const toast = useToast();
 
   const priceValue = Number(price);
   const stockValue = unlimited ? null : Number(stock);
@@ -55,9 +56,10 @@ export function AddProductForm({ boothId }: { boothId: string }) {
             value={price}
             onChange={(e) => setPrice(e.target.value)}
           />
-          <label className="flex items-center gap-2 text-sm text-foreground-subtle">
+          <label className="flex items-center gap-2 text-body text-foreground-subtle">
             <input
               type="checkbox"
+              className="size-4 accent-brand"
               checked={unlimited}
               onChange={(e) => setUnlimited(e.target.checked)}
             />
@@ -72,20 +74,27 @@ export function AddProductForm({ boothId }: { boothId: string }) {
             />
           )}
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-foreground">
+            <span className="mb-1.5 block text-body font-medium text-foreground">
               이미지 (선택)
             </span>
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              className="text-sm text-foreground-subtle"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
+            <label className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-card-sm border border-dashed border-border bg-surface px-3 text-body text-foreground-subtle transition-colors hover:border-brand hover:text-foreground">
+              <Upload className="size-4" />
+              <span className="truncate">
+                {file ? file.name : "이미지 파일 선택"}
+              </span>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
           </label>
           <div className="flex gap-2 pt-1">
             <Button
               className="flex-1"
-              disabled={!valid || create.isPending || uploading}
+              loading={create.isPending || uploading}
+              disabled={!valid}
               onClick={() =>
                 create.mutate(
                   {
@@ -108,17 +117,20 @@ export function AddProductForm({ boothId }: { boothId: string }) {
                             input: { imageUrl },
                           });
                         } catch {
+                          toast.error("이미지 업로드에 실패했어요.");
                         } finally {
                           setUploading(false);
                         }
                       }
+                      toast.success("메뉴를 추가했어요.");
                       reset();
                     },
+                    onError: () => toast.error("메뉴 추가에 실패했어요."),
                   },
                 )
               }
             >
-              {create.isPending || uploading ? "추가 중…" : "추가"}
+              추가
             </Button>
             <Button variant="neutral" onClick={() => setOpen(false)}>
               취소
