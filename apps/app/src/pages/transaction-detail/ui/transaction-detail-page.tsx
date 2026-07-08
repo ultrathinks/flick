@@ -53,7 +53,7 @@ const OrderItems = ({ orderId }: { orderId: string }) => {
             key={item.id}
             className="flex items-baseline justify-between gap-3 text-body"
           >
-            <span className="truncate text-foreground-muted">
+            <span className="min-w-0 flex-1 truncate text-foreground-muted">
               {item.name} × {item.quantity}
             </span>
             <Money

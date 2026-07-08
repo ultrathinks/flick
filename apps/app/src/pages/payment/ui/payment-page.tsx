@@ -66,12 +66,12 @@ const PaymentBody = ({ code }: { code: string }) => {
   return (
     <div className="space-y-4">
       <Card>
-        <div className="flex items-center justify-between">
-          <p className="text-heading font-semibold text-foreground">
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 truncate text-heading font-semibold text-foreground">
             {booth.name}
           </p>
           {!expired && (
-            <span className="rounded-full bg-surface-muted px-2.5 py-1 text-caption font-medium tabular-nums text-foreground-muted">
+            <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-1 text-caption font-medium tabular-nums text-foreground-muted">
               {formatSeconds(remaining)}
             </span>
           )}
@@ -82,7 +82,7 @@ const PaymentBody = ({ code }: { code: string }) => {
               key={item.id}
               className="flex items-baseline justify-between gap-3 text-body"
             >
-              <span className="truncate text-foreground-muted">
+              <span className="min-w-0 flex-1 truncate text-foreground-muted">
                 {item.name} × {item.quantity}
               </span>
               <Money
@@ -143,7 +143,7 @@ export const PaymentPage = ({ params }: RouteProps) => {
   return (
     <Screen className="flex-1 overflow-y-auto">
       <PageHeader title="결제 확인" back />
-      <div className="px-5 pb-6">
+      <div className="px-5 pb-6 pt-2">
         {code ? (
           <PaymentBody code={code} />
         ) : (

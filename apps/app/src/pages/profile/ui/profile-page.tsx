@@ -32,12 +32,12 @@ export const ProfilePage = () => {
                 src={me.data.profileImageUrl}
                 size="lg"
               />
-              <div>
-                <p className="text-heading font-bold text-foreground">
+              <div className="min-w-0">
+                <p className="truncate text-heading font-bold text-foreground">
                   {me.data.name}
                 </p>
                 {me.data.studentNumber && (
-                  <p className="text-body text-foreground-subtle">
+                  <p className="truncate text-body text-foreground-subtle">
                     {me.data.studentNumber}
                   </p>
                 )}
@@ -56,8 +56,14 @@ export const ProfilePage = () => {
                     />
                   }
                 />
-                <ListRow title="화면 테마" right={<ThemeToggle />} />
               </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface px-4 py-2">
+              <span className="text-heading font-medium text-foreground">
+                화면 테마
+              </span>
+              <ThemeToggle />
             </div>
           </>
         ) : (
