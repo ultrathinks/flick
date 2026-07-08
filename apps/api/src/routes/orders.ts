@@ -18,7 +18,7 @@ import {
   transactions,
   users,
 } from "../db/schema/index.ts";
-import { PAYMENT_TTL_MS } from "../lib/constants.ts";
+import { MAX_ORDER_QUANTITY, PAYMENT_TTL_MS } from "../lib/constants.ts";
 import {
   BadRequestError,
   ForbiddenError,
@@ -45,7 +45,7 @@ const createOrderSchema = z.object({
     .array(
       z.object({
         productId: z.string().uuid(),
-        quantity: z.number().int().positive(),
+        quantity: z.number().int().positive().max(MAX_ORDER_QUANTITY),
         optionValueIds: z.array(z.string().uuid()).optional(),
       }),
     )
