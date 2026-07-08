@@ -142,7 +142,6 @@ export const resolvedUserSchema = z
 export const payoutRequestSchema = z
   .object({
     id: z.string(),
-    amount: z.number(),
     status: z.enum(["requested", "paid", "rejected"]),
     createdAt: z.date(),
   })
@@ -159,7 +158,8 @@ export const maskedPayoutSchema = z
   .object({
     id: z.string(),
     userId: z.string(),
-    amount: z.number(),
+    amount: z.number().nullable(),
+    availableAmount: z.number(),
     status: z.enum(["requested", "paid", "rejected"]),
     accountHolder: z.string(),
     bankName: z.string(),

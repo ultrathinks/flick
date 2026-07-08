@@ -350,7 +350,7 @@ export const payouts = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
-    amount: bigint("amount", { mode: "number" }).notNull(),
+    amount: bigint("amount", { mode: "number" }),
     bankName: text("bank_name").notNull(),
     accountNumber: text("account_number").notNull(),
     accountHolder: text("account_holder").notNull(),
