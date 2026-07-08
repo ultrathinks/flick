@@ -3,7 +3,6 @@ import {
   useBridgeProvider,
   useBridgeResponse,
 } from "@b1nd/aid-kit/bridge-kit/web";
-import { useRouter } from "@b1nd/aid-kit/navigation";
 import {
   createContext,
   type ReactNode,
@@ -31,28 +30,27 @@ function hasNativeBridge(): boolean {
 
 interface PayByCodeValue {
   scannerOpen: boolean;
+  activeCode: string | null;
   scan: () => void;
   closeScanner: () => void;
   submitCode: (code: string) => void;
+  closePayment: () => void;
+  rescan: () => void;
 }
 
 const PayByCodeContext = createContext<PayByCodeValue | null>(null);
 
 export function PayByCodeProvider({ children }: { children: ReactNode }) {
   const { send } = useBridgeProvider();
-  const { stack } = useRouter();
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [activeCode, setActiveCode] = useState<string | null>(null);
 
-  const openPayment = useCallback(
-    (code: string) => {
-      const trimmed = code.trim();
-      if (trimmed.length === 0) {
-        return;
-      }
-      stack.push(`/payment/${encodeURIComponent(trimmed)}`);
-    },
-    [stack],
-  );
+  const openPayment = useCallback((code: string) => {
+    const trimmed = code.trim();
+    if (trimmed.length > 0) {
+      setActiveCode(trimmed);
+    }
+  }, []);
 
   useBridgeResponse(Actions.QR_SCAN, async (data) => {
     const text = parseScanText(data);
@@ -80,9 +78,32 @@ export function PayByCodeProvider({ children }: { children: ReactNode }) {
     [openPayment],
   );
 
+  const closePayment = useCallback(() => setActiveCode(null), []);
+
+  const rescan = useCallback(() => {
+    setActiveCode(null);
+    scan();
+  }, [scan]);
+
   const value = useMemo(
-    () => ({ scannerOpen, scan, closeScanner, submitCode }),
-    [scannerOpen, scan, closeScanner, submitCode],
+    () => ({
+      scannerOpen,
+      activeCode,
+      scan,
+      closeScanner,
+      submitCode,
+      closePayment,
+      rescan,
+    }),
+    [
+      scannerOpen,
+      activeCode,
+      scan,
+      closeScanner,
+      submitCode,
+      closePayment,
+      rescan,
+    ],
   );
 
   return (
