@@ -80,7 +80,8 @@ function CreateSheet({
         />
         <Button
           className="w-full"
-          disabled={!name.trim() || create.isPending}
+          loading={create.isPending}
+          disabled={!name.trim()}
           onClick={() =>
             create.mutate(name.trim(), {
               onSuccess: (result) => {
@@ -91,7 +92,7 @@ function CreateSheet({
           }
         >
           <KeyRound className="size-4" />
-          {create.isPending ? "생성 중…" : "페어링 코드 생성"}
+          페어링 코드 생성
         </Button>
         {create.isError && (
           <p className="text-body text-danger">생성에 실패했어요.</p>

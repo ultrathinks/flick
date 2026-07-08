@@ -95,7 +95,7 @@ function AddValue({
         value={price}
         onChange={(e) => setPrice(e.target.value)}
       />
-      <label className="flex items-center gap-1.5 pb-3 text-caption text-foreground-subtle">
+      <label className="flex h-11 items-center gap-1.5 text-caption text-foreground-subtle">
         <input
           type="checkbox"
           className="size-4 accent-brand"
@@ -106,7 +106,6 @@ function AddValue({
       </label>
       <Button
         size="sm"
-        className="mb-0.5"
         disabled={!valid || addValue.isPending}
         onClick={() =>
           addValue.mutate(
@@ -155,16 +154,20 @@ function GroupCard({
 
   return (
     <Card className="space-y-1">
-      <div className="flex items-center justify-between">
-        <p className="flex items-center gap-2 text-body font-semibold text-foreground">
-          {group.name}
-          <Badge tone={group.required ? "brand" : "neutral"}>
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <p className="flex min-w-0 items-center gap-2 text-body font-semibold text-foreground">
+          <span className="truncate">{group.name}</span>
+          <Badge
+            tone={group.required ? "brand" : "neutral"}
+            className="shrink-0"
+          >
             {group.required ? "필수" : "선택"}
           </Badge>
         </p>
         <Button
           variant="ghost"
           size="sm"
+          className="shrink-0"
           disabled={removeGroup.isPending}
           onClick={handleRemove}
         >
@@ -202,7 +205,7 @@ function AddGroup({ productId }: { productId: string }) {
         onChange={(e) => setName(e.target.value)}
         placeholder="예: 사이즈"
       />
-      <label className="flex items-center gap-1.5 pb-3 text-caption text-foreground-subtle">
+      <label className="flex h-11 items-center gap-1.5 text-caption text-foreground-subtle">
         <input
           type="checkbox"
           className="size-4 accent-brand"
@@ -213,7 +216,6 @@ function AddGroup({ productId }: { productId: string }) {
       </label>
       <Button
         size="sm"
-        className="mb-0.5"
         disabled={!name.trim() || addGroup.isPending}
         onClick={() =>
           addGroup.mutate(

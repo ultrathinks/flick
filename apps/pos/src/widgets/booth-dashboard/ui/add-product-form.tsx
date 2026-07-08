@@ -77,7 +77,7 @@ export function AddProductForm({ boothId }: { boothId: string }) {
             <span className="mb-1.5 block text-body font-medium text-foreground-muted">
               이미지 (선택)
             </span>
-            <label className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-card-sm border border-dashed border-border bg-surface px-3 text-body text-foreground-subtle transition-colors hover:border-brand hover:text-foreground">
+            <label className="flex h-11 w-full cursor-pointer items-center gap-2 rounded-card-sm border border-dashed border-border bg-surface px-3 text-body text-foreground-subtle transition-colors hover:border-brand hover:text-foreground">
               <Upload className="size-4" />
               <span className="truncate">
                 {file ? file.name : "이미지 파일 선택"}
@@ -136,6 +136,9 @@ export function AddProductForm({ boothId }: { boothId: string }) {
               취소
             </Button>
           </div>
+          {create.isError && (
+            <p className="text-body text-danger">메뉴 추가에 실패했어요.</p>
+          )}
         </div>
       </Sheet>
     </>

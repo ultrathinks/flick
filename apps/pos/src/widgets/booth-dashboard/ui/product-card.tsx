@@ -36,7 +36,7 @@ export function ProductCard({
   };
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-card border border-border bg-surface transition-colors hover:border-border">
+    <div className="flex flex-col overflow-hidden rounded-card border border-border bg-surface">
       <div
         className={cn(
           "relative aspect-square bg-surface-muted",

@@ -200,7 +200,7 @@ export function OrderBoard({ booth }: { booth: Booth }) {
                     {order.totalAmount.toLocaleString()}원
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex h-9 items-center justify-end gap-2">
                       <Badge tone={STATUS_TONE[order.status]}>
                         {STATUS_LABEL[order.status]}
                       </Badge>

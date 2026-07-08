@@ -33,7 +33,8 @@ export function BoothOnboarding() {
         />
         <Button
           className="w-full"
-          disabled={!name.trim() || create.isPending}
+          loading={create.isPending}
+          disabled={!name.trim()}
           onClick={() =>
             create.mutate({
               name: name.trim(),
@@ -41,7 +42,7 @@ export function BoothOnboarding() {
             })
           }
         >
-          {create.isPending ? "등록 중…" : "부스 등록"}
+          부스 등록
         </Button>
         {create.isError && (
           <p className="text-body text-danger">등록에 실패했어요.</p>
