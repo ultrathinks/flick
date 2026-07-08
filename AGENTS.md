@@ -1,4 +1,4 @@
-Flick — pnpm + Turborepo monorepo. Three web frontends (Vite + Next.js) + Hono/Drizzle API, sharing one design system.
+Flick — pnpm + Turborepo monorepo. Four web frontends (Vite + Next.js) + Hono/Drizzle API, sharing one design system.
 
 ## Rules
 
@@ -10,7 +10,7 @@ Flick — pnpm + Turborepo monorepo. Three web frontends (Vite + Next.js) + Hono
 ## Workspace
 
 - `apps/app` — customer web app (Vite + React 19, `@b1nd/aid-kit` navigation). See `apps/app/AGENTS.md`.
-- `apps/kiosk` — touch kiosk web app (Next.js 16). See `apps/kiosk/AGENTS.md`.
+- `apps/kiosk` — touch kiosk web app (Vite + React 19, react-router). See `apps/kiosk/AGENTS.md`.
 - `apps/pos` — booth-operator web app (Next.js 16). See `apps/pos/AGENTS.md`.
 - `apps/admin` — platform-operator back-office web app (Next.js 16). See `apps/admin/AGENTS.md`.
 - `apps/api` — Hono + Drizzle (PostgreSQL) API. See `apps/api/AGENTS.md`.
