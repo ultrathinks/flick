@@ -13,13 +13,13 @@ export function BoothMenu({ booth }: { booth: Booth }) {
 
   return (
     <Menu
-      trigger={({ toggle, ...aria }) => (
+      trigger={({ toggle, triggerProps }) => (
         <button
           type="button"
           onClick={toggle}
           aria-label="부스 메뉴"
           className="flex items-center rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-brand/40"
-          {...aria}
+          {...triggerProps}
         >
           <Avatar name={booth.name} size="md" />
         </button>

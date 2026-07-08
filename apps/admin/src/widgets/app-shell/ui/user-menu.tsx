@@ -12,13 +12,13 @@ export function UserMenu({ user }: { user: Me }) {
 
   return (
     <Menu
-      trigger={({ toggle, ...aria }) => (
+      trigger={({ toggle, triggerProps }) => (
         <button
           type="button"
           onClick={toggle}
           aria-label="내 계정"
           className="flex items-center rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-brand/40"
-          {...aria}
+          {...triggerProps}
         >
           <Avatar name={user.name} src={user.profileImageUrl} size="md" />
         </button>

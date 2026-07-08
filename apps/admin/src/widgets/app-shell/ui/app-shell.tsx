@@ -2,7 +2,7 @@
 
 import { Menu as MenuIcon, ShieldCheck, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Me } from "@/shared/auth/me";
 import { SidebarNav } from "./sidebar-nav.tsx";
 import { UserMenu } from "./user-menu.tsx";
@@ -15,6 +15,24 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    if (!drawerOpen) {
+      return;
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setDrawerOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [drawerOpen]);
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">

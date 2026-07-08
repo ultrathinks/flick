@@ -56,14 +56,13 @@ export const ProfilePage = () => {
                     />
                   }
                 />
+                <div className="flex items-center justify-between gap-3 py-3.5">
+                  <span className="text-heading font-medium text-foreground">
+                    화면 테마
+                  </span>
+                  <ThemeToggle />
+                </div>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface px-4 py-2">
-              <span className="text-heading font-medium text-foreground">
-                화면 테마
-              </span>
-              <ThemeToggle />
             </div>
           </>
         ) : (
