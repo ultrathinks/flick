@@ -131,3 +131,7 @@ export function paymentCodeView(): PaymentCodeView {
   };
   return { payment, order, booth, items, balance: me.balance };
 }
+
+export function lowBalanceView(): PaymentCodeView {
+  return { ...paymentCodeView(), balance: 2000 };
+}
