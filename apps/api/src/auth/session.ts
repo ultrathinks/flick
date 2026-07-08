@@ -5,6 +5,7 @@ import { sessions, type User, users } from "../db/schema/index.ts";
 
 const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const REFRESH_GRACE_TTL_MS = 30 * 1000;
 
 export const ACCESS_TOKEN_EXPIRES_IN_SECONDS = ACCESS_TOKEN_TTL_MS / 1000;
 
@@ -64,26 +65,55 @@ export async function rotateRefresh(
   refreshToken: string,
 ): Promise<IssuedTokens | null> {
   const now = Date.now();
+  const providedHash = hashToken(refreshToken);
   const newAccessToken = generateToken();
   const newRefreshToken = generateToken();
 
-  const updated = await getDb()
+  const rotated = await getDb()
     .update(sessions)
     .set({
       accessTokenHash: hashToken(newAccessToken),
       refreshTokenHash: hashToken(newRefreshToken),
       accessTokenExpiresAt: new Date(now + ACCESS_TOKEN_TTL_MS),
       refreshTokenExpiresAt: new Date(now + REFRESH_TOKEN_TTL_MS),
+      previousRefreshTokenHash: providedHash,
+      previousRefreshTokenExpiresAt: new Date(now + REFRESH_GRACE_TTL_MS),
     })
     .where(
       and(
-        eq(sessions.refreshTokenHash, hashToken(refreshToken)),
+        eq(sessions.refreshTokenHash, providedHash),
         gt(sessions.refreshTokenExpiresAt, new Date()),
       ),
     )
     .returning({ id: sessions.id });
 
-  if (updated.length === 0) {
+  if (rotated.length > 0) {
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      expiresIn: ACCESS_TOKEN_EXPIRES_IN_SECONDS,
+    };
+  }
+
+  const graced = await getDb()
+    .update(sessions)
+    .set({
+      accessTokenHash: hashToken(newAccessToken),
+      refreshTokenHash: hashToken(newRefreshToken),
+      accessTokenExpiresAt: new Date(now + ACCESS_TOKEN_TTL_MS),
+      refreshTokenExpiresAt: new Date(now + REFRESH_TOKEN_TTL_MS),
+      previousRefreshTokenHash: sessions.refreshTokenHash,
+      previousRefreshTokenExpiresAt: new Date(now + REFRESH_GRACE_TTL_MS),
+    })
+    .where(
+      and(
+        eq(sessions.previousRefreshTokenHash, providedHash),
+        gt(sessions.previousRefreshTokenExpiresAt, new Date()),
+      ),
+    )
+    .returning({ id: sessions.id });
+
+  if (graced.length === 0) {
     return null;
   }
 

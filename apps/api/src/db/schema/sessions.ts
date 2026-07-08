@@ -17,6 +17,11 @@ export const sessions = pgTable(
     refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
       withTimezone: true,
     }).notNull(),
+    previousRefreshTokenHash: text("previous_refresh_token_hash").unique(),
+    previousRefreshTokenExpiresAt: timestamp(
+      "previous_refresh_token_expires_at",
+      { withTimezone: true },
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
