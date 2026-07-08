@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { COOKIE_OPTIONS } from "@/shared/auth/cookies";
+import {
+  COOKIE_OPTIONS,
+  STATE_COOKIE,
+  VERIFIER_COOKIE,
+} from "@/shared/auth/cookies";
 import {
   generateCodeChallenge,
   generateCodeVerifier,
@@ -12,9 +16,6 @@ import {
   DAUTH_REDIRECT_URI,
   DAUTH_SCOPE,
 } from "@/shared/config";
-
-const VERIFIER_COOKIE = "flick_admin_verifier";
-const STATE_COOKIE = "flick_admin_state";
 
 export async function GET() {
   const verifier = generateCodeVerifier();
