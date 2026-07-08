@@ -11,7 +11,7 @@ import {
   getKioskSession,
   getPaymentSnapshot,
 } from "@/shared/model/storage";
-import { Button } from "@/shared/ui";
+import { Button, useConfirm } from "@/shared/ui";
 import { Loading } from "@/shared/ui/loading";
 import type { OrderSummaryItem } from "@/widgets/payment/ui/order-summary-panel";
 import { PaymentWaiting } from "@/widgets/payment/ui/payment-waiting";
@@ -36,6 +36,7 @@ function isValidPaymentSnapshot(snapshot: PaymentSnapshot) {
 
 export default function PaymentPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [snapshot, setSnapshot] = useState<PaymentSnapshot | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -124,9 +125,16 @@ export default function PaymentPage() {
     return () => clearTimeout(id);
   }, [snapshot]);
 
-  function handleCancel() {
-    if (!window.confirm("결제를 취소하시겠습니까?")) return;
-    cancelAndGoBackRef.current();
+  async function handleCancel() {
+    const ok = await confirm({
+      tone: "danger",
+      title: "결제를 취소할까요?",
+      description: "진행 중인 결제가 취소돼요.",
+      confirmLabel: "결제 취소",
+    });
+    if (ok) {
+      cancelAndGoBackRef.current();
+    }
   }
 
   if (pageError) {

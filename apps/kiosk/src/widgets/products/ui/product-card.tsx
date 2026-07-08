@@ -19,12 +19,13 @@ export function ProductCard({
   return (
     <button
       type="button"
+      disabled={isSoldOut}
       className={`relative flex h-64 w-full flex-col overflow-hidden rounded-card border bg-surface text-left transition disabled:cursor-not-allowed ${
         inCart ? "border-brand" : "border-border"
       } ${
         isSoldOut
           ? "opacity-70"
-          : "hover:-translate-y-1 hover:shadow-[var(--shadow-overlay)] active:-translate-y-0.5"
+          : "active:-translate-y-0.5 active:shadow-[var(--shadow-overlay)]"
       } ${isAtStockLimit && !isSoldOut ? "bg-surface-muted" : ""}`}
       onClick={() => onAddProduct(product)}
     >
@@ -59,11 +60,11 @@ export function ProductCard({
           </div>
         ) : null}
       </div>
-      <div className="flex flex-1 flex-col justify-between p-4">
-        <h2 className="truncate text-subtitle font-semibold text-foreground">
+      <div className="flex flex-1 flex-col justify-between gap-2 p-4">
+        <h2 className="line-clamp-2 text-subtitle font-semibold text-foreground">
           {product.name}
         </h2>
-        <div>
+        <div className="shrink-0">
           <Money
             amount={product.price}
             className={`block text-title font-bold ${

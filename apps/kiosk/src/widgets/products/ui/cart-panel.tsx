@@ -77,65 +77,67 @@ export function CartPanel({
 
               return (
                 <div
-                  className="flex items-center justify-between border-b border-border py-4"
+                  className="flex flex-col gap-3 border-b border-border py-4"
                   key={item.id}
                 >
-                  <div className="mr-2 min-w-0 flex-1">
-                    <h3 className="truncate text-heading font-semibold text-foreground">
-                      {item.name}
-                    </h3>
-                    <div className="flex items-baseline">
-                      <Money
-                        amount={item.price * item.quantity}
-                        className="text-heading font-semibold text-brand"
-                      />
-                      <span className="ml-1 text-caption text-foreground-subtle">
-                        (<Money amount={item.price} />
-                        /개)
-                      </span>
-                    </div>
-                    {maxReached ? (
-                      <p className="mt-1 text-caption font-bold text-foreground-faint">
-                        최대 수량
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-heading font-semibold text-foreground">
+                        {item.name}
+                      </h3>
+                      <p className="mt-0.5 text-caption text-foreground-subtle">
+                        <Money amount={item.price} />
+                        /개
                       </p>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center gap-2">
+                    </div>
                     <Button
-                      variant="neutral"
-                      size="icon-lg"
-                      aria-label="수량 줄이기"
-                      className="rounded-full"
-                      onClick={() =>
-                        onUpdateQuantity(item.id, item.quantity - 1)
-                      }
-                    >
-                      <Minus strokeWidth={2.5} />
-                    </Button>
-                    <span className="mx-1 min-w-6 text-center text-heading font-semibold text-foreground">
-                      {item.quantity}
-                    </span>
-                    <Button
-                      size="icon-lg"
-                      aria-label="수량 늘리기"
-                      className="rounded-full"
-                      onClick={() =>
-                        onUpdateQuantity(item.id, item.quantity + 1)
-                      }
-                      disabled={maxReached}
-                    >
-                      <Plus strokeWidth={2.5} />
-                    </Button>
-                    <Button
-                      variant="weak"
-                      size="icon-lg"
+                      variant="ghost"
+                      size="icon-sm"
                       aria-label="삭제"
-                      className="rounded-full bg-danger-subtle text-danger hover:brightness-95"
+                      className="-mr-1 shrink-0 text-foreground-subtle hover:text-danger"
                       onClick={() => onUpdateQuantity(item.id, 0)}
                     >
-                      <X strokeWidth={2.5} />
+                      <X strokeWidth={2} />
                     </Button>
                   </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <Money
+                      amount={item.price * item.quantity}
+                      className="text-subtitle font-bold text-brand"
+                    />
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button
+                        variant="neutral"
+                        size="icon"
+                        aria-label="수량 줄이기"
+                        className="rounded-full"
+                        onClick={() =>
+                          onUpdateQuantity(item.id, item.quantity - 1)
+                        }
+                      >
+                        <Minus strokeWidth={2.5} />
+                      </Button>
+                      <span className="min-w-8 text-center text-heading font-bold tabular-nums text-foreground">
+                        {item.quantity}
+                      </span>
+                      <Button
+                        size="icon"
+                        aria-label="수량 늘리기"
+                        className="rounded-full"
+                        onClick={() =>
+                          onUpdateQuantity(item.id, item.quantity + 1)
+                        }
+                        disabled={maxReached}
+                      >
+                        <Plus strokeWidth={2.5} />
+                      </Button>
+                    </div>
+                  </div>
+                  {maxReached ? (
+                    <p className="text-caption font-bold text-foreground-faint">
+                      최대 수량이에요
+                    </p>
+                  ) : null}
                 </div>
               );
             })}

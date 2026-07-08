@@ -51,7 +51,7 @@ export function ProductsCatalog({
     <main className="flex h-dvh flex-col bg-bg">
       <BrandHeader />
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <section className="flex-1 overflow-auto bg-bg p-5">
+        <section className="flex-1 overflow-auto bg-bg p-6">
           {errorMessage ? (
             <ProductsErrorState onRetry={onRetry} />
           ) : products.length === 0 ? (
@@ -61,7 +61,7 @@ export function ProductsCatalog({
               description="부스 관리 화면에서 상품 상태를 확인해주세요"
             />
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
               {products.map((product) => (
                 <ProductCard
                   key={product.id}

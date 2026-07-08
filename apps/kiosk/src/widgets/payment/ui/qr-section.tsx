@@ -1,6 +1,6 @@
 import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
-import { Button, Money } from "@/shared/ui";
+import { Button, CodeDisplay, Money } from "@/shared/ui";
 
 type QrSectionProps = {
   code: string;
@@ -48,10 +48,8 @@ export function QrSection({ code, totalAmount }: QrSectionProps) {
         {showCode ? "코드 숨기기" : "코드 번호 보기"}
       </Button>
       {showCode && (
-        <div className="-mt-4 rounded-card-sm border border-border bg-surface-muted px-5 py-3">
-          <p className="break-all font-mono text-body font-bold text-foreground">
-            {code}
-          </p>
+        <div className="w-full max-w-sm">
+          <CodeDisplay code={code} />
         </div>
       )}
     </div>
