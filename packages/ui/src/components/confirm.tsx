@@ -46,7 +46,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(() => confirm, [confirm]);
 
   return (
-    <ConfirmContext.Provider value={value}>
+    <ConfirmContext value={value}>
       {children}
       <Sheet
         open={pending !== null}
@@ -79,7 +79,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </Sheet>
-    </ConfirmContext.Provider>
+    </ConfirmContext>
   );
 }
 
