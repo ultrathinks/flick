@@ -1,5 +1,5 @@
-const ACCESS_TOKEN_KEY = "flick::access-token";
-const REFRESH_TOKEN_KEY = "flick::refresh-token";
+const ACCESS_TOKEN_KEY = "flick:app:access-token";
+const REFRESH_TOKEN_KEY = "flick:app:refresh-token";
 
 export interface SessionTokens {
   accessToken: string;

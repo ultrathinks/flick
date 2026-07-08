@@ -21,6 +21,7 @@ type PaymentSnapshot = {
 const KIOSK_SESSION_KEY = "flick:kiosk:session";
 const CART_KEY = "flick:kiosk:cart";
 const PAYMENT_KEY = "flick:kiosk:payment";
+const ALERT_KEY = "flick:kiosk:alert";
 
 const emptySession: KioskSession = { token: null };
 const emptyPayment: PaymentSnapshot = {
@@ -87,4 +88,22 @@ export function clearKioskData() {
   setKioskToken(null);
   clearCartItems();
   clearPaymentSnapshot();
+}
+
+export function takeAlert(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const value = window.sessionStorage.getItem(ALERT_KEY);
+  if (value) {
+    window.sessionStorage.removeItem(ALERT_KEY);
+  }
+  return value;
+}
+
+export function setAlert(message: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.sessionStorage.setItem(ALERT_KEY, message);
 }

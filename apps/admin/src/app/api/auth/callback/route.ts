@@ -4,12 +4,11 @@ import {
   ACCESS_COOKIE,
   COOKIE_OPTIONS,
   REFRESH_COOKIE,
+  STATE_COOKIE,
+  VERIFIER_COOKIE,
 } from "@/shared/auth/cookies";
 import { exchangeDauthCode } from "@/shared/auth/server";
 import { BASE_URL, DAUTH_REDIRECT_URI } from "@/shared/config";
-
-const VERIFIER_COOKIE = "flick_admin_verifier";
-const STATE_COOKIE = "flick_admin_state";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);

@@ -24,6 +24,7 @@ import {
   getPaymentSnapshot,
   setCartItems,
   setPaymentSnapshot,
+  takeAlert,
 } from "@/shared/model/storage";
 import { useLocalState } from "@/shared/model/use-local-state";
 import { ProductsCatalog } from "@/widgets/products/ui/products-catalog";
@@ -50,9 +51,8 @@ export default function ProductsPage() {
   useEffect(() => {
     let active = true;
 
-    const storedAlert = sessionStorage.getItem("flick:alert");
+    const storedAlert = takeAlert();
     if (storedAlert) {
-      sessionStorage.removeItem("flick:alert");
       setAlertMessage(storedAlert);
     }
 
