@@ -10,6 +10,7 @@ import {
   Button,
   EmptyState,
   QueryState,
+  SectionHeader,
   Select,
   Skeleton,
   Stat,
@@ -102,7 +103,7 @@ export function OrderBoard({ booth }: { booth: Booth }) {
   }, [orders.data, filter]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Stat
           label="결제 매출"
@@ -122,22 +123,24 @@ export function OrderBoard({ booth }: { booth: Booth }) {
         />
       </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-body font-medium text-foreground">주문 내역</p>
-        <div className="w-36">
-          <Select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value as Filter)}
-          >
-            <option value="all">전체</option>
-            <option value="paid">결제 완료</option>
-            <option value="pending">결제 대기</option>
-            <option value="canceled">취소</option>
-            <option value="refunded">환불</option>
-            <option value="expired">만료</option>
-          </Select>
-        </div>
-      </div>
+      <SectionHeader
+        title="주문 내역"
+        action={
+          <div className="w-36">
+            <Select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value as Filter)}
+            >
+              <option value="all">전체</option>
+              <option value="paid">결제 완료</option>
+              <option value="pending">결제 대기</option>
+              <option value="canceled">취소</option>
+              <option value="refunded">환불</option>
+              <option value="expired">만료</option>
+            </Select>
+          </div>
+        }
+      />
 
       <QueryState
         isPending={orders.isPending}
@@ -176,7 +179,7 @@ export function OrderBoard({ booth }: { booth: Booth }) {
                 <th className="px-4 py-2.5 text-left text-caption font-medium text-foreground-subtle">
                   주문 시각
                 </th>
-                <th className="px-4 py-2.5 text-left text-caption font-medium text-foreground-subtle">
+                <th className="px-4 py-2.5 text-right text-caption font-medium text-foreground-subtle">
                   결제 금액
                 </th>
                 <th className="px-4 py-2.5 text-right text-caption font-medium text-foreground-subtle">
@@ -193,7 +196,7 @@ export function OrderBoard({ booth }: { booth: Booth }) {
                   <td className="px-4 py-2.5 text-caption text-foreground-subtle">
                     {formatTime(order.createdAt)}
                   </td>
-                  <td className="px-4 py-2.5 text-caption font-medium tabular-nums text-foreground">
+                  <td className="px-4 py-2.5 text-right text-body font-medium tabular-nums text-foreground">
                     {order.totalAmount.toLocaleString()}원
                   </td>
                   <td className="px-4 py-2.5 text-right">

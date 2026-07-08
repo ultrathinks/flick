@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import type { Booth } from "@/entities/booth";
 import { useMyBooth } from "@/entities/booth";
 import { ApiError } from "@/shared/api";
-import { EmptyState, Skeleton } from "@/shared/ui";
+import { Button, EmptyState, Skeleton } from "@/shared/ui";
 import { BoothOnboarding } from "@/widgets/booth-onboarding";
 import { isTabLocked, type TabKey } from "../model/tabs.ts";
 import { AppShell } from "./app-shell.tsx";
@@ -52,13 +52,9 @@ export function BoothScreen({
           title="부스 정보를 불러오지 못했어요"
           description="잠시 후 다시 시도해 주세요."
           action={
-            <button
-              type="button"
-              onClick={() => booth.refetch()}
-              className="rounded-control px-4 py-2 text-body font-semibold text-brand transition-colors hover:bg-brand-subtle"
-            >
+            <Button variant="weak" size="sm" onClick={() => booth.refetch()}>
               다시 시도
-            </button>
+            </Button>
           }
         />
       </div>

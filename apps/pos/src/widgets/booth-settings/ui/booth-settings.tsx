@@ -57,7 +57,7 @@ export function BoothSettings({ booth }: { booth: Booth }) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <StatusNote status={booth.status} />
 
       <Card className="max-w-xl space-y-4">
@@ -82,8 +82,8 @@ export function BoothSettings({ booth }: { booth: Booth }) {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="부스 소개를 입력하세요 (선택)"
         />
-        <label className="block">
-          <span className="mb-1.5 block text-caption font-medium text-foreground">
+        <div className="block">
+          <span className="mb-1.5 block text-body font-medium text-foreground-muted">
             대표 이미지 (선택)
           </span>
           <label className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-card-sm border border-dashed border-border bg-surface px-3 text-body text-foreground-subtle transition-colors hover:border-brand hover:text-foreground">
@@ -98,7 +98,7 @@ export function BoothSettings({ booth }: { booth: Booth }) {
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
           </label>
-        </label>
+        </div>
         <div className="flex items-center gap-3">
           <Button
             loading={update.isPending || uploading}

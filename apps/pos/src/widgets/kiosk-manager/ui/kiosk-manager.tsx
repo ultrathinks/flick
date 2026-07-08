@@ -12,11 +12,13 @@ import {
 import {
   Badge,
   Button,
+  CodeDisplay,
   EmptyState,
   Field,
   QueryState,
   Sheet,
   Skeleton,
+  useToast,
 } from "@/shared/ui";
 
 function formatDate(iso: string): string {
@@ -114,11 +116,7 @@ function CodeSheet({
             키오스크 기기에서 아래 코드를 입력해 연결하세요. 이 코드는 지금만
             확인할 수 있어요.
           </p>
-          <div className="rounded-card border border-border bg-surface-muted py-6 text-center">
-            <p className="text-display font-semibold tracking-[0.3em] tabular-nums text-foreground">
-              {result.code}
-            </p>
-          </div>
+          <CodeDisplay code={result.code} size="lg" />
           <Button className="w-full" onClick={onClose}>
             확인
           </Button>
@@ -139,9 +137,10 @@ export function KioskManager({
 }) {
   const pairings = useKioskPairings(booth.id);
   const [created, setCreated] = useState<CreatePairingResult | null>(null);
+  const toast = useToast();
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <QueryState
         isPending={pairings.isPending}
         isError={pairings.isError}
@@ -175,6 +174,7 @@ export function KioskManager({
         onCreated={(result) => {
           onCreateOpenChange(false);
           setCreated(result);
+          toast.success("키오스크 코드를 만들었어요");
         }}
       />
       <CodeSheet result={created} onClose={() => setCreated(null)} />

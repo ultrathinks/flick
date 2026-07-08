@@ -73,8 +73,8 @@ export function AddProductForm({ boothId }: { boothId: string }) {
               onChange={(e) => setStock(e.target.value)}
             />
           )}
-          <label className="block">
-            <span className="mb-1.5 block text-body font-medium text-foreground">
+          <div className="block">
+            <span className="mb-1.5 block text-body font-medium text-foreground-muted">
               이미지 (선택)
             </span>
             <label className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-card-sm border border-dashed border-border bg-surface px-3 text-body text-foreground-subtle transition-colors hover:border-brand hover:text-foreground">
@@ -89,7 +89,7 @@ export function AddProductForm({ boothId }: { boothId: string }) {
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </label>
-          </label>
+          </div>
           <div className="flex gap-2 pt-1">
             <Button
               className="flex-1"

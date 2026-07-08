@@ -38,19 +38,24 @@ function ValueRow({
   };
 
   return (
-    <div className="flex items-center justify-between py-2">
-      <span className="flex items-center gap-2 text-body text-foreground">
-        {name}
+    <div className="flex min-w-0 items-center justify-between gap-2 py-2">
+      <span className="flex min-w-0 items-center gap-2 text-body text-foreground">
+        <span className="truncate">{name}</span>
         {priceDelta > 0 && (
-          <span className="text-caption text-foreground-subtle">
+          <span className="shrink-0 text-caption text-foreground-subtle">
             +{priceDelta.toLocaleString()}원
           </span>
         )}
-        {isDefault && <Badge tone="brand">기본</Badge>}
+        {isDefault && (
+          <Badge tone="brand" className="shrink-0">
+            기본
+          </Badge>
+        )}
       </span>
       <Button
         variant="ghost"
         size="icon-sm"
+        className="shrink-0"
         aria-label="옵션값 삭제"
         disabled={removeValue.isPending}
         onClick={handleRemove}

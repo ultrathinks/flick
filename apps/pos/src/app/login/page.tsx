@@ -23,7 +23,7 @@ export default async function LoginPage({
       </div>
       <Link
         href="/api/auth/login"
-        className="flex h-10 w-full items-center justify-center rounded-card-sm bg-brand px-4 text-body font-medium text-brand-foreground transition-colors hover:bg-brand-hover"
+        className="flex h-11 w-full items-center justify-center rounded-control bg-brand px-4 text-heading font-semibold text-brand-foreground transition-colors hover:bg-brand-hover"
       >
         도담 계정으로 로그인
       </Link>

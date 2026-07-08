@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/entities/product";
 import { useArchiveProduct, useUpdateProduct } from "@/entities/product";
+import { cn } from "@/shared/lib/cn.ts";
 import { Badge, Button, useConfirm, useToast } from "@/shared/ui";
 
 export function ProductCard({
@@ -35,8 +36,13 @@ export function ProductCard({
   };
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-card border border-border bg-surface transition-colors hover:border-muted/40">
-      <div className="relative aspect-square bg-surface-muted">
+    <div className="flex flex-col overflow-hidden rounded-card border border-border bg-surface transition-colors hover:border-border">
+      <div
+        className={cn(
+          "relative aspect-square bg-surface-muted",
+          soldOut && "opacity-60",
+        )}
+      >
         {product.imageUrl ? (
           <Image
             src={product.imageUrl}
@@ -73,9 +79,9 @@ export function ProductCard({
         <div className="mt-auto flex items-center gap-1 border-t border-border pt-2">
           <Link
             href={`/products/${product.id}/options`}
-            className="inline-flex h-10 items-center gap-1.5 rounded-card-sm px-2.5 text-caption font-medium text-foreground-subtle transition-colors hover:bg-surface-muted hover:text-foreground"
+            className="inline-flex h-9 items-center gap-1.5 rounded-card-sm px-2.5 text-caption font-medium text-foreground-subtle transition-colors hover:bg-surface-muted hover:text-foreground"
           >
-            <Settings2 className="size-3.5" />
+            <Settings2 className="size-4" />
             옵션
           </Link>
           <Button
@@ -99,7 +105,7 @@ export function ProductCard({
             disabled={archive.isPending}
             onClick={handleArchive}
           >
-            <Trash2 className="size-3.5" />
+            <Trash2 className="size-4" />
           </Button>
         </div>
       </div>
