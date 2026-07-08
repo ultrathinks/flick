@@ -212,9 +212,7 @@ export default function ProductsPage() {
       if (createdOrderId) {
         try {
           await cancelOrder(token, createdOrderId);
-        } catch {
-          /* cleanup best-effort */
-        }
+        } catch {}
       }
       if (error instanceof ApiError && error.status === 401) {
         clearKioskData();

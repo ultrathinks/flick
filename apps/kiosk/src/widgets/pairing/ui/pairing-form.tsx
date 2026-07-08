@@ -1,5 +1,5 @@
-import { Button } from "@flick/ui";
 import type { FormEvent } from "react";
+import { Button, Input } from "@/shared/ui";
 import { BrandHeader } from "@/shared/ui/brand-header";
 
 type PairingFormProps = {
@@ -43,9 +43,9 @@ export function PairingForm({
           >
             페어링 코드
           </label>
-          <input
+          <Input
             id="pairing-code"
-            className="h-16 w-full rounded-control border border-border bg-surface px-4 text-center text-2xl font-bold tracking-[0.18em] text-foreground outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15"
+            className="h-14 text-center text-subtitle font-bold tracking-[0.18em]"
             value={code}
             onChange={(event) => onCodeChange(event.target.value)}
             placeholder="CODE"

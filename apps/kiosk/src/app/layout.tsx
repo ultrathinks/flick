@@ -1,3 +1,4 @@
+import { ConfirmProvider, ToastProvider } from "@flick/ui";
 import { ThemeProvider } from "@flick/ui/theme";
 import type { Metadata } from "next";
 import "./globals.css";
@@ -34,7 +35,11 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-bg text-foreground">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <ConfirmProvider>{children}</ConfirmProvider>
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

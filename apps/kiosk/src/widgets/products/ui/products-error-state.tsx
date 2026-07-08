@@ -1,5 +1,5 @@
-import { Button } from "@flick/ui";
 import { TriangleAlert } from "lucide-react";
+import { Button } from "@/shared/ui";
 
 type ProductsErrorStateProps = {
   onRetry: () => void;

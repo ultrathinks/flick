@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@flick/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { CartItem } from "@/entities/cart/model/types";
@@ -12,6 +11,7 @@ import {
   getKioskSession,
   getPaymentSnapshot,
 } from "@/shared/model/storage";
+import { Button } from "@/shared/ui";
 import { Loading } from "@/shared/ui/loading";
 import type { OrderSummaryItem } from "@/widgets/payment/ui/order-summary-panel";
 import { PaymentWaiting } from "@/widgets/payment/ui/payment-waiting";

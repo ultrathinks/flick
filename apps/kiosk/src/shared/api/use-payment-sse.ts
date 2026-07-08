@@ -110,9 +110,7 @@ export function usePaymentSSE(paymentId: string | null, token: string | null) {
                     event: currentEvent || "message",
                     data: parsed,
                   });
-                } catch {
-                  /* ignore malformed JSON */
-                }
+                } catch {}
               }
               currentEvent = "";
               currentData = "";

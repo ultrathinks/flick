@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@flick/ui";
+import { Button } from "@/shared/ui";
 
 export default function PageError({
   error,
