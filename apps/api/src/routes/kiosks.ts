@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
 import {
   type AuthVariables,
   requireAuth,
@@ -65,16 +65,17 @@ kiosksRoutes.openapi(
     const db = getDb();
     const result = await db.transaction(async (tx) => {
       const [pairing] = await tx
-        .select()
-        .from(kioskPairings)
+        .update(kioskPairings)
+        .set({ claimedAt: now })
         .where(
           and(
             eq(kioskPairings.codeHash, hashSecret(code)),
             isNull(kioskPairings.claimedAt),
+            gt(kioskPairings.expiresAt, now),
           ),
         )
-        .limit(1);
-      if (!pairing || pairing.expiresAt <= now) {
+        .returning();
+      if (!pairing) {
         throw new BadRequestError("invalid pairing code");
       }
       const [kiosk] = await tx
@@ -88,10 +89,6 @@ kiosksRoutes.openapi(
       if (!kiosk) {
         throw new Error("failed to create kiosk");
       }
-      await tx
-        .update(kioskPairings)
-        .set({ claimedAt: now })
-        .where(eq(kioskPairings.id, pairing.id));
       return kiosk;
     });
     return c.json({ kiosk: serializeKiosk(result), deviceToken: token }, 201);
@@ -152,7 +149,8 @@ kiosksRoutes.openapi(
           eq(products.status, "available"),
           isNull(products.archivedAt),
         ),
-      );
+      )
+      .orderBy(asc(products.sortOrder), asc(products.createdAt));
     const productIds = rows.map((product) => product.id);
     const groups =
       productIds.length > 0
@@ -213,7 +211,7 @@ kiosksRoutes.openapi(
     tags: ["kiosks"],
     security: [{ Bearer: [] }],
     middleware: [requireAuth] as const,
-    request: { params: z.object({ id: z.string() }) },
+    request: { params: z.object({ id: z.string().uuid() }) },
     responses: {
       200: jsonContent(kioskSchema, "Revoked kiosk"),
       401: errorResponse("Unauthorized"),

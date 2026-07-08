@@ -7,7 +7,8 @@ export type PayoutStatus = (typeof payoutStatuses)[number];
 export const maskedPayoutSchema = z.object({
   id: z.string(),
   userId: z.string(),
-  amount: z.number(),
+  amount: z.number().nullable(),
+  availableAmount: z.number(),
   status: z.enum(payoutStatuses),
   accountHolder: z.string(),
   bankName: z.string(),

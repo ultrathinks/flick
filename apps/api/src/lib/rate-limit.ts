@@ -16,16 +16,28 @@ function clientKey(c: Context, keyPrefix: string): string {
   return `ratelimit:${keyPrefix}:ip:${ip}`;
 }
 
+const INCR_WITH_TTL = `
+local current = redis.call('incr', KEYS[1])
+if current == 1 then
+  redis.call('pexpire', KEYS[1], ARGV[1])
+elseif redis.call('pttl', KEYS[1]) < 0 then
+  redis.call('pexpire', KEYS[1], ARGV[1])
+end
+return current
+`;
+
 async function allowRedis(key: string, limit: number): Promise<boolean> {
   const redis = getRedis();
   if (!redis) {
     return allowMemory(key, limit);
   }
   try {
-    const count = await redis.incr(key);
-    if (count === 1) {
-      await redis.pexpire(key, WINDOW_MS);
-    }
+    const count = (await redis.eval(
+      INCR_WITH_TTL,
+      1,
+      key,
+      String(WINDOW_MS),
+    )) as number;
     return count <= limit;
   } catch (error) {
     console.error("rate limit: redis error, falling back to in-memory", error);

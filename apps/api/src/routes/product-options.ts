@@ -16,7 +16,7 @@ import {
   productOptionValueSchema,
 } from "../openapi/schemas.ts";
 
-const idParam = z.object({ id: z.string() });
+const idParam = z.object({ id: z.string().uuid() });
 
 const groupBodySchema = z.object({
   name: z.string().min(1),

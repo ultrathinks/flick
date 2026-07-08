@@ -18,7 +18,7 @@ import {
   transactions,
   users,
 } from "../db/schema/index.ts";
-import { PAYMENT_TTL_MS } from "../lib/constants.ts";
+import { MAX_ORDER_QUANTITY, PAYMENT_TTL_MS } from "../lib/constants.ts";
 import {
   BadRequestError,
   ForbiddenError,
@@ -45,14 +45,14 @@ const createOrderSchema = z.object({
     .array(
       z.object({
         productId: z.string().uuid(),
-        quantity: z.number().int().positive(),
+        quantity: z.number().int().positive().max(MAX_ORDER_QUANTITY),
         optionValueIds: z.array(z.string().uuid()).optional(),
       }),
     )
     .min(1),
 });
 
-const idParam = z.object({ id: z.string() });
+const idParam = z.object({ id: z.string().uuid() });
 
 async function attachOptions<T extends { id: string }>(items: T[]) {
   const itemIds = items.map((item) => item.id);
@@ -332,26 +332,28 @@ ordersRoutes.openapi(
     const kiosk = c.get("kiosk");
     const orderId = c.req.valid("param").id;
     const now = new Date();
-    const [order] = await getDb()
-      .update(orders)
-      .set({ status: "canceled", canceledAt: now })
-      .where(
-        and(
-          eq(orders.id, orderId),
-          eq(orders.kioskId, kiosk.id),
-          eq(orders.status, "pending"),
-        ),
-      )
-      .returning();
-    if (!order) {
-      throw new NotFoundError("order not found");
-    }
-    await getDb()
-      .update(payments)
-      .set({ status: "canceled" })
-      .where(
-        and(eq(payments.orderId, order.id), eq(payments.status, "pending")),
-      );
+    const order = await getDb().transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(orders)
+        .where(and(eq(orders.id, orderId), eq(orders.kioskId, kiosk.id)))
+        .for("update");
+      if (existing?.status !== "pending") {
+        throw new NotFoundError("order not found");
+      }
+      const [updated] = await tx
+        .update(orders)
+        .set({ status: "canceled", canceledAt: now })
+        .where(eq(orders.id, orderId))
+        .returning();
+      await tx
+        .update(payments)
+        .set({ status: "canceled" })
+        .where(
+          and(eq(payments.orderId, orderId), eq(payments.status, "pending")),
+        );
+      return updated;
+    });
     return c.json(order, 200);
   },
 );
@@ -569,13 +571,16 @@ paymentCodesRoutes.openapi(
       const [order] = await tx
         .update(orders)
         .set({ status: "paid", buyerId: user.id, paidAt: now })
-        .where(eq(orders.id, row.order.id))
+        .where(and(eq(orders.id, row.order.id), eq(orders.status, "pending")))
         .returning();
+      if (!order) {
+        throw new PaymentNotPendingError();
+      }
       await tx
         .update(payments)
         .set({ status: "completed", completedAt: now, confirmedBy: user.id })
         .where(eq(payments.id, row.payment.id));
-      return order ?? row.order;
+      return order;
     });
     return c.json(result, 200);
   },
@@ -632,6 +637,7 @@ paymentsRoutes.get("/:id/events", requireKiosk, async (c) => {
   }
 
   const encoder = new TextEncoder();
+  let onClose: (() => void) | null = null;
   const stream = new ReadableStream({
     start(controller) {
       let closed = false;
@@ -643,10 +649,12 @@ paymentsRoutes.get("/:id/events", requireKiosk, async (c) => {
         clearInterval(poll);
         clearInterval(heartbeat);
         clearTimeout(maxLifetime);
+        c.req.raw.signal.removeEventListener("abort", close);
         try {
           controller.close();
         } catch {}
       };
+      onClose = close;
 
       const poll = setInterval(async () => {
         try {
@@ -678,6 +686,9 @@ paymentsRoutes.get("/:id/events", requireKiosk, async (c) => {
       const maxLifetime = setTimeout(close, 5 * 60 * 1000);
 
       c.req.raw.signal.addEventListener("abort", close);
+    },
+    cancel() {
+      onClose?.();
     },
   });
 

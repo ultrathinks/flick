@@ -15,8 +15,19 @@ function getPool(): Pool {
       throw new Error("DATABASE_URL is not set");
     }
     pool = new Pool({ connectionString });
+    pool.on("error", (err) => {
+      console.error("pg pool error on idle client", err);
+    });
   }
   return pool;
+}
+
+export async function closePool(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = undefined;
+    db = undefined;
+  }
 }
 
 export function getDb(): NodePgDatabase<typeof schema> {

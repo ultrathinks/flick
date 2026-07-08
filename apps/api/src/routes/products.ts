@@ -27,7 +27,7 @@ productsRoutes.openapi(
     security: [{ Bearer: [] }],
     middleware: [requireAuth] as const,
     request: {
-      params: z.object({ id: z.string() }),
+      params: z.object({ id: z.string().uuid() }),
       body: {
         content: { "application/json": { schema: productPatchSchema } },
       },
@@ -72,7 +72,7 @@ productsRoutes.openapi(
     tags: ["products"],
     security: [{ Bearer: [] }],
     middleware: [requireAuth] as const,
-    request: { params: z.object({ id: z.string() }) },
+    request: { params: z.object({ id: z.string().uuid() }) },
     responses: {
       204: { description: "Archived product" },
       401: errorResponse("Unauthorized"),
