@@ -25,3 +25,4 @@ export { Textarea } from "./components/textarea";
 export { ToastProvider, useToast } from "./components/toast";
 export { cn } from "./lib/cn";
 export { formatWon } from "./lib/format";
+export { useClipboard } from "./lib/use-clipboard";
