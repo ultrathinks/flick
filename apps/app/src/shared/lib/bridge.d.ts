@@ -5,6 +5,7 @@ interface ReactNativeWebViewBridge {
 declare global {
   interface Window {
     ReactNativeWebView?: ReactNativeWebViewBridge;
+    __flickBridgeMock?: boolean;
   }
 }
 

@@ -10,10 +10,6 @@ type MockResponder = (request: BridgeRequest) => object;
 const responders: Record<string, MockResponder> = {
   HAPTIC: () => ({}),
   NAVIGATION_POP: () => ({}),
-  QR_SCAN: () => {
-    const text = window.prompt("[dev] QR 결제 코드를 입력하세요");
-    return { text: text ?? "" };
-  },
 };
 
 function dispatchResponse(request: BridgeRequest, data: object): void {
@@ -56,6 +52,7 @@ export function installBridgeMock(): void {
   if (window.ReactNativeWebView) {
     return;
   }
+  window.__flickBridgeMock = true;
   window.ReactNativeWebView = {
     postMessage(message: string) {
       const request = parseRequest(message);
