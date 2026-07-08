@@ -637,6 +637,7 @@ paymentsRoutes.get("/:id/events", requireKiosk, async (c) => {
   }
 
   const encoder = new TextEncoder();
+  let onClose: (() => void) | null = null;
   const stream = new ReadableStream({
     start(controller) {
       let closed = false;
@@ -648,10 +649,12 @@ paymentsRoutes.get("/:id/events", requireKiosk, async (c) => {
         clearInterval(poll);
         clearInterval(heartbeat);
         clearTimeout(maxLifetime);
+        c.req.raw.signal.removeEventListener("abort", close);
         try {
           controller.close();
         } catch {}
       };
+      onClose = close;
 
       const poll = setInterval(async () => {
         try {
@@ -683,6 +686,9 @@ paymentsRoutes.get("/:id/events", requireKiosk, async (c) => {
       const maxLifetime = setTimeout(close, 5 * 60 * 1000);
 
       c.req.raw.signal.addEventListener("abort", close);
+    },
+    cancel() {
+      onClose?.();
     },
   });
 
