@@ -26,11 +26,7 @@ export function EmptyState({
       )}
     >
       {emoji ? (
-        <span
-          aria-hidden
-          className="mb-3 text-4xl leading-none"
-          style={{ fontFamily: "Tossface" }}
-        >
+        <span aria-hidden className="mb-3 font-emoji text-4xl leading-none">
           {emoji}
         </span>
       ) : icon ? (
