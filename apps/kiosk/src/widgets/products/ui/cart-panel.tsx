@@ -92,7 +92,7 @@ export function CartPanel({
                     </div>
                     <Button
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon"
                       aria-label="삭제"
                       className="-mr-1 shrink-0 text-foreground-subtle hover:text-danger"
                       onClick={() => onUpdateQuantity(item.id, 0)}
@@ -108,7 +108,7 @@ export function CartPanel({
                     <div className="flex shrink-0 items-center gap-2">
                       <Button
                         variant="neutral"
-                        size="icon"
+                        size="icon-lg"
                         aria-label="수량 줄이기"
                         className="rounded-full"
                         onClick={() =>
@@ -121,7 +121,7 @@ export function CartPanel({
                         {item.quantity}
                       </span>
                       <Button
-                        size="icon"
+                        size="icon-lg"
                         aria-label="수량 늘리기"
                         className="rounded-full"
                         onClick={() =>

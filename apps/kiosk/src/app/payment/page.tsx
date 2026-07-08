@@ -172,7 +172,7 @@ export default function PaymentPage() {
         }),
       )}
       remainingSeconds={remainingSeconds}
-      isConnected={sseStatus === "connected"}
+      connectionStatus={sseStatus}
       onCancel={handleCancel}
     />
   );
