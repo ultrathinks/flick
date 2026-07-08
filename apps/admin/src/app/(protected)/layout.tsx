@@ -1,7 +1,7 @@
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { getCurrentUser } from "@/shared/auth/me";
+import { getSessionState } from "@/shared/auth/me";
 import { AppShell } from "@/widgets/app-shell";
 
 export default async function ProtectedLayout({
@@ -9,15 +9,19 @@ export default async function ProtectedLayout({
 }: {
   children: ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const user = await getCurrentUser(cookieStore);
+  const session = await getSessionState();
 
-  if (!user) {
+  if (session.status === "expired") {
+    const requestHeaders = await headers();
+    const pathname = requestHeaders.get("x-pathname") ?? "/";
+    redirect(`/api/auth/refresh?next=${encodeURIComponent(pathname)}`);
+  }
+  if (session.status === "unauthenticated") {
     redirect("/login");
   }
-  if (!user.isAdmin) {
+  if (!session.user.isAdmin) {
     redirect("/login?error=forbidden");
   }
 
-  return <AppShell user={user}>{children}</AppShell>;
+  return <AppShell user={session.user}>{children}</AppShell>;
 }
