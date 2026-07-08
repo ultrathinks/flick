@@ -36,7 +36,7 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface px-6">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface px-4 lg:px-6">
         <div className="flex items-center gap-2.5">
           <span className="flex size-7 items-center justify-center rounded-card-sm bg-brand text-brand-foreground">
             <Store className="size-4" />
@@ -71,7 +71,7 @@ export function AppShell({
           </nav>
         </aside>
 
-        <main className="flex-1 overflow-y-auto px-6 py-8 pb-24 lg:px-10 lg:pb-10">
+        <main className="flex-1 overflow-y-auto px-4 py-8 pb-24 sm:px-6 lg:px-10 lg:pb-10">
           <div className="mx-auto w-full max-w-6xl">{children}</div>
         </main>
       </div>
