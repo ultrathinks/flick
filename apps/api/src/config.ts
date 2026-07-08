@@ -6,6 +6,10 @@ function requireEnv(key: string): string {
   return value;
 }
 
+export function isProduction(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
 const DODAM_API_BASE = "https://dodam-api.b1nd.com";
 
 export const DODAM_AUTHORIZE_URL = `${DODAM_API_BASE}/oauth/authorize`;
@@ -46,16 +50,20 @@ export function getAdminDauthConfig(): DauthConfig {
 }
 
 export function getCorsOrigins(): string[] {
-  return (process.env.CORS_ORIGIN ?? "")
+  const origins = requireEnv("CORS_ORIGIN")
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
+  if (origins.length === 0) {
+    throw new Error("CORS_ORIGIN is empty");
+  }
+  return origins;
 }
 
 export function getS3Config() {
   return {
     endpoint: requireEnv("S3_ENDPOINT"),
-    region: process.env.S3_REGION ?? "us-east-1",
+    region: requireEnv("S3_REGION"),
     bucket: requireEnv("S3_BUCKET"),
     accessKeyId: requireEnv("S3_ACCESS_KEY"),
     secretAccessKey: requireEnv("S3_SECRET_KEY"),

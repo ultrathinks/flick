@@ -1,3 +1,5 @@
 export function formatWon(amount: number) {
-  return `${Math.round(amount).toLocaleString("ko-KR")}원`;
+  const won = Math.round(amount);
+  const normalized = Object.is(won, -0) ? 0 : won;
+  return `${normalized.toLocaleString("ko-KR")}원`;
 }

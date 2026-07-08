@@ -39,7 +39,7 @@ statsRoutes.openapi(
       .from(booths)
       .leftJoin(
         transactions,
-        sql`${transactions.orderId} in (select id from orders where booth_id = ${booths.id}) and ${transactions.type} = 'purchase'`,
+        sql`${transactions.orderId} in (select id from orders where booth_id = ${booths.id} and status = 'paid') and ${transactions.type} = 'purchase'`,
       )
       .groupBy(booths.id);
     return c.json({ totals, boothSales }, 200);

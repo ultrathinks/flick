@@ -7,9 +7,13 @@ const WINDOW_MS = 60_000;
 const memory = new Map<string, { count: number; resetAt: number }>();
 
 function clientKey(c: Context, keyPrefix: string): string {
+  const user = c.get("user") as { id?: string } | undefined;
+  if (user?.id) {
+    return `ratelimit:${keyPrefix}:user:${user.id}`;
+  }
   const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = forwarded || c.req.header("x-real-ip") || "unknown";
-  return `ratelimit:${keyPrefix}:${ip}`;
+  return `ratelimit:${keyPrefix}:ip:${ip}`;
 }
 
 async function allowRedis(key: string, limit: number): Promise<boolean> {
@@ -23,7 +27,8 @@ async function allowRedis(key: string, limit: number): Promise<boolean> {
       await redis.pexpire(key, WINDOW_MS);
     }
     return count <= limit;
-  } catch {
+  } catch (error) {
+    console.error("rate limit: redis error, falling back to in-memory", error);
     return allowMemory(key, limit);
   }
 }

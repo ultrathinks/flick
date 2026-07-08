@@ -8,9 +8,10 @@ interface Props {
 }
 
 export function Money({ amount, signed = false, className }: Props) {
+  const rounded = Math.round(amount);
   const text = signed
-    ? `${amount > 0 ? "+" : amount < 0 ? "-" : ""}${formatWon(Math.abs(amount))}`
-    : formatWon(amount);
+    ? `${rounded > 0 ? "+" : rounded < 0 ? "-" : ""}${formatWon(Math.abs(rounded))}`
+    : formatWon(rounded);
   return (
     <span className={cn("whitespace-nowrap tabular-nums", className)}>
       {text}

@@ -327,14 +327,24 @@ boothsRoutes.openapi(
     responses: {
       200: jsonContent(z.array(productSchema), "Booth products"),
       401: errorResponse("Unauthorized"),
+      404: errorResponse("Not found"),
     },
   }),
   async (c) => {
+    const user = c.get("user");
     const boothId = c.req.valid("param").id;
+    const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
+    const canSeeHidden = owns || user.isAdmin;
     const rows = await getDb()
       .select()
       .from(products)
-      .where(and(eq(products.boothId, boothId), isNull(products.archivedAt)));
+      .where(
+        and(
+          eq(products.boothId, boothId),
+          isNull(products.archivedAt),
+          canSeeHidden ? undefined : eq(products.status, "available"),
+        ),
+      );
     return c.json(rows, 200);
   },
 );
@@ -399,6 +409,9 @@ boothsRoutes.openapi(
       .insert(products)
       .values({ ...c.req.valid("json"), boothId })
       .returning();
+    if (!row) {
+      throw new Error("failed to create product");
+    }
     return c.json(row, 201);
   },
 );

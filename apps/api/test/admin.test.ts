@@ -332,3 +332,44 @@ async function balanceOf(userId: string): Promise<number> {
     .where(eq(users.id, userId));
   return row?.balance ?? 0;
 }
+
+describe("GET /v1/stats (booth sales exclude refunds)", () => {
+  it("counts paid orders and drops refunded ones from booth sales", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 10000 });
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 10 });
+
+    const kept = await createOrderWithPayment(boothId, kioskId, productId, {
+      price: 1000,
+    });
+    await app.request(`/v1/payment-codes/${kept.code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+
+    const refunded = await createOrderWithPayment(boothId, kioskId, productId, {
+      price: 1000,
+    });
+    await app.request(`/v1/payment-codes/${refunded.code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+    await app.request("/v1/refunds", {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ orderId: refunded.orderId }),
+    });
+
+    const res = await app.request("/v1/stats", {
+      headers: authHeaders(admin.accessToken),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      boothSales: Array<{ boothId: string; amount: number }>;
+    };
+    const sale = body.boothSales.find((row) => row.boothId === boothId);
+    expect(sale?.amount).toBe(1000);
+  });
+});

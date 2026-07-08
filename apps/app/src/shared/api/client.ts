@@ -36,6 +36,9 @@ export const api: KyInstance = ky.create({
         if (!token) {
           return response;
         }
+        if (request.headers.get("x-flick-no-replay") === "1") {
+          return response;
+        }
         request.headers.set("Authorization", `Bearer ${token}`);
         request.headers.set("x-flick-retried", "1");
         return ky(request);

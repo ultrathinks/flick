@@ -19,6 +19,7 @@ export function fetchPaymentCodeView(code: string): Promise<PaymentCodeView> {
 export function confirmPaymentCode(code: string): Promise<Order> {
   return request(orderSchema, `payment-codes/${encode(code)}/confirm`, {
     method: "post",
+    headers: { "x-flick-no-replay": "1" },
   });
 }
 

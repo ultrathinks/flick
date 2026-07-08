@@ -5,6 +5,7 @@ import { getDb } from "../src/db/index.ts";
 import {
   booths,
   payouts,
+  products,
   transactions,
   users,
 } from "../src/db/schema/index.ts";
@@ -32,6 +33,14 @@ async function ledgerOf(userId: string): Promise<number> {
     .from(transactions)
     .where(eq(transactions.userId, userId));
   return row?.total ?? 0;
+}
+
+async function stockOf(productId: string): Promise<number | null> {
+  const [row] = await getDb()
+    .select({ stock: products.stock })
+    .from(products)
+    .where(eq(products.id, productId));
+  return row?.stock ?? null;
 }
 
 beforeAll(() => {
@@ -237,6 +246,61 @@ describe("refund", () => {
     });
     expect(second.status).toBe(400);
     expect(await balanceOf(buyer.id)).toBe(5000);
+  });
+
+  it("restores product stock when refunding", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 5000 });
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 5 });
+    const { orderId, code } = await createOrderWithPayment(
+      boothId,
+      kioskId,
+      productId,
+      { price: 1000, quantity: 2 },
+    );
+    await app.request(`/v1/payment-codes/${code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+    expect(await stockOf(productId)).toBe(3);
+
+    const refund = await app.request("/v1/refunds", {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ orderId }),
+    });
+    expect(refund.status).toBe(201);
+    expect(await stockOf(productId)).toBe(5);
+  });
+
+  it("leaves unlimited (null) stock untouched on refund", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 5000 });
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, {
+      price: 1000,
+      stock: null,
+    });
+    const { orderId, code } = await createOrderWithPayment(
+      boothId,
+      kioskId,
+      productId,
+      { price: 1000 },
+    );
+    await app.request(`/v1/payment-codes/${code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+    expect(await stockOf(productId)).toBeNull();
+
+    const refund = await app.request("/v1/refunds", {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ orderId }),
+    });
+    expect(refund.status).toBe(201);
+    expect(await stockOf(productId)).toBeNull();
   });
 });
 
@@ -555,6 +619,41 @@ describe("menu soft-delete", () => {
     });
     const products = (await listRes.json()) as unknown[];
     expect(products).toHaveLength(0);
+  });
+});
+
+describe("booth product visibility", () => {
+  it("hides hidden products from non-owners but shows them to the owner", async () => {
+    const owner = await createUser();
+    const other = await createUser();
+    const { boothId } = await createBoothWithKiosk(owner.id);
+    const availableId = await createProduct(boothId, { price: 1000 });
+    const [hidden] = await getDb()
+      .insert(products)
+      .values({
+        boothId,
+        name: "Secret",
+        price: 2000,
+        stock: 5,
+        status: "hidden",
+      })
+      .returning();
+
+    const ownerRes = await app.request(`/v1/booths/${boothId}/products`, {
+      headers: authHeaders(owner.accessToken),
+    });
+    expect(ownerRes.status).toBe(200);
+    const ownerList = (await ownerRes.json()) as Array<{ id: string }>;
+    expect(ownerList.map((p) => p.id).sort()).toEqual(
+      [availableId, hidden?.id].sort(),
+    );
+
+    const otherRes = await app.request(`/v1/booths/${boothId}/products`, {
+      headers: authHeaders(other.accessToken),
+    });
+    expect(otherRes.status).toBe(200);
+    const otherList = (await otherRes.json()) as Array<{ id: string }>;
+    expect(otherList.map((p) => p.id)).toEqual([availableId]);
   });
 });
 
