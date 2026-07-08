@@ -4,7 +4,6 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useProductOptions } from "@/entities/option";
-import { AuthGate } from "@/features/auth-gate";
 import { EmptyState, Skeleton } from "@/shared/ui";
 import { OptionManager } from "@/widgets/option-manager";
 
@@ -59,9 +58,5 @@ function Options() {
 }
 
 export default function Page() {
-  return (
-    <AuthGate>
-      <Options />
-    </AuthGate>
-  );
+  return <Options />;
 }
