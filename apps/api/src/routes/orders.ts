@@ -22,7 +22,11 @@ import { PAYMENT_TTL_MS } from "../lib/constants.ts";
 import {
   BadRequestError,
   ForbiddenError,
+  InsufficientBalanceError,
   NotFoundError,
+  OutOfStockError,
+  PaymentExpiredError,
+  PaymentNotPendingError,
 } from "../lib/errors.ts";
 import { rateLimit } from "../lib/rate-limit.ts";
 import { generateSecret, hashSecret } from "../lib/security.ts";
@@ -435,11 +439,14 @@ paymentCodesRoutes.openapi(
       .innerJoin(orders, eq(payments.orderId, orders.id))
       .innerJoin(booths, eq(orders.boothId, booths.id))
       .where(eq(payments.codeHash, codeHash));
+    if (!row) {
+      throw new NotFoundError("payment not found");
+    }
     if (
-      row?.payment.status !== "pending" ||
+      row.payment.status !== "pending" ||
       row.payment.expiresAt <= new Date()
     ) {
-      throw new NotFoundError("payment not found");
+      throw new PaymentExpiredError();
     }
     const items = await getDb()
       .select()
@@ -495,12 +502,11 @@ paymentCodesRoutes.openapi(
       ) {
         return row.order;
       }
-      if (
-        row.payment.status !== "pending" ||
-        row.payment.expiresAt <= now ||
-        row.order.status !== "pending"
-      ) {
-        throw new BadRequestError("payment is not pending");
+      if (row.payment.expiresAt <= now) {
+        throw new PaymentExpiredError();
+      }
+      if (row.payment.status !== "pending" || row.order.status !== "pending") {
+        throw new PaymentNotPendingError();
       }
       const items = await tx
         .select()
@@ -516,7 +522,7 @@ paymentCodesRoutes.openapi(
         .where(eq(users.id, user.id))
         .for("update");
       if (!freshUser || freshUser.balance < row.order.totalAmount) {
-        throw new BadRequestError("insufficient balance");
+        throw new InsufficientBalanceError();
       }
       for (const item of items) {
         const [updatedProduct] = await tx
@@ -536,7 +542,7 @@ paymentCodesRoutes.openapi(
             .from(products)
             .where(eq(products.id, item.productId));
           if (current?.stock != null) {
-            throw new BadRequestError("insufficient stock");
+            throw new OutOfStockError();
           }
         }
       }

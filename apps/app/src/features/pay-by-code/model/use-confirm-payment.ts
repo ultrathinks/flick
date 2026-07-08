@@ -3,34 +3,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { confirmPaymentCode } from "@/entities/payment";
 import { transactionsQueryKey } from "@/entities/transaction";
 import { meQueryKey } from "@/entities/user";
-import { isApiError } from "@/shared/api";
-
-export type ConfirmFailure =
-  | "expired"
-  | "insufficient-balance"
-  | "out-of-stock"
-  | "canceled"
-  | "unknown";
-
-export function classifyConfirmFailure(error: unknown): ConfirmFailure {
-  if (!isApiError(error)) {
-    return "unknown";
-  }
-  if (error.status === 404 || error.code === "NOT_FOUND") {
-    return "expired";
-  }
-  const message = error.message.toLowerCase();
-  if (message.includes("balance")) {
-    return "insufficient-balance";
-  }
-  if (message.includes("stock")) {
-    return "out-of-stock";
-  }
-  if (message.includes("cancel")) {
-    return "canceled";
-  }
-  return "unknown";
-}
 
 export function useConfirmPayment(code: string) {
   const queryClient = useQueryClient();

@@ -1,7 +1,11 @@
 import { Router } from "@b1nd/aid-kit/navigation";
 import { installSessionAuth } from "@/entities/session";
 import { AuthGate } from "@/features/auth-gate";
-import { PayByCodeProvider, QrScannerHost } from "@/features/pay-by-code";
+import {
+  PayByCodeProvider,
+  PaymentSheetHost,
+  QrScannerHost,
+} from "@/features/pay-by-code";
 import { installBridgeMock } from "@/shared/lib";
 import { resetRouterStack } from "./lib/reset-router-stack.ts";
 import { Providers } from "./providers";
@@ -21,6 +25,7 @@ export const App = () => (
           </div>
         </div>
         <QrScannerHost />
+        <PaymentSheetHost />
       </PayByCodeProvider>
     </AuthGate>
   </Providers>
