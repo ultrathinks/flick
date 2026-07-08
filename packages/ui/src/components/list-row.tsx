@@ -55,7 +55,7 @@ export function ListRow({
     </>
   );
 
-  const base = "flex w-full items-center gap-3 py-3.5 text-left";
+  const base = "flex items-center gap-3 py-3.5 text-left";
 
   if (onClick) {
     return (
@@ -64,7 +64,7 @@ export function ListRow({
         onClick={onClick}
         className={cn(
           base,
-          "-mx-2 rounded-card-sm px-2 outline-none transition-colors hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-brand/40 active:bg-surface-muted",
+          "-mx-2 w-[calc(100%+1rem)] rounded-card-sm px-2 outline-none transition-colors hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-brand/40 active:bg-surface-muted",
           className,
         )}
       >
@@ -73,5 +73,5 @@ export function ListRow({
     );
   }
 
-  return <div className={cn(base, className)}>{inner}</div>;
+  return <div className={cn(base, "w-full", className)}>{inner}</div>;
 }
