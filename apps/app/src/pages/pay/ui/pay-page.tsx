@@ -5,7 +5,7 @@ import { PageHeader } from "@/widgets/page-header";
 export const PayPage = () => (
   <Screen className="flex-1 overflow-y-auto">
     <PageHeader title="결제" />
-    <div className="px-5 pb-6">
+    <div className="px-5 pb-6 pt-2">
       <PayByCode />
     </div>
   </Screen>

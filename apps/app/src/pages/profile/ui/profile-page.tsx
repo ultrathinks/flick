@@ -2,6 +2,7 @@ import { ThemeToggle } from "@flick/ui/theme";
 import { useMe } from "@/entities/user";
 import { LogoutButton } from "@/features/logout";
 import {
+  Avatar,
   Card,
   EmptyState,
   Money,
@@ -25,17 +26,11 @@ export const ProfilePage = () => {
         ) : me.data ? (
           <>
             <Card className="flex items-center gap-4">
-              <div className="flex size-14 items-center justify-center overflow-hidden rounded-full bg-surface-muted text-heading font-bold text-foreground-subtle">
-                {me.data.profileImageUrl ? (
-                  <img
-                    src={me.data.profileImageUrl}
-                    alt=""
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  me.data.name.slice(0, 1)
-                )}
-              </div>
+              <Avatar
+                name={me.data.name}
+                src={me.data.profileImageUrl}
+                size="lg"
+              />
               <div>
                 <p className="text-heading font-bold text-foreground">
                   {me.data.name}
@@ -70,7 +65,7 @@ export const ProfilePage = () => {
             </div>
           </>
         ) : (
-          <Card flat>
+          <Card>
             <EmptyState
               emoji="😅"
               title="정보를 불러오지 못했어요"

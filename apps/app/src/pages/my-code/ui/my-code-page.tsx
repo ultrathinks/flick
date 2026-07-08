@@ -1,6 +1,6 @@
 import { QRCodeSVG } from "qrcode.react";
 import { useUserCode } from "@/entities/user-code";
-import { Card, Screen, Spinner } from "@/shared/ui";
+import { Button, Card, Screen, Spinner } from "@/shared/ui";
 import { PageHeader } from "@/widgets/page-header";
 
 export const MyCodePage = () => {
@@ -9,7 +9,7 @@ export const MyCodePage = () => {
   return (
     <Screen className="flex-1 overflow-y-auto">
       <PageHeader title="충전 코드" back />
-      <div className="space-y-4 px-5 pb-6">
+      <div className="space-y-6 px-5 pb-6 pt-2">
         <p className="px-1 text-body text-foreground-subtle">
           관리자에게 이 QR 코드를 보여주면 잔액을 충전할 수 있어요.
         </p>
@@ -19,7 +19,20 @@ export const MyCodePage = () => {
             <div className="flex h-52 items-center justify-center">
               <Spinner />
             </div>
-          ) : userCode.data ? (
+          ) : userCode.isError || !userCode.data ? (
+            <div className="flex h-52 flex-col items-center justify-center gap-3 text-center">
+              <p className="text-body text-foreground-subtle">
+                코드를 불러오지 못했어요.
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => userCode.refetch()}
+              >
+                다시 시도
+              </Button>
+            </div>
+          ) : (
             <>
               <div className="rounded-2xl bg-white p-4">
                 <QRCodeSVG
@@ -35,10 +48,6 @@ export const MyCodePage = () => {
                 {userCode.data.code}
               </p>
             </>
-          ) : (
-            <p className="text-body text-foreground-subtle">
-              코드를 불러오지 못했어요.
-            </p>
           )}
         </Card>
       </div>

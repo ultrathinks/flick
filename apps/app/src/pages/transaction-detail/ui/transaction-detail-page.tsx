@@ -24,13 +24,19 @@ const OrderItems = ({ orderId }: { orderId: string }) => {
 
   if (order.isPending) {
     return (
-      <Card className="flex justify-center py-8">
+      <Card className="flex justify-center py-12">
         <Spinner />
       </Card>
     );
   }
-  if (!order.data) {
-    return null;
+  if (order.isError || !order.data) {
+    return (
+      <Card>
+        <p className="py-2 text-center text-body text-foreground-subtle">
+          주문 내역을 불러오지 못했어요.
+        </p>
+      </Card>
+    );
   }
 
   return (
@@ -58,7 +64,7 @@ export const TransactionDetailPage = ({ state }: RouteProps) => {
   return (
     <Screen className="flex-1 overflow-y-auto">
       <PageHeader title="거래 상세" back />
-      <div className="space-y-4 px-5 pb-6">
+      <div className="space-y-6 px-5 pb-6 pt-2">
         {transaction ? (
           <>
             <Card className="space-y-3">
@@ -86,7 +92,7 @@ export const TransactionDetailPage = ({ state }: RouteProps) => {
             )}
           </>
         ) : (
-          <Card flat>
+          <Card>
             <EmptyState
               emoji="🔍"
               title="거래 정보를 찾을 수 없어요"
