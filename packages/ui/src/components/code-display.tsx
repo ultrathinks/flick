@@ -1,8 +1,8 @@
 "use client";
 
 import { Check, Copy } from "lucide-react";
-import { useState } from "react";
 import { cn } from "../lib/cn";
+import { useClipboard } from "../lib/use-clipboard";
 
 export function CodeDisplay({
   code,
@@ -13,23 +13,15 @@ export function CodeDisplay({
   size?: "md" | "lg";
   className?: string;
 }) {
-  const [copied, setCopied] = useState(false);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
-    } catch {}
-  };
+  const { copied, copy } = useClipboard();
 
   return (
     <button
       type="button"
-      onClick={copy}
+      onClick={() => copy(code)}
       aria-label={copied ? "코드 복사됨" : `${code} 코드 복사`}
       className={cn(
-        "group flex w-full items-center justify-between gap-3 rounded-card border border-border bg-surface-muted px-4 outline-none transition-colors hover:bg-border focus-visible:ring-2 focus-visible:ring-brand/40",
+        "group flex w-full items-center justify-between gap-3 rounded-card border border-border bg-surface-muted px-4 outline-hidden transition-colors hover:bg-border focus-visible:ring-2 focus-visible:ring-brand/40",
         size === "lg" ? "py-4" : "py-3",
         className,
       )}

@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import type { ReactNode, SelectHTMLAttributes } from "react";
+import type { ReactNode, Ref, SelectHTMLAttributes } from "react";
 import { cn } from "../lib/cn";
 import { FieldShell, fieldClass } from "../lib/field";
 
@@ -7,6 +7,7 @@ interface Props extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
   help?: ReactNode;
+  ref?: Ref<HTMLSelectElement>;
 }
 
 export function Select({
@@ -15,12 +16,14 @@ export function Select({
   help,
   className,
   children,
+  ref,
   ...props
 }: Props) {
   return (
     <FieldShell label={label} error={error} help={help}>
       <div className="relative">
         <select
+          ref={ref}
           aria-invalid={error ? true : undefined}
           className={cn(
             fieldClass(Boolean(error), "h-11 appearance-none pr-10"),

@@ -6,7 +6,7 @@ export function fieldClass(
   ...extra: (string | undefined)[]
 ): string {
   return cn(
-    "w-full rounded-control border bg-surface px-4 text-heading text-foreground outline-none transition-colors placeholder:text-foreground-faint focus:ring-2",
+    "w-full rounded-control border bg-surface px-4 text-heading text-foreground outline-hidden transition-colors placeholder:text-foreground-faint focus:ring-2",
     hasError
       ? "border-danger focus:border-danger focus:ring-danger/15"
       : "border-border focus:border-brand focus:ring-brand/15",

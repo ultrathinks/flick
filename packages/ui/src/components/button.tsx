@@ -1,12 +1,12 @@
 "use client";
 
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 import { cn } from "../lib/cn";
 import { Loader } from "./loader";
 
 const button = cva(
-  "relative inline-flex items-center justify-center gap-1.5 rounded-control font-semibold whitespace-nowrap outline-none transition-[color,background-color,border-color,transform] focus-visible:ring-2 focus-visible:ring-brand/40 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 [&_svg]:shrink-0",
+  "relative inline-flex items-center justify-center gap-1.5 rounded-control font-semibold whitespace-nowrap outline-hidden transition-[color,background-color,border-color,transform] focus-visible:ring-2 focus-visible:ring-brand/40 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -38,6 +38,7 @@ interface Props
   extends ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof button> {
   loading?: boolean;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 export function Button({
@@ -49,10 +50,12 @@ export function Button({
   type = "button",
   children,
   disabled,
+  ref,
   ...props
 }: Props) {
   return (
     <button
+      ref={ref}
       type={type}
       disabled={disabled || loading}
       className={cn(button({ variant, size, block }), className)}
