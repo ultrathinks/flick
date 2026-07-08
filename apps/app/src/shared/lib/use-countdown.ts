@@ -1,22 +1,22 @@
 import { useEffect, useState } from "react";
 
-export function useCountdown(target: Date | null): number {
+export function useCountdown(targetTime: number | null): number {
   const [remaining, setRemaining] = useState(() =>
-    target ? Math.max(0, target.getTime() - Date.now()) : 0,
+    targetTime ? Math.max(0, targetTime - Date.now()) : 0,
   );
 
   useEffect(() => {
-    if (!target) {
+    if (!targetTime) {
       setRemaining(0);
       return;
     }
     const tick = () => {
-      setRemaining(Math.max(0, target.getTime() - Date.now()));
+      setRemaining(Math.max(0, targetTime - Date.now()));
     };
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [target]);
+  }, [targetTime]);
 
   return remaining;
 }
