@@ -7,6 +7,7 @@ export {
   clearTokens,
   readTokens,
   type SessionTokens,
+  subscribeSessionCleared,
   writeTokens,
 } from "./model/token-store.ts";
 export type { Session } from "./model/types.ts";

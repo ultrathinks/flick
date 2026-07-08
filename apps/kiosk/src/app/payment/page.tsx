@@ -88,11 +88,17 @@ export default function PaymentPage() {
   }, [lastEvent, router]);
 
   useEffect(() => {
-    if (remainingSeconds > 0 || cancelledRef.current || completedRef.current) {
+    if (!snapshot?.expiresAt) {
+      return;
+    }
+    if (remainingSeconds > 0 || getRemainingSeconds(snapshot.expiresAt) > 0) {
+      return;
+    }
+    if (cancelledRef.current || completedRef.current) {
       return;
     }
     cancelAndGoBackRef.current();
-  }, [remainingSeconds]);
+  }, [remainingSeconds, snapshot?.expiresAt]);
 
   const cancelAndGoBackRef = useRef(async () => {});
   cancelAndGoBackRef.current = async () => {

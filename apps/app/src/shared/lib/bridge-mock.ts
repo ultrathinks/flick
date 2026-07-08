@@ -14,10 +14,6 @@ const responders: Record<string, MockResponder> = {
     const text = window.prompt("[dev] QR 결제 코드를 입력하세요");
     return { text: text ?? "" };
   },
-  OAUTH_GET_TOKEN: () => {
-    const token = window.prompt("[dev] 도담 토큰을 입력하세요");
-    return { token: token ?? "" };
-  },
 };
 
 function dispatchResponse(request: BridgeRequest, data: unknown): void {

@@ -6,6 +6,15 @@ export interface SessionTokens {
   refreshToken: string;
 }
 
+const sessionClearedListeners = new Set<() => void>();
+
+export function subscribeSessionCleared(listener: () => void): () => void {
+  sessionClearedListeners.add(listener);
+  return () => {
+    sessionClearedListeners.delete(listener);
+  };
+}
+
 function read(key: string): string | null {
   try {
     return window.localStorage.getItem(key);
@@ -39,4 +48,7 @@ export function writeTokens(tokens: SessionTokens): void {
 export function clearTokens(): void {
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
   window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+  for (const listener of sessionClearedListeners) {
+    listener();
+  }
 }
