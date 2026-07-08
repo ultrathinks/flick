@@ -47,7 +47,7 @@ const productBodySchema = z.object({
   sortOrder: z.number().int().optional(),
 });
 
-const idParam = z.object({ id: z.string() });
+const idParam = z.object({ id: z.string().uuid() });
 
 async function requireBoothOwnerOrAdmin(userId: string, boothId: string) {
   const [booth] = await getDb()

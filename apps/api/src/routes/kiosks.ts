@@ -210,7 +210,7 @@ kiosksRoutes.openapi(
     tags: ["kiosks"],
     security: [{ Bearer: [] }],
     middleware: [requireAuth] as const,
-    request: { params: z.object({ id: z.string() }) },
+    request: { params: z.object({ id: z.string().uuid() }) },
     responses: {
       200: jsonContent(kioskSchema, "Revoked kiosk"),
       401: errorResponse("Unauthorized"),

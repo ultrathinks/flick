@@ -52,7 +52,7 @@ const createOrderSchema = z.object({
     .min(1),
 });
 
-const idParam = z.object({ id: z.string() });
+const idParam = z.object({ id: z.string().uuid() });
 
 async function attachOptions<T extends { id: string }>(items: T[]) {
   const itemIds = items.map((item) => item.id);
