@@ -332,26 +332,28 @@ ordersRoutes.openapi(
     const kiosk = c.get("kiosk");
     const orderId = c.req.valid("param").id;
     const now = new Date();
-    const [order] = await getDb()
-      .update(orders)
-      .set({ status: "canceled", canceledAt: now })
-      .where(
-        and(
-          eq(orders.id, orderId),
-          eq(orders.kioskId, kiosk.id),
-          eq(orders.status, "pending"),
-        ),
-      )
-      .returning();
-    if (!order) {
-      throw new NotFoundError("order not found");
-    }
-    await getDb()
-      .update(payments)
-      .set({ status: "canceled" })
-      .where(
-        and(eq(payments.orderId, order.id), eq(payments.status, "pending")),
-      );
+    const order = await getDb().transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(orders)
+        .where(and(eq(orders.id, orderId), eq(orders.kioskId, kiosk.id)))
+        .for("update");
+      if (existing?.status !== "pending") {
+        throw new NotFoundError("order not found");
+      }
+      const [updated] = await tx
+        .update(orders)
+        .set({ status: "canceled", canceledAt: now })
+        .where(eq(orders.id, orderId))
+        .returning();
+      await tx
+        .update(payments)
+        .set({ status: "canceled" })
+        .where(
+          and(eq(payments.orderId, orderId), eq(payments.status, "pending")),
+        );
+      return updated;
+    });
     return c.json(order, 200);
   },
 );
@@ -569,13 +571,16 @@ paymentCodesRoutes.openapi(
       const [order] = await tx
         .update(orders)
         .set({ status: "paid", buyerId: user.id, paidAt: now })
-        .where(eq(orders.id, row.order.id))
+        .where(and(eq(orders.id, row.order.id), eq(orders.status, "pending")))
         .returning();
+      if (!order) {
+        throw new PaymentNotPendingError();
+      }
       await tx
         .update(payments)
         .set({ status: "completed", completedAt: now, confirmedBy: user.id })
         .where(eq(payments.id, row.payment.id));
-      return order ?? row.order;
+      return order;
     });
     return c.json(result, 200);
   },

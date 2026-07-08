@@ -4,6 +4,7 @@ import { app } from "../src/app.ts";
 import { getDb } from "../src/db/index.ts";
 import {
   booths,
+  orders,
   payouts,
   products,
   transactions,
@@ -208,6 +209,40 @@ describe("payment confirm", () => {
     });
     expect(res.status).toBe(400);
     expect(await balanceOf(other.id)).toBe(5000);
+  });
+
+  it("blocks confirm after the order is canceled and keeps balance intact", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 5000 });
+    const { boothId, kioskId, deviceToken } = await createBoothWithKiosk(
+      owner.id,
+    );
+    const productId = await createProduct(boothId, { price: 1000, stock: 5 });
+    const { orderId, code } = await createOrderWithPayment(
+      boothId,
+      kioskId,
+      productId,
+    );
+
+    const cancelRes = await app.request(`/v1/orders/${orderId}/cancel`, {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+    });
+    expect(cancelRes.status).toBe(200);
+
+    const res = await app.request(`/v1/payment-codes/${code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+    expect(res.status).toBe(400);
+    expect(await balanceOf(buyer.id)).toBe(5000);
+    expect(await ledgerOf(buyer.id)).toBe(5000);
+
+    const [row] = await getDb()
+      .select()
+      .from(orders)
+      .where(eq(orders.id, orderId));
+    expect(row?.status).toBe("canceled");
   });
 });
 
