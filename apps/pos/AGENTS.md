@@ -17,8 +17,9 @@ Booth-operator management web app (Next.js 16 App Router + React 19). Operators 
 ## Structure (FSD + App Router)
 
 - `src/app/` — routes + route handlers; replaces FSD `app`/`pages`. Import direction `shared → entities → features → widgets → app`. Alias `@/*`. Relative imports keep the `.ts`/`.tsx` extension (tsconfig enables `allowImportingTsExtensions`).
-- Auth: DAuth Authorization Code + PKCE. `GET /api/auth/login` starts the flow (PKCE verifier/state in short-lived httpOnly cookies); `GET /api/auth/callback` exchanges the code via the API's `POST /v1/auth/dauth` and sets httpOnly session cookies. Tokens are never exposed to client JS.
-- `src/app/api/proxy/[...path]` — same-origin proxy that injects the bearer cookie into Flick API calls and refreshes on 401. The client `ky` instance targets `/api/proxy`.
+- Auth: DAuth Authorization Code + PKCE. `GET /api/auth/login` starts the flow (PKCE verifier/state in short-lived httpOnly cookies); `GET /api/auth/callback` exchanges the code via the API's `POST /v1/auth/pos` and sets httpOnly session cookies. Tokens are never exposed to client JS.
+- `src/app/api/proxy/[...path]` — same-origin proxy that injects the bearer cookie into Flick API calls and refreshes on 401 (via `rotateSession`, the single write-path helper). The client `ky` instance targets `/api/proxy`.
+- Gating mirrors admin: `src/proxy.ts` does an optimistic `/login` redirect when no session cookie is present and sets an `x-pathname` request header; `src/app/(protected)/layout.tsx` is a server component calling the read-only DAL `getSessionState` (`shared/auth/me.ts`, memoized with React `cache()`) that returns `authenticated`/`expired`/`unauthenticated` — `unauthenticated` → `/login`, `expired` → `/api/auth/refresh?next=…`. Cookie writes (token rotation) happen only in Route Handlers. Booth resolution/onboarding and the locked-tab UI still live in the client `BoothScreen` widget.
 
 ## Design
 

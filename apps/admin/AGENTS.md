@@ -18,12 +18,12 @@ Platform-operator back-office (Next.js 16 App Router + React 19). Operators appr
 
 - `src/app/` — routes + route handlers. Import direction `shared → entities → features → widgets → app`. Alias `@/*`. Relative imports keep the `.ts`/`.tsx` extension.
 - Auth: DAuth Authorization Code + PKCE, cloned from pos with `flick_admin_*` cookies. `GET /api/auth/login` starts the flow; `GET /api/auth/callback` exchanges the code via the API's `POST /v1/auth/admin`. Tokens are never exposed to client JS.
-- `src/app/api/proxy/[...path]` — same-origin proxy that injects the bearer cookie and refreshes on 401. The `ky` client targets `/api/proxy`.
+- `src/app/api/proxy/[...path]` — same-origin proxy that injects the bearer cookie and refreshes on 401 (via `rotateSession`, the single write-path helper). The `ky` client targets `/api/proxy`.
 
 ## Admin gate (two layers, defense-in-depth)
 
-- `src/proxy.ts` (Next 16 proxy, not middleware) redirects requests with no session cookie to `/login`. Matcher excludes `login`/`api`/static.
-- `src/app/(protected)/layout.tsx` is a server component that calls `getCurrentUser` (`shared/auth/me.ts`) and `redirect('/login?error=forbidden')` when `!isAdmin`. On a stale token (`/me` 401) it refreshes then `clearSession`s to avoid a redirect loop.
+- `src/proxy.ts` (Next 16 proxy, not middleware) does an optimistic redirect to `/login` when no session cookie is present, and sets an `x-pathname` request header for server components. Matcher excludes `login`/`api`/static/metadata. It never reads the DB or writes cookies (Next: cookie writes are only allowed in Route Handlers/Server Actions).
+- `src/app/(protected)/layout.tsx` is a server component that calls the read-only DAL `getSessionState` (`shared/auth/me.ts`, memoized with React `cache()`). It returns `authenticated`/`expired`/`unauthenticated`: `unauthenticated` → `redirect('/login')`, `!isAdmin` → `redirect('/login?error=forbidden')`, and `expired` (access invalid but refresh cookie present) → `redirect('/api/auth/refresh?next=…')`. The DAL performs no cookie writes; token rotation happens only in Route Handlers (`/api/auth/refresh` and the `/api/proxy` on-401 path), which is why the earlier "Cookies can only be modified in a Server Action or Route Handler" crash is gone.
 - Security is ultimately enforced by the API's `requireAdmin`; the front gate is UX + defense-in-depth. `isAdmin` is set directly in the DB (no env allowlist).
 
 ## Data & pagination
