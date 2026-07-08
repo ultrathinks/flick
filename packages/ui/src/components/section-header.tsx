@@ -3,21 +3,30 @@ import { cn } from "../lib/cn";
 
 export function SectionHeader({
   title,
+  description,
   action,
   className,
 }: {
   title: ReactNode;
+  description?: ReactNode;
   action?: ReactNode;
   className?: string;
 }) {
   return (
     <div
-      className={cn("flex items-center justify-between px-1 pb-1", className)}
+      className={cn("flex items-center justify-between gap-3 pb-2", className)}
     >
-      <h2 className="text-heading font-bold text-foreground">{title}</h2>
-      {action && (
-        <div className="text-caption text-foreground-subtle">{action}</div>
-      )}
+      <div className="min-w-0">
+        <h2 className="truncate text-heading font-bold text-foreground">
+          {title}
+        </h2>
+        {description && (
+          <p className="mt-0.5 truncate text-caption text-foreground-subtle">
+            {description}
+          </p>
+        )}
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }

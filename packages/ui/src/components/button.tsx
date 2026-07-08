@@ -17,13 +17,16 @@ const button = cva(
           "border border-border bg-surface text-foreground hover:bg-surface-muted",
         ghost:
           "text-foreground-muted hover:bg-surface-muted hover:text-foreground",
-        danger: "bg-danger text-white hover:brightness-95",
+        danger: "bg-danger text-danger-foreground hover:brightness-95",
       },
       size: {
         sm: "h-9 gap-1 px-3.5 text-body [&_svg]:size-4",
         md: "h-11 px-4 text-heading [&_svg]:size-[18px]",
         lg: "h-[52px] px-5 text-heading [&_svg]:size-5",
         xl: "h-14 px-6 text-subtitle [&_svg]:size-6",
+        "icon-sm": "size-9 [&_svg]:size-[18px]",
+        icon: "size-11 [&_svg]:size-5",
+        "icon-lg": "size-14 [&_svg]:size-6",
       },
       block: { true: "w-full", false: "" },
     },

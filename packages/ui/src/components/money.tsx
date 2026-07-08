@@ -12,5 +12,9 @@ export function Money({ amount, signed = false, className }: Props) {
   const text = signed
     ? `${rounded > 0 ? "+" : rounded < 0 ? "-" : ""}${formatWon(Math.abs(rounded))}`
     : formatWon(rounded);
-  return <span className={cn("tabular-nums", className)}>{text}</span>;
+  return (
+    <span className={cn("whitespace-nowrap tabular-nums", className)}>
+      {text}
+    </span>
+  );
 }

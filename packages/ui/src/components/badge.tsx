@@ -15,9 +15,9 @@ const weak: Record<Tone, string> = {
 const fill: Record<Tone, string> = {
   neutral: "bg-foreground-muted text-surface",
   brand: "bg-brand text-brand-foreground",
-  success: "bg-success text-white",
-  warning: "bg-warning text-white",
-  danger: "bg-danger text-white",
+  success: "bg-success text-success-foreground",
+  warning: "bg-warning text-warning-foreground",
+  danger: "bg-danger text-danger-foreground",
 };
 
 export function Badge({
@@ -29,7 +29,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-caption font-semibold [&>svg]:size-3.5",
+        "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-caption font-semibold leading-none [&>svg]:size-3.5",
         (variant === "fill" ? fill : weak)[tone],
         className,
       )}

@@ -4,7 +4,7 @@ import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import type { OptionGroup } from "@/entities/option";
 import { useOptionMutations } from "@/entities/option";
-import { Badge, Button, Card, Field } from "@/shared/ui";
+import { Badge, Button, Card, Field, useConfirm, useToast } from "@/shared/ui";
 
 function ValueRow({
   productId,
@@ -20,22 +20,45 @@ function ValueRow({
   isDefault: boolean;
 }) {
   const { removeValue } = useOptionMutations(productId);
+  const confirm = useConfirm();
+  const toast = useToast();
+
+  const handleRemove = async () => {
+    const ok = await confirm({
+      title: "옵션값을 삭제할까요?",
+      description: `‘${name}’ 옵션값이 삭제돼요.`,
+      confirmLabel: "삭제",
+      tone: "danger",
+    });
+    if (!ok) return;
+    removeValue.mutate(id, {
+      onSuccess: () => toast.success("옵션값을 삭제했어요."),
+      onError: () => toast.error("삭제에 실패했어요."),
+    });
+  };
+
   return (
-    <div className="flex items-center justify-between py-2">
-      <span className="flex items-center gap-2 text-sm text-foreground">
-        {name}
+    <div className="flex min-w-0 items-center justify-between gap-2 py-2">
+      <span className="flex min-w-0 items-center gap-2 text-body text-foreground">
+        <span className="truncate">{name}</span>
         {priceDelta > 0 && (
-          <span className="text-xs text-foreground-subtle">
+          <span className="shrink-0 text-caption text-foreground-subtle">
             +{priceDelta.toLocaleString()}원
           </span>
         )}
-        {isDefault && <Badge tone="brand">기본</Badge>}
+        {isDefault && (
+          <Badge tone="brand" className="shrink-0">
+            기본
+          </Badge>
+        )}
       </span>
       <Button
         variant="ghost"
-        size="sm"
+        size="icon-sm"
+        className="shrink-0"
         aria-label="옵션값 삭제"
-        onClick={() => removeValue.mutate(id)}
+        disabled={removeValue.isPending}
+        onClick={handleRemove}
       >
         <X className="size-4" />
       </Button>
@@ -72,9 +95,10 @@ function AddValue({
         value={price}
         onChange={(e) => setPrice(e.target.value)}
       />
-      <label className="flex items-center gap-1 pb-3 text-xs text-foreground-subtle">
+      <label className="flex h-11 items-center gap-1.5 text-caption text-foreground-subtle">
         <input
           type="checkbox"
+          className="size-4 accent-brand"
           checked={isDefault}
           onChange={(e) => setIsDefault(e.target.checked)}
         />
@@ -82,7 +106,6 @@ function AddValue({
       </label>
       <Button
         size="sm"
-        className="mb-0.5"
         disabled={!valid || addValue.isPending}
         onClick={() =>
           addValue.mutate(
@@ -112,19 +135,41 @@ function GroupCard({
   group: OptionGroup;
 }) {
   const { removeGroup } = useOptionMutations(productId);
+  const confirm = useConfirm();
+  const toast = useToast();
+
+  const handleRemove = async () => {
+    const ok = await confirm({
+      title: "옵션 그룹을 삭제할까요?",
+      description: `‘${group.name}’ 그룹과 하위 옵션값이 모두 삭제돼요.`,
+      confirmLabel: "삭제",
+      tone: "danger",
+    });
+    if (!ok) return;
+    removeGroup.mutate(group.id, {
+      onSuccess: () => toast.success("옵션 그룹을 삭제했어요."),
+      onError: () => toast.error("삭제에 실패했어요."),
+    });
+  };
+
   return (
     <Card className="space-y-1">
-      <div className="flex items-center justify-between">
-        <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          {group.name}
-          <Badge tone={group.required ? "brand" : "neutral"}>
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <p className="flex min-w-0 items-center gap-2 text-body font-semibold text-foreground">
+          <span className="truncate">{group.name}</span>
+          <Badge
+            tone={group.required ? "brand" : "neutral"}
+            className="shrink-0"
+          >
             {group.required ? "필수" : "선택"}
           </Badge>
         </p>
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => removeGroup.mutate(group.id)}
+          className="shrink-0"
+          disabled={removeGroup.isPending}
+          onClick={handleRemove}
         >
           그룹 삭제
         </Button>
@@ -160,9 +205,10 @@ function AddGroup({ productId }: { productId: string }) {
         onChange={(e) => setName(e.target.value)}
         placeholder="예: 사이즈"
       />
-      <label className="flex items-center gap-1 pb-3 text-xs text-foreground-subtle">
+      <label className="flex h-11 items-center gap-1.5 text-caption text-foreground-subtle">
         <input
           type="checkbox"
+          className="size-4 accent-brand"
           checked={required}
           onChange={(e) => setRequired(e.target.checked)}
         />
@@ -170,7 +216,6 @@ function AddGroup({ productId }: { productId: string }) {
       </label>
       <Button
         size="sm"
-        className="mb-0.5"
         disabled={!name.trim() || addGroup.isPending}
         onClick={() =>
           addGroup.mutate(

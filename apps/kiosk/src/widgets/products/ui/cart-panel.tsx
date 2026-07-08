@@ -1,7 +1,7 @@
-import { Button, Money } from "@flick/ui";
 import { Minus, Plus, X } from "lucide-react";
 import type { CartItem } from "@/entities/cart/model/types";
 import type { Product } from "@/shared/api/types";
+import { Button, Money, useConfirm } from "@/shared/ui";
 
 type CartPanelProps = {
   items: CartItem[];
@@ -24,25 +24,40 @@ export function CartPanel({
   onUpdateQuantity,
   onCheckout,
 }: CartPanelProps) {
+  const confirm = useConfirm();
+
+  async function handleClearCart() {
+    const ok = await confirm({
+      tone: "danger",
+      title: "장바구니를 비울까요?",
+      description: "담긴 상품이 모두 삭제됩니다.",
+      confirmLabel: "비우기",
+    });
+    if (ok) {
+      onClearCart();
+    }
+  }
+
   return (
     <aside className="flex min-w-80 basis-1/4 flex-col border-l border-border bg-surface">
       <div className="flex h-20 items-center justify-between border-b border-border p-5">
         <h2 className="text-title font-bold text-foreground">장바구니</h2>
         {items.length > 0 ? (
-          <button
-            type="button"
-            className="rounded-full bg-danger-subtle px-3 py-1.5 text-body font-semibold text-danger transition hover:brightness-95"
-            onClick={onClearCart}
+          <Button
+            variant="weak"
+            size="md"
+            className="h-12 bg-danger-subtle text-danger hover:brightness-95"
+            onClick={handleClearCart}
           >
             비우기
-          </button>
+          </Button>
         ) : null}
       </div>
 
       <div className="flex-1 overflow-auto">
         {items.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-muted text-2xl font-black text-foreground-faint">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-muted text-title font-black text-foreground-faint">
               0
             </div>
             <p className="mt-4 text-heading font-semibold text-foreground-subtle">
@@ -62,60 +77,67 @@ export function CartPanel({
 
               return (
                 <div
-                  className="flex items-center justify-between border-b border-border py-4"
+                  className="flex flex-col gap-3 border-b border-border py-4"
                   key={item.id}
                 >
-                  <div className="mr-2 min-w-0 flex-1">
-                    <h3 className="truncate text-heading font-semibold text-foreground">
-                      {item.name}
-                    </h3>
-                    <div className="flex items-baseline">
-                      <Money
-                        amount={item.price * item.quantity}
-                        className="text-heading font-semibold text-brand"
-                      />
-                      <span className="ml-1 text-caption text-foreground-subtle">
-                        (<Money amount={item.price} />
-                        /개)
-                      </span>
-                    </div>
-                    {maxReached ? (
-                      <p className="mt-1 text-caption font-bold text-foreground-faint">
-                        최대 수량
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-heading font-semibold text-foreground">
+                        {item.name}
+                      </h3>
+                      <p className="mt-0.5 text-caption text-foreground-subtle">
+                        <Money amount={item.price} />
+                        /개
                       </p>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-muted text-foreground transition hover:bg-border"
-                      onClick={() =>
-                        onUpdateQuantity(item.id, item.quantity - 1)
-                      }
-                    >
-                      <Minus className="size-5" strokeWidth={2.5} />
-                    </button>
-                    <span className="mx-1 min-w-6 text-center text-heading font-semibold text-foreground">
-                      {item.quantity}
-                    </span>
-                    <button
-                      type="button"
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-brand-foreground transition hover:bg-brand-hover disabled:opacity-40"
-                      onClick={() =>
-                        onUpdateQuantity(item.id, item.quantity + 1)
-                      }
-                      disabled={maxReached}
-                    >
-                      <Plus className="size-5" strokeWidth={2.5} />
-                    </button>
-                    <button
-                      type="button"
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-danger-subtle text-danger transition hover:brightness-95"
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="삭제"
+                      className="-mr-1 shrink-0 text-foreground-subtle hover:text-danger"
                       onClick={() => onUpdateQuantity(item.id, 0)}
                     >
-                      <X className="size-5" strokeWidth={2.5} />
-                    </button>
+                      <X strokeWidth={2} />
+                    </Button>
                   </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <Money
+                      amount={item.price * item.quantity}
+                      className="text-subtitle font-bold text-brand"
+                    />
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button
+                        variant="neutral"
+                        size="icon-lg"
+                        aria-label="수량 줄이기"
+                        className="rounded-full"
+                        onClick={() =>
+                          onUpdateQuantity(item.id, item.quantity - 1)
+                        }
+                      >
+                        <Minus strokeWidth={2.5} />
+                      </Button>
+                      <span className="min-w-8 text-center text-heading font-bold tabular-nums text-foreground">
+                        {item.quantity}
+                      </span>
+                      <Button
+                        size="icon-lg"
+                        aria-label="수량 늘리기"
+                        className="rounded-full"
+                        onClick={() =>
+                          onUpdateQuantity(item.id, item.quantity + 1)
+                        }
+                        disabled={maxReached}
+                      >
+                        <Plus strokeWidth={2.5} />
+                      </Button>
+                    </div>
+                  </div>
+                  {maxReached ? (
+                    <p className="text-caption font-bold text-foreground-faint">
+                      최대 수량이에요
+                    </p>
+                  ) : null}
                 </div>
               );
             })}

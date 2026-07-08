@@ -8,7 +8,7 @@ import {
   resolveUserCode,
 } from "@/features/charge";
 import { ApiError } from "@/shared/api";
-import { Button, formatWon, Input } from "@/shared/ui";
+import { Button, Card, formatWon, Input, useToast } from "@/shared/ui";
 import { QrScanner } from "./qr-scanner.tsx";
 
 type Stage =
@@ -16,12 +16,15 @@ type Stage =
   | { name: "confirm"; user: ResolvedUser; idempotencyKey: string }
   | { name: "done"; user: ResolvedUser; result: ChargeTransaction };
 
+const QUICK_AMOUNTS = [5000, 10000, 30000, 50000];
+
 export function ChargePanel() {
   const [stage, setStage] = useState<Stage>({ name: "scan" });
   const [manualCode, setManualCode] = useState("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function resolve(code: string) {
     if (busy) {
@@ -63,6 +66,9 @@ export function ChargePanel() {
       });
       setStage({ name: "done", user: stage.user, result });
       setAmount("");
+      toast.success(
+        `${stage.user.name} 님에게 ${formatWon(result.amount)}을 충전했어요`,
+      );
     } catch {
       setError("충전에 실패했어요. 다시 시도해 주세요.");
     } finally {
@@ -102,7 +108,7 @@ export function ChargePanel() {
       )}
 
       {stage.name === "confirm" && (
-        <div className="flex flex-col gap-4 rounded-card border border-border bg-surface p-5">
+        <Card className="flex flex-col gap-4">
           <div>
             <p className="text-body font-semibold text-foreground">
               {stage.user.name}
@@ -112,27 +118,43 @@ export function ChargePanel() {
               {stage.user.studentNumber ? ` · ${stage.user.studentNumber}` : ""}
             </p>
           </div>
-          <Input
-            label="충전 금액"
-            type="number"
-            inputMode="numeric"
-            placeholder="0"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-          />
+          <div>
+            <Input
+              label="충전 금액"
+              type="number"
+              inputMode="numeric"
+              placeholder="0"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              error={error ?? undefined}
+            />
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {QUICK_AMOUNTS.map((preset) => (
+                <Button
+                  key={preset}
+                  variant="neutral"
+                  size="sm"
+                  onClick={() => setAmount(String(preset))}
+                  disabled={busy}
+                >
+                  {formatWon(preset)}
+                </Button>
+              ))}
+            </div>
+          </div>
           <div className="flex gap-2">
             <Button variant="outline" block onClick={reset} disabled={busy}>
               취소
             </Button>
-            <Button block onClick={charge} disabled={busy}>
+            <Button block onClick={charge} loading={busy}>
               충전
             </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {stage.name === "done" && (
-        <div className="flex flex-col items-center gap-4 rounded-card border border-border bg-surface p-6 text-center">
+        <Card className="flex flex-col items-center gap-4 p-6 text-center">
           <p className="text-heading font-semibold text-foreground">
             충전 완료
           </p>
@@ -143,10 +165,12 @@ export function ChargePanel() {
           <Button block onClick={reset}>
             다음 사용자 충전
           </Button>
-        </div>
+        </Card>
       )}
 
-      {error && <p className="text-center text-caption text-danger">{error}</p>}
+      {stage.name === "scan" && error && (
+        <p className="text-center text-caption text-danger">{error}</p>
+      )}
     </div>
   );
 }

@@ -1,7 +1,10 @@
 import type { RouteProps } from "@b1nd/aid-kit/navigation";
 import { useOrder } from "@/entities/payment";
-import { parseTransaction, transactionLabel } from "@/entities/transaction";
-import { formatWon } from "@/shared/lib";
+import {
+  isIncome,
+  parseTransaction,
+  transactionLabel,
+} from "@/entities/transaction";
 import { Card, EmptyState, Money, Screen, Spinner } from "@/shared/ui";
 import { PageHeader } from "@/widgets/page-header";
 
@@ -24,13 +27,19 @@ const OrderItems = ({ orderId }: { orderId: string }) => {
 
   if (order.isPending) {
     return (
-      <Card className="flex justify-center py-8">
+      <Card className="flex justify-center py-12">
         <Spinner />
       </Card>
     );
   }
-  if (!order.data) {
-    return null;
+  if (order.isError || !order.data) {
+    return (
+      <Card>
+        <p className="py-2 text-center text-body text-foreground-subtle">
+          주문 내역을 불러오지 못했어요.
+        </p>
+      </Card>
+    );
   }
 
   return (
@@ -40,11 +49,17 @@ const OrderItems = ({ orderId }: { orderId: string }) => {
       </p>
       <ul className="space-y-2">
         {order.data.items.map((item) => (
-          <li key={item.id} className="flex justify-between text-body">
-            <span className="text-foreground-muted">
+          <li
+            key={item.id}
+            className="flex items-baseline justify-between gap-3 text-body"
+          >
+            <span className="min-w-0 flex-1 truncate text-foreground-muted">
               {item.name} × {item.quantity}
             </span>
-            <Money amount={item.totalAmount} className="text-foreground" />
+            <Money
+              amount={item.totalAmount}
+              className="shrink-0 text-foreground"
+            />
           </li>
         ))}
       </ul>
@@ -58,7 +73,7 @@ export const TransactionDetailPage = ({ state }: RouteProps) => {
   return (
     <Screen className="flex-1 overflow-y-auto">
       <PageHeader title="거래 상세" back />
-      <div className="space-y-4 px-5 pb-6">
+      <div className="space-y-6 px-5 pb-6 pt-2">
         {transaction ? (
           <>
             <Card className="space-y-3">
@@ -70,9 +85,15 @@ export const TransactionDetailPage = ({ state }: RouteProps) => {
               </div>
               <div className="flex justify-between">
                 <span className="text-body text-foreground-subtle">금액</span>
-                <span className="text-body font-bold text-foreground">
-                  {formatWon(transaction.amount)}
-                </span>
+                <Money
+                  amount={transaction.amount}
+                  signed
+                  className={`text-body font-bold ${
+                    isIncome(transaction.amount)
+                      ? "text-brand"
+                      : "text-foreground"
+                  }`}
+                />
               </div>
               <div className="flex justify-between">
                 <span className="text-body text-foreground-subtle">일시</span>
@@ -86,7 +107,7 @@ export const TransactionDetailPage = ({ state }: RouteProps) => {
             )}
           </>
         ) : (
-          <Card flat>
+          <Card>
             <EmptyState
               emoji="🔍"
               title="거래 정보를 찾을 수 없어요"

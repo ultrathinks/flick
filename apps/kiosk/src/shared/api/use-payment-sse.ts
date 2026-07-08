@@ -10,9 +10,9 @@ export type SSEMessage = {
   data: Record<string, unknown>;
 };
 
-const MAX_RETRIES = 5;
+const MAX_RETRIES = 30;
 const BASE_DELAY_MS = 1000;
-const MAX_DELAY_MS = 30000;
+const MAX_DELAY_MS = 15000;
 
 function calculateDelay(attempt: number) {
   return Math.min(BASE_DELAY_MS * 2 ** attempt, MAX_DELAY_MS);
@@ -110,9 +110,7 @@ export function usePaymentSSE(paymentId: string | null, token: string | null) {
                     event: currentEvent || "message",
                     data: parsed,
                   });
-                } catch {
-                  /* ignore malformed JSON */
-                }
+                } catch {}
               }
               currentEvent = "";
               currentData = "";

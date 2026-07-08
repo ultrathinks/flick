@@ -14,7 +14,7 @@ export const AuthGate = ({ children }: AuthGateProps) => {
   }
 
   return (
-    <Screen className="items-center justify-center gap-6 px-8 text-center">
+    <Screen className="items-center justify-center gap-6 px-5 text-center">
       {status === "checking" ? (
         <Spinner className="size-8" />
       ) : (

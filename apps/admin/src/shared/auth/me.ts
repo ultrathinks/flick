@@ -1,13 +1,8 @@
-import type { cookies } from "next/headers";
+import { cookies } from "next/headers";
+import { cache } from "react";
 import { z } from "zod";
 import { API_INTERNAL_BASE_URL } from "@/shared/config";
-import { REFRESH_COOKIE } from "./cookies.ts";
-import {
-  clearSession,
-  ensureAccessToken,
-  persistSession,
-  refreshSession,
-} from "./server.ts";
+import { readAccessToken, readRefreshToken } from "./server.ts";
 
 export const meSchema = z.object({
   id: z.string(),
@@ -22,7 +17,10 @@ export const meSchema = z.object({
 
 export type Me = z.infer<typeof meSchema>;
 
-type CookieStore = Awaited<ReturnType<typeof cookies>>;
+export type SessionState =
+  | { status: "authenticated"; user: Me }
+  | { status: "expired" }
+  | { status: "unauthenticated" };
 
 function fetchMe(accessToken: string): Promise<Response> {
   return fetch(`${API_INTERNAL_BASE_URL}/users/me`, {
@@ -31,38 +29,31 @@ function fetchMe(accessToken: string): Promise<Response> {
   });
 }
 
-export async function getCurrentUser(
-  cookieStore: CookieStore,
-): Promise<Me | null> {
-  const accessToken = await ensureAccessToken(cookieStore);
-  if (!accessToken) {
-    return null;
-  }
-
-  let response = await fetchMe(accessToken);
-
-  if (response.status === 401) {
-    const refreshToken = cookieStore.get(REFRESH_COOKIE)?.value;
-    if (refreshToken) {
-      try {
-        const tokens = await refreshSession(refreshToken);
-        persistSession(cookieStore, tokens);
-        response = await fetchMe(tokens.accessToken);
-      } catch {
-        clearSession(cookieStore);
-        return null;
-      }
-    }
-    if (response.status === 401) {
-      clearSession(cookieStore);
-      return null;
-    }
-  }
-
+async function resolveMe(accessToken: string): Promise<Me | null> {
+  const response = await fetchMe(accessToken);
   if (!response.ok) {
     return null;
   }
-
   const parsed = meSchema.safeParse(await response.json());
   return parsed.success ? parsed.data : null;
 }
+
+export const getSessionState = cache(async (): Promise<SessionState> => {
+  const cookieStore = await cookies();
+  const accessToken = readAccessToken(cookieStore);
+  const hasRefreshToken = readRefreshToken(cookieStore) !== null;
+
+  if (accessToken) {
+    const user = await resolveMe(accessToken);
+    if (user) {
+      return { status: "authenticated", user };
+    }
+    return hasRefreshToken
+      ? { status: "expired" }
+      : { status: "unauthenticated" };
+  }
+
+  return hasRefreshToken
+    ? { status: "expired" }
+    : { status: "unauthenticated" };
+});

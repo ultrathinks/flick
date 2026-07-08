@@ -10,7 +10,7 @@ export const LogoutButton = () => {
       size="lg"
       block
       onClick={() => mutate()}
-      disabled={isPending}
+      loading={isPending}
     >
       로그아웃
     </Button>

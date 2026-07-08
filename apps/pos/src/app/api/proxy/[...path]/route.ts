@@ -1,12 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { REFRESH_COOKIE } from "@/shared/auth/cookies";
-import {
-  clearSession,
-  ensureAccessToken,
-  persistSession,
-  refreshSession,
-} from "@/shared/auth/server";
+import { readAccessToken, rotateSession } from "@/shared/auth/server";
 import { API_INTERNAL_BASE_URL } from "@/shared/config";
 
 function unauthorized(): NextResponse {
@@ -21,7 +15,10 @@ async function forward(
   path: string[],
 ): Promise<NextResponse> {
   const cookieStore = await cookies();
-  const accessToken = await ensureAccessToken(cookieStore);
+  let accessToken = readAccessToken(cookieStore);
+  if (!accessToken) {
+    accessToken = await rotateSession(cookieStore);
+  }
   if (!accessToken) {
     return unauthorized();
   }
@@ -47,18 +44,9 @@ async function forward(
   let response = await call(accessToken);
 
   if (response.status === 401) {
-    const refreshToken = cookieStore.get(REFRESH_COOKIE)?.value;
-    if (refreshToken) {
-      try {
-        const tokens = await refreshSession(refreshToken);
-        persistSession(cookieStore, tokens);
-        response = await call(tokens.accessToken);
-      } catch {
-        clearSession(cookieStore);
-      }
-    }
-    if (response.status === 401) {
-      clearSession(cookieStore);
+    const refreshedToken = await rotateSession(cookieStore);
+    if (refreshedToken) {
+      response = await call(refreshedToken);
     }
   }
 

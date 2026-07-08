@@ -11,10 +11,10 @@ export function BoothOnboarding() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-16">
-      <h1 className="mb-1.5 text-lg font-semibold tracking-tight text-foreground">
+      <h1 className="mb-1.5 text-title font-bold tracking-tight text-foreground">
         부스 등록
       </h1>
-      <p className="mb-5 text-sm text-foreground-subtle">
+      <p className="mb-5 text-body text-foreground-subtle">
         먼저 부스를 등록하세요. 등록 후 관리자 승인을 받아야 판매를 시작할 수
         있어요.
       </p>
@@ -33,7 +33,8 @@ export function BoothOnboarding() {
         />
         <Button
           className="w-full"
-          disabled={!name.trim() || create.isPending}
+          loading={create.isPending}
+          disabled={!name.trim()}
           onClick={() =>
             create.mutate({
               name: name.trim(),
@@ -41,10 +42,10 @@ export function BoothOnboarding() {
             })
           }
         >
-          {create.isPending ? "등록 중…" : "부스 등록"}
+          부스 등록
         </Button>
         {create.isError && (
-          <p className="text-sm text-danger">등록에 실패했어요.</p>
+          <p className="text-body text-danger">등록에 실패했어요.</p>
         )}
       </Card>
     </div>

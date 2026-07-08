@@ -1,6 +1,6 @@
-import { Money } from "@flick/ui";
 import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
+import { Button, CodeDisplay, Money } from "@/shared/ui";
 
 type QrSectionProps = {
   code: string;
@@ -18,7 +18,7 @@ export function QrSection({ code, totalAmount }: QrSectionProps) {
             value={code}
             size={240}
             level="H"
-            fgColor="#0f172a"
+            fgColor="#191f28"
             bgColor="#ffffff"
           />
         </div>
@@ -40,18 +40,16 @@ export function QrSection({ code, totalAmount }: QrSectionProps) {
           />
         </div>
       </div>
-      <button
-        type="button"
-        className="text-body font-medium text-foreground-faint underline underline-offset-2 transition hover:text-foreground-subtle"
+      <Button
+        variant="ghost"
+        size="lg"
         onClick={() => setShowCode((prev) => !prev)}
       >
         {showCode ? "코드 숨기기" : "코드 번호 보기"}
-      </button>
+      </Button>
       {showCode && (
-        <div className="-mt-4 rounded-card-sm bg-surface-muted px-5 py-3">
-          <p className="break-all font-mono text-body font-bold text-foreground">
-            {code}
-          </p>
+        <div className="w-full max-w-sm">
+          <CodeDisplay code={code} />
         </div>
       )}
     </div>

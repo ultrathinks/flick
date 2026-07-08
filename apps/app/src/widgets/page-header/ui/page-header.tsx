@@ -19,25 +19,21 @@ export const PageHeader = ({
 
   return (
     <header
-      className={`sticky top-0 ${back ? "bg-bg" : "bg-bg/80 backdrop-blur"}`}
+      className="sticky top-0 border-b border-border bg-bg"
       style={{ paddingTop: top }}
     >
-      <div className="flex h-14 items-center gap-1 px-3">
+      <div className="flex h-14 items-center gap-1 px-5">
         {back && (
           <button
             type="button"
             onClick={() => stack.pop()}
-            className="-ml-1 flex size-10 items-center justify-center rounded-full text-foreground-muted transition-colors active:bg-surface-muted"
+            className="-ml-2 flex size-11 items-center justify-center rounded-full text-foreground-muted transition-colors active:bg-surface-muted"
             aria-label="뒤로"
           >
             <ChevronLeft className="size-6" strokeWidth={1.75} aria-hidden />
           </button>
         )}
-        <h1
-          className={`text-subtitle font-bold text-foreground ${back ? "" : "px-2"}`}
-        >
-          {title}
-        </h1>
+        <h1 className="text-subtitle font-bold text-foreground">{title}</h1>
         {action && <div className="ml-auto">{action}</div>}
       </div>
     </header>

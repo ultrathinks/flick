@@ -3,7 +3,7 @@
 import { Inbox } from "lucide-react";
 import type { Key, ReactNode } from "react";
 import { cn } from "@/shared/lib/cn.ts";
-import { Button, EmptyState, Skeleton } from "@/shared/ui";
+import { Button, Card, EmptyState, Skeleton } from "@/shared/ui";
 import type { Column } from "../model/column.ts";
 
 interface DataTableProps<T> {
@@ -18,6 +18,7 @@ interface DataTableProps<T> {
   hasMore?: boolean;
   isFetchingMore?: boolean;
   onLoadMore?: () => void;
+  loadMoreError?: boolean;
   toolbar?: ReactNode;
 }
 
@@ -35,90 +36,115 @@ export function DataTable<T>({
   hasMore = false,
   isFetchingMore = false,
   onLoadMore,
+  loadMoreError = false,
   toolbar,
 }: DataTableProps<T>) {
+  const showTable = isLoading || (!isError && rows.length > 0);
+
   return (
     <div className="flex flex-col gap-3">
       {toolbar}
-      <div className="overflow-hidden rounded-card border border-border bg-surface">
-        <table className="w-full border-collapse text-body">
-          <thead>
-            <tr className="border-b border-border">
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className={cn(
-                    "px-4 py-2.5 text-caption font-medium text-foreground-subtle",
-                    column.align === "right" ? "text-right" : "text-left",
-                  )}
-                >
-                  {column.header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading
-              ? Array.from({ length: SKELETON_ROWS }).map((_, rowIndex) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholder rows have no stable id
-                  <tr key={rowIndex} className="border-b border-border">
-                    {columns.map((column) => (
-                      <td key={column.key} className="px-4 py-3">
-                        <Skeleton className="h-4 w-full" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              : rows.map((row) => (
-                  <tr
-                    key={rowKey(row)}
-                    onClick={onRowClick ? () => onRowClick(row) : undefined}
-                    className={cn(
-                      "border-b border-border last:border-b-0",
-                      onRowClick &&
-                        "cursor-pointer transition-colors hover:bg-surface-muted",
-                    )}
-                  >
-                    {columns.map((column) => (
-                      <td
-                        key={column.key}
+      <Card className="p-0 overflow-hidden">
+        {showTable ? (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-body">
+              <thead>
+                <tr className="border-b border-border">
+                  {columns.map((column) => (
+                    <th
+                      key={column.key}
+                      className={cn(
+                        "whitespace-nowrap px-4 py-2.5 text-caption font-medium text-foreground-subtle",
+                        column.align === "right" ? "text-right" : "text-left",
+                      )}
+                    >
+                      {column.header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading
+                  ? Array.from({ length: SKELETON_ROWS }).map((_, rowIndex) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholder rows have no stable id
+                      <tr key={rowIndex} className="border-b border-border">
+                        {columns.map((column) => (
+                          <td key={column.key} className="px-4 py-3">
+                            <Skeleton className="h-4 w-full" />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  : rows.map((row) => (
+                      <tr
+                        key={rowKey(row)}
+                        onClick={onRowClick ? () => onRowClick(row) : undefined}
+                        onKeyDown={
+                          onRowClick
+                            ? (event) => {
+                                if (
+                                  event.key === "Enter" ||
+                                  event.key === " "
+                                ) {
+                                  event.preventDefault();
+                                  onRowClick(row);
+                                }
+                              }
+                            : undefined
+                        }
+                        role={onRowClick ? "button" : undefined}
+                        tabIndex={onRowClick ? 0 : undefined}
                         className={cn(
-                          "px-4 py-3 text-foreground",
-                          column.align === "right" && "text-right tabular-nums",
-                          column.className,
+                          "border-b border-border last:border-b-0",
+                          onRowClick &&
+                            "cursor-pointer transition-colors hover:bg-surface-muted",
                         )}
                       >
-                        {column.cell(row)}
-                      </td>
+                        {columns.map((column) => (
+                          <td
+                            key={column.key}
+                            className={cn(
+                              "whitespace-nowrap px-4 py-3 text-foreground tabular-nums",
+                              column.align === "right" && "text-right",
+                              column.className,
+                            )}
+                          >
+                            {column.cell(row)}
+                          </td>
+                        ))}
+                      </tr>
                     ))}
-                  </tr>
-                ))}
-          </tbody>
-        </table>
-
-        {!isLoading && isError && (
+              </tbody>
+            </table>
+          </div>
+        ) : isError ? (
           <EmptyState
             icon={<Inbox />}
             title="불러오지 못했어요"
             description="잠시 후 다시 시도해 주세요."
           />
-        )}
-        {!isLoading && !isError && rows.length === 0 && (
+        ) : (
           <EmptyState
             icon={<Inbox />}
             title={emptyTitle}
             description={emptyDescription}
           />
         )}
-      </div>
+      </Card>
 
       {hasMore && (
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-2">
+          {loadMoreError && (
+            <p className="text-caption text-danger">
+              더 불러오지 못했어요. 다시 시도해 주세요.
+            </p>
+          )}
           <Button
-            variant="ghost"
+            variant="weak"
             size="sm"
             onClick={onLoadMore}
             disabled={isFetchingMore}
+            loading={isFetchingMore}
           >
             {isFetchingMore ? "불러오는 중…" : "더 보기"}
           </Button>

@@ -48,6 +48,14 @@ export async function revokeSession(accessToken: string): Promise<void> {
   });
 }
 
+export function readAccessToken(cookieStore: CookieStore): string | null {
+  return cookieStore.get(ACCESS_COOKIE)?.value ?? null;
+}
+
+export function readRefreshToken(cookieStore: CookieStore): string | null {
+  return cookieStore.get(REFRESH_COOKIE)?.value ?? null;
+}
+
 export function persistSession(
   cookieStore: CookieStore,
   tokens: SessionTokens,
@@ -67,19 +75,13 @@ export function clearSession(cookieStore: CookieStore): void {
   cookieStore.delete(REFRESH_COOKIE);
 }
 
-export async function ensureAccessToken(
+export async function rotateSession(
   cookieStore: CookieStore,
 ): Promise<string | null> {
-  const accessToken = cookieStore.get(ACCESS_COOKIE)?.value;
-  if (accessToken) {
-    return accessToken;
-  }
-
-  const refreshToken = cookieStore.get(REFRESH_COOKIE)?.value;
+  const refreshToken = readRefreshToken(cookieStore);
   if (!refreshToken) {
     return null;
   }
-
   try {
     const tokens = await refreshSession(refreshToken);
     persistSession(cookieStore, tokens);

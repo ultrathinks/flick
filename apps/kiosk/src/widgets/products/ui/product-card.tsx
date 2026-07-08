@@ -1,5 +1,5 @@
-import { Money } from "@flick/ui";
 import type { Product } from "@/shared/api/types";
+import { Money } from "@/shared/ui";
 
 type ProductCardProps = {
   product: Product;
@@ -19,12 +19,13 @@ export function ProductCard({
   return (
     <button
       type="button"
+      disabled={isSoldOut}
       className={`relative flex h-64 w-full flex-col overflow-hidden rounded-card border bg-surface text-left transition disabled:cursor-not-allowed ${
-        inCart ? "border-2 border-brand" : "border-border"
+        inCart ? "border-brand" : "border-border"
       } ${
         isSoldOut
           ? "opacity-70"
-          : "hover:-translate-y-1 hover:shadow-[var(--shadow-card)]"
+          : "active:-translate-y-0.5 active:shadow-[var(--shadow-overlay)]"
       } ${isAtStockLimit && !isSoldOut ? "bg-surface-muted" : ""}`}
       onClick={() => onAddProduct(product)}
     >
@@ -42,8 +43,8 @@ export function ProductCard({
           </div>
         )}
         {isSoldOut ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-            <span className="rounded-full bg-black/60 px-4 py-2 text-subtitle font-bold text-white">
+          <div className="absolute inset-0 flex items-center justify-center bg-scrim">
+            <span className="rounded-full bg-foreground px-4 py-2 text-subtitle font-bold text-surface">
               품절
             </span>
           </div>
@@ -54,16 +55,16 @@ export function ProductCard({
           </div>
         ) : null}
         {isAtStockLimit && !isSoldOut ? (
-          <div className="absolute bottom-2 right-2 rounded-full bg-black/70 px-3 py-1 text-caption font-bold text-white">
+          <div className="absolute bottom-2 right-2 rounded-full bg-foreground px-3 py-1 text-caption font-bold text-surface">
             최대
           </div>
         ) : null}
       </div>
-      <div className="flex flex-1 flex-col justify-between p-4">
-        <h2 className="truncate text-subtitle font-semibold text-foreground">
+      <div className="flex flex-1 flex-col justify-between gap-2 p-4">
+        <h2 className="line-clamp-2 text-subtitle font-semibold text-foreground">
           {product.name}
         </h2>
-        <div>
+        <div className="shrink-0">
           <Money
             amount={product.price}
             className={`block text-title font-bold ${

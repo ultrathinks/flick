@@ -1,6 +1,6 @@
-import { Button, Icon, Money } from "@flick/ui";
 import { CircleCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Button, Icon, Money } from "@/shared/ui";
 
 type PaymentCompleteViewProps = {
   totalAmount: number;
@@ -43,7 +43,7 @@ export function PaymentCompleteView({
         주문이 성공적으로 완료되었어요
       </p>
       <div className="mt-10 grid w-full max-w-sm grid-cols-2 gap-4">
-        <div className="rounded-card bg-surface-muted p-5">
+        <div className="rounded-card border border-border bg-surface-muted p-5">
           <p className="text-caption font-bold text-foreground-subtle">
             결제 금액
           </p>
@@ -52,7 +52,7 @@ export function PaymentCompleteView({
             className="mt-2 block text-title font-black text-brand"
           />
         </div>
-        <div className="rounded-card bg-surface-muted p-5">
+        <div className="rounded-card border border-border bg-surface-muted p-5">
           <p className="text-caption font-bold text-foreground-subtle">
             결제 시간
           </p>

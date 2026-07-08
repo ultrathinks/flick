@@ -17,14 +17,27 @@ export function RollingNumber({
   format = formatWon,
   className,
 }: Props) {
-  const [display, setDisplay] = useState(0);
-  const displayRef = useRef(0);
+  const [display, setDisplay] = useState(value);
+  const displayRef = useRef(value);
+  const mountedRef = useRef(false);
 
   useEffect(() => {
     const from = displayRef.current;
     if (from === value) {
       return;
     }
+
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+    if (!mountedRef.current || reduced) {
+      mountedRef.current = true;
+      displayRef.current = value;
+      setDisplay(value);
+      return;
+    }
+
     let raf = 0;
     let start: number | null = null;
     const tick = (now: number) => {
@@ -45,7 +58,10 @@ export function RollingNumber({
   }, [value, durationMs]);
 
   return (
-    <span className={cn("tabular-nums", className)} aria-label={format(value)}>
+    <span
+      className={cn("whitespace-nowrap tabular-nums", className)}
+      aria-label={format(value)}
+    >
       {format(display)}
     </span>
   );

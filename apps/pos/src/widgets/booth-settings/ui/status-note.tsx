@@ -33,7 +33,7 @@ export function StatusNote({ status }: { status: Booth["status"] }) {
   const note = STATUS_NOTE[status];
   return (
     <div
-      className={`rounded-[var(--radius-card)] px-3.5 py-2.5 text-[13px] ${TONE_CLASS[note.tone]}`}
+      className={`rounded-card px-3.5 py-2.5 text-caption ${TONE_CLASS[note.tone]}`}
     >
       {note.text}
     </div>

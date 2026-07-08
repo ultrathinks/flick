@@ -17,7 +17,7 @@ Hono API with Drizzle ORM over node-postgres. ESM (`"type": "module"`).
 - `src/app.ts` — `OpenAPIHono` app, `/v1` routing, error handler. Serves Scalar docs at `/v1/docs` and the OpenAPI spec at `/v1/openapi.json` only when `NODE_ENV !== "production"`.
 - `src/routes/*` — resource routes (auth, users, booths, products, kiosks, orders/payments, money, payouts, stats). Each route is defined with `createRoute` + `OpenAPIHono.openapi()`; middleware (`requireAuth`/`requireAdmin`/`requireKiosk`, `rateLimit`) goes in the route's `middleware` array, and `c.json(body, status)` must pass an explicit status code.
 - `src/openapi/*` — shared request/response zod schemas (`schemas.ts`, derived from Drizzle via `drizzle-zod`) and helpers (`helpers.ts`: `jsonContent`, `errorResponse`, `errorResponseSchema`).
-- `src/auth/*` — Dodam OAuth, sessions, principal middleware (`requireAuth`, `requireAdmin`, `requireKiosk`).
+- `src/auth/*` — Dodam OAuth, sessions, principal middleware (`requireAuth`, `requireAdmin`, `requireKiosk`). `rotateRefresh` (`session.ts`) is rotating: it moves the presented refresh token into a short-lived `previous_refresh_token_hash` grace slot (30s) so concurrent refreshes from the same session (e.g. a server-render refresh redirect racing widget proxy calls) don't invalidate each other.
 - `src/db/schema/*` — Drizzle schema (`users`, `sessions`, `domain.ts`); `src/db/index.ts` — singleton `getDb()`.
 - `src/lib/*` — errors, constants, rate limit, security (hash/encrypt/mask).
 - `drizzle/` — generated SQL migrations.

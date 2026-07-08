@@ -36,16 +36,21 @@ export function ListRow({
           </span>
         )}
       </span>
-      {right && (
-        <span className="flex shrink-0 items-center text-body text-foreground-muted">
-          {right}
+      {(right || withArrow) && (
+        <span className="flex shrink-0 items-center gap-1">
+          {right && (
+            <span className="flex items-center text-body text-foreground-muted">
+              {right}
+            </span>
+          )}
+          {withArrow && (
+            <ChevronRight
+              aria-hidden
+              strokeWidth={1.75}
+              className="size-5 shrink-0 text-foreground-subtle"
+            />
+          )}
         </span>
-      )}
-      {withArrow && (
-        <ChevronRight
-          aria-hidden
-          className="size-5 shrink-0 text-foreground-faint"
-        />
       )}
     </>
   );
@@ -59,7 +64,7 @@ export function ListRow({
         onClick={onClick}
         className={cn(
           base,
-          "-mx-2 rounded-card-sm px-2 transition-colors active:bg-surface-muted",
+          "-mx-2 rounded-card-sm px-2 outline-none transition-colors hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-brand/40 active:bg-surface-muted",
           className,
         )}
       >

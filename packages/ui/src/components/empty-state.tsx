@@ -21,30 +21,30 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 px-6 py-14 text-center",
+        "flex flex-col items-center justify-center px-6 py-14 text-center",
         className,
       )}
     >
       {emoji ? (
         <span
           aria-hidden
-          className="text-4xl leading-none"
+          className="mb-3 text-4xl leading-none"
           style={{ fontFamily: "Tossface" }}
         >
           {emoji}
         </span>
       ) : icon ? (
-        <span className="text-foreground-faint [&>svg]:size-8">{icon}</span>
+        <span className="mb-3 text-foreground-subtle [&>svg]:size-8">
+          {icon}
+        </span>
       ) : null}
-      <div className="space-y-1">
-        <p className="text-heading font-semibold text-foreground">{title}</p>
-        {description && (
-          <p className="mx-auto max-w-xs text-body text-foreground-subtle">
-            {description}
-          </p>
-        )}
-      </div>
-      {action && <div className="mt-1">{action}</div>}
+      <p className="text-heading font-semibold text-foreground">{title}</p>
+      {description && (
+        <p className="mt-1 max-w-xs text-body text-foreground-subtle">
+          {description}
+        </p>
+      )}
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }

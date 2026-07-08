@@ -25,7 +25,7 @@ export const PaymentComplete = ({ amount, onDone }: PaymentCompleteProps) => {
   }, []);
 
   return (
-    <div className="rounded-card border border-border bg-surface p-5 shadow-[var(--shadow-card)]">
+    <div className="rounded-card border border-border bg-surface p-5">
       <div className="flex flex-col items-center gap-4 py-8 text-center">
         <div className="relative">
           <motion.div

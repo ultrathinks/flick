@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import type { Booth } from "@/entities/booth";
 import { useMyBooth } from "@/entities/booth";
 import { ApiError } from "@/shared/api";
-import { EmptyState, Skeleton } from "@/shared/ui";
+import { Button, EmptyState, Skeleton } from "@/shared/ui";
 import { BoothOnboarding } from "@/widgets/booth-onboarding";
 import { isTabLocked, type TabKey } from "../model/tabs.ts";
 import { AppShell } from "./app-shell.tsx";
@@ -35,6 +35,28 @@ export function BoothScreen({
             <Skeleton className="h-20 w-full" />
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (booth.isError) {
+    const unauthorized =
+      booth.error instanceof ApiError && booth.error.status === 401;
+    if (unauthorized) {
+      return null;
+    }
+    return (
+      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-16">
+        <EmptyState
+          emoji="⚠️"
+          title="부스 정보를 불러오지 못했어요"
+          description="잠시 후 다시 시도해 주세요."
+          action={
+            <Button variant="weak" size="sm" onClick={() => booth.refetch()}>
+              다시 시도
+            </Button>
+          }
+        />
       </div>
     );
   }

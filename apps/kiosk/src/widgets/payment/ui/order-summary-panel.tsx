@@ -1,4 +1,4 @@
-import { Button, Money } from "@flick/ui";
+import { Button, Money } from "@/shared/ui";
 
 export type OrderSummaryItem = {
   name: string;

@@ -1,10 +1,9 @@
 "use client";
 
-import { Button } from "@flick/ui";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CartItem } from "@/entities/cart/model/types";
-import { cancelOrder } from "@/entities/order/api/orders";
+import { cancelOrder, fetchPayment } from "@/entities/order/api/orders";
 import type { PaymentSnapshot } from "@/entities/payment/model/types";
 import { usePaymentSSE } from "@/shared/api/use-payment-sse";
 import {
@@ -12,6 +11,7 @@ import {
   getKioskSession,
   getPaymentSnapshot,
 } from "@/shared/model/storage";
+import { Button, useConfirm } from "@/shared/ui";
 import { Loading } from "@/shared/ui/loading";
 import type { OrderSummaryItem } from "@/widgets/payment/ui/order-summary-panel";
 import { PaymentWaiting } from "@/widgets/payment/ui/payment-waiting";
@@ -36,6 +36,7 @@ function isValidPaymentSnapshot(snapshot: PaymentSnapshot) {
 
 export default function PaymentPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [snapshot, setSnapshot] = useState<PaymentSnapshot | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -69,23 +70,46 @@ export default function PaymentPage() {
     return () => window.clearInterval(intervalId);
   }, [snapshot?.expiresAt]);
 
+  const resolvePayment = useCallback(
+    (event: string) => {
+      if (completedRef.current) return;
+      if (event === "completed") {
+        completedRef.current = true;
+        router.push("/payment/complete");
+        return;
+      }
+      if (event === "expired" || event === "canceled") {
+        completedRef.current = true;
+        clearPaymentSnapshot();
+        sessionStorage.setItem("flick:alert", "결제가 취소되었습니다");
+        router.replace("/products");
+      }
+    },
+    [router],
+  );
+
   useEffect(() => {
     if (!lastEvent) return;
+    resolvePayment(lastEvent.event);
+  }, [lastEvent, resolvePayment]);
 
-    if (completedRef.current) return;
+  useEffect(() => {
+    const paymentId = snapshot?.paymentId;
+    if (!paymentId || !token) return;
 
-    if (lastEvent.event === "completed") {
-      completedRef.current = true;
-      router.push("/payment/complete");
-      return;
-    }
-    if (lastEvent.event === "expired" || lastEvent.event === "canceled") {
-      completedRef.current = true;
-      clearPaymentSnapshot();
-      sessionStorage.setItem("flick:alert", "결제가 취소되었습니다");
-      router.replace("/products");
-    }
-  }, [lastEvent, router]);
+    const poll = async () => {
+      if (completedRef.current || cancelledRef.current) return;
+      try {
+        const { payment } = await fetchPayment(token, paymentId);
+        if (payment.status !== "pending") {
+          resolvePayment(payment.status);
+        }
+      } catch {}
+    };
+
+    const intervalId = window.setInterval(poll, 5000);
+    return () => window.clearInterval(intervalId);
+  }, [snapshot?.paymentId, token, resolvePayment]);
 
   useEffect(() => {
     if (!snapshot?.expiresAt) {
@@ -124,9 +148,16 @@ export default function PaymentPage() {
     return () => clearTimeout(id);
   }, [snapshot]);
 
-  function handleCancel() {
-    if (!window.confirm("결제를 취소하시겠습니까?")) return;
-    cancelAndGoBackRef.current();
+  async function handleCancel() {
+    const ok = await confirm({
+      tone: "danger",
+      title: "결제를 취소할까요?",
+      description: "진행 중인 결제가 취소돼요.",
+      confirmLabel: "결제 취소",
+    });
+    if (ok) {
+      cancelAndGoBackRef.current();
+    }
   }
 
   if (pageError) {
@@ -164,7 +195,7 @@ export default function PaymentPage() {
         }),
       )}
       remainingSeconds={remainingSeconds}
-      isConnected={sseStatus === "connected"}
+      connectionStatus={sseStatus}
       onCancel={handleCancel}
     />
   );

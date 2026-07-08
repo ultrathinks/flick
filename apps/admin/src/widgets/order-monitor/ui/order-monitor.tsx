@@ -65,6 +65,7 @@ export function OrderMonitor() {
       hasMore={orders.hasNextPage}
       isFetchingMore={orders.isFetchingNextPage}
       onLoadMore={() => orders.fetchNextPage()}
+      loadMoreError={orders.isFetchNextPageError}
       toolbar={
         <Select
           value={status}
