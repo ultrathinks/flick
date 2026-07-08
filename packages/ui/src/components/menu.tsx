@@ -22,9 +22,11 @@ export function Menu({
   trigger: (props: {
     open: boolean;
     toggle: () => void;
-    "aria-haspopup": "menu";
-    "aria-expanded": boolean;
-    "aria-controls": string;
+    triggerProps: {
+      "aria-haspopup": "menu";
+      "aria-expanded": boolean;
+      "aria-controls": string;
+    };
   }) => ReactNode;
   children: ReactNode;
   align?: "start" | "end";
@@ -62,9 +64,11 @@ export function Menu({
       {trigger({
         open,
         toggle: () => setOpen((v) => !v),
-        "aria-haspopup": "menu",
-        "aria-expanded": open,
-        "aria-controls": menuId,
+        triggerProps: {
+          "aria-haspopup": "menu",
+          "aria-expanded": open,
+          "aria-controls": menuId,
+        },
       })}
       {open && (
         <div

@@ -27,7 +27,7 @@ export function CodeDisplay({
     <button
       type="button"
       onClick={copy}
-      aria-label="코드 복사"
+      aria-label={copied ? "코드 복사됨" : `${code} 코드 복사`}
       className={cn(
         "group flex w-full items-center justify-between gap-3 rounded-card border border-border bg-surface-muted px-4 outline-none transition-colors hover:bg-border focus-visible:ring-2 focus-visible:ring-brand/40",
         size === "lg" ? "py-4" : "py-3",

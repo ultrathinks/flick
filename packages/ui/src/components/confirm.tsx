@@ -53,7 +53,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
         onClose={() => settle(false)}
         title={pending?.title}
       >
-        <div className="space-y-5">
+        <div className="space-y-6">
           {pending?.description ? (
             <p className="text-body text-foreground-muted">
               {pending.description}

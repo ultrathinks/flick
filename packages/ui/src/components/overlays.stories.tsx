@@ -18,8 +18,13 @@ export const Dropdown: Story = {
   render: () => (
     <div className="flex justify-end p-8">
       <Menu
-        trigger={({ toggle, ...aria }) => (
-          <button type="button" onClick={toggle} aria-label="계정" {...aria}>
+        trigger={({ toggle, triggerProps }) => (
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label="계정"
+            {...triggerProps}
+          >
             <Avatar name="전민오" size="md" />
           </button>
         )}

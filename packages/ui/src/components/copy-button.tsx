@@ -30,7 +30,7 @@ export function CopyButton({
     <button
       type="button"
       onClick={copy}
-      aria-label={label}
+      aria-label={copied ? "복사됨" : label}
       className={cn(
         "inline-flex h-9 items-center gap-1.5 rounded-control px-3 text-body font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 [&>svg]:size-4",
         copied
