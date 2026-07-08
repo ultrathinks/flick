@@ -11,7 +11,7 @@ export function PayoutBoard() {
   const payouts = usePayouts(status || undefined);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <div className="flex gap-1">
         {PAYOUT_TABS.map((item) => (
           <Button

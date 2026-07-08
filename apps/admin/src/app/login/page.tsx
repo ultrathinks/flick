@@ -32,7 +32,7 @@ export default async function LoginPage({
           <form action="/api/auth/logout" method="post" className="w-full">
             <button
               type="submit"
-              className="flex h-10 w-full items-center justify-center rounded-card-sm bg-surface-muted px-4 text-body font-medium text-foreground transition-colors hover:bg-surface-muted"
+              className="flex h-11 w-full items-center justify-center rounded-control bg-surface-muted px-4 text-heading font-semibold text-foreground transition-colors hover:bg-border"
             >
               로그아웃하고 다른 계정으로 로그인
             </button>
@@ -41,7 +41,7 @@ export default async function LoginPage({
       ) : (
         <Link
           href="/api/auth/login"
-          className="flex h-10 w-full items-center justify-center rounded-card-sm bg-brand px-4 text-body font-medium text-brand-foreground transition-colors hover:bg-brand-hover"
+          className="flex h-11 w-full items-center justify-center rounded-control bg-brand px-4 text-heading font-semibold text-brand-foreground transition-colors hover:bg-brand-hover"
         >
           도담 계정으로 로그인
         </Link>

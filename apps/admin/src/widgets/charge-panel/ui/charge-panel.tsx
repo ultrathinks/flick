@@ -16,6 +16,8 @@ type Stage =
   | { name: "confirm"; user: ResolvedUser; idempotencyKey: string }
   | { name: "done"; user: ResolvedUser; result: ChargeTransaction };
 
+const QUICK_AMOUNTS = [5000, 10000, 30000, 50000];
+
 export function ChargePanel() {
   const [stage, setStage] = useState<Stage>({ name: "scan" });
   const [manualCode, setManualCode] = useState("");
@@ -116,14 +118,31 @@ export function ChargePanel() {
               {stage.user.studentNumber ? ` · ${stage.user.studentNumber}` : ""}
             </p>
           </div>
-          <Input
-            label="충전 금액"
-            type="number"
-            inputMode="numeric"
-            placeholder="0"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-          />
+          <div>
+            <Input
+              label="충전 금액"
+              type="number"
+              inputMode="numeric"
+              placeholder="0"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              error={error ?? undefined}
+            />
+            <div className="mt-2 flex gap-2">
+              {QUICK_AMOUNTS.map((preset) => (
+                <Button
+                  key={preset}
+                  variant="neutral"
+                  size="sm"
+                  block
+                  onClick={() => setAmount(String(preset))}
+                  disabled={busy}
+                >
+                  {formatWon(preset)}
+                </Button>
+              ))}
+            </div>
+          </div>
           <div className="flex gap-2">
             <Button variant="outline" block onClick={reset} disabled={busy}>
               취소
@@ -150,7 +169,9 @@ export function ChargePanel() {
         </Card>
       )}
 
-      {error && <p className="text-center text-caption text-danger">{error}</p>}
+      {stage.name === "scan" && error && (
+        <p className="text-center text-caption text-danger">{error}</p>
+      )}
     </div>
   );
 }

@@ -14,7 +14,7 @@ export function Dashboard() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no stable id
-            <Card key={index} className="flex flex-col gap-2">
+            <Card key={index} className="flex flex-col gap-2 p-4">
               <Skeleton className="h-3 w-16" />
               <Skeleton className="h-6 w-24" />
             </Card>
@@ -41,10 +41,10 @@ export function Dashboard() {
       <DashboardStats stats={stats.data} />
 
       <div className="flex flex-col gap-2">
-        <SectionHeader title="부스 매출" />
-        <p className="px-1 text-caption text-foreground-subtle">
-          환불 반영 전 구매 총액 기준
-        </p>
+        <SectionHeader
+          title="부스 매출"
+          description="환불 반영 전 구매 총액 기준"
+        />
         <Card className="p-0 overflow-hidden">
           {boothSales.length === 0 ? (
             <p className="px-4 py-10 text-center text-body text-foreground-subtle">
@@ -54,17 +54,17 @@ export function Dashboard() {
             boothSales.map((booth, index) => (
               <div
                 key={booth.boothId}
-                className="flex items-center justify-between border-b border-border px-4 py-3 last:border-b-0"
+                className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 last:border-b-0"
               >
-                <div className="flex items-center gap-3">
-                  <span className="w-5 text-caption font-semibold tabular-nums text-foreground-subtle">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="w-5 shrink-0 text-caption font-semibold tabular-nums text-foreground-subtle">
                     {index + 1}
                   </span>
-                  <span className="text-body text-foreground">
+                  <span className="truncate text-body text-foreground">
                     {booth.name}
                   </span>
                 </div>
-                <span className="text-body font-medium tabular-nums text-foreground">
+                <span className="shrink-0 text-body font-medium tabular-nums text-foreground">
                   {formatWon(Math.abs(booth.amount))}
                 </span>
               </div>

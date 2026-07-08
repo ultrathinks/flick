@@ -55,7 +55,7 @@ export function BoothQueue() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <div className="flex gap-1">
         {BOOTH_TABS.map((item) => (
           <Button
@@ -112,10 +112,10 @@ function BoothRow({
   onReject: () => void;
 }) {
   return (
-    <Card className="flex items-center justify-between px-4 py-3">
-      <div className="flex flex-col gap-1">
+    <Card className="flex items-center justify-between gap-2 px-4 py-3">
+      <div className="flex min-w-0 flex-col gap-1">
         <div className="flex items-center gap-2">
-          <span className="text-body font-medium text-foreground">
+          <span className="truncate text-body font-medium text-foreground">
             {booth.name}
           </span>
           <Badge tone={BOOTH_STATUS_TONE[booth.status]}>
@@ -129,7 +129,7 @@ function BoothRow({
         )}
       </div>
       {booth.status === "pending" && (
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <Button
             variant="outline"
             size="sm"

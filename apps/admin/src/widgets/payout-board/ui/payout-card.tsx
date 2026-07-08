@@ -7,6 +7,7 @@ import {
   Badge,
   Button,
   Card,
+  CopyButton,
   formatWon,
   useConfirm,
   useToast,
@@ -65,8 +66,8 @@ export function PayoutCard({ payout }: { payout: MaskedPayout }) {
 
   return (
     <Card className="flex flex-col gap-3 px-4 py-3.5">
-      <div className="flex items-start justify-between">
-        <div className="flex flex-col gap-1">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="text-body font-semibold tabular-nums text-foreground">
               {formatWon(payout.amount)}
@@ -75,13 +76,12 @@ export function PayoutCard({ payout }: { payout: MaskedPayout }) {
               {PAYOUT_STATUS_LABEL[payout.status]}
             </Badge>
           </div>
-          <p className="text-caption text-foreground-subtle">
-            {payout.bankName} · {account?.accountNumber ?? payout.accountNumber}{" "}
-            · {payout.accountHolder}
+          <p className="min-w-0 break-all text-caption text-foreground-subtle">
+            {payout.bankName} · {payout.accountNumber} · {payout.accountHolder}
           </p>
         </div>
         {isRequested && (
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -97,7 +97,14 @@ export function PayoutCard({ payout }: { payout: MaskedPayout }) {
         )}
       </div>
 
-      {!account && (
+      {account ? (
+        <div className="flex items-center gap-2">
+          <span className="min-w-0 break-all text-caption tabular-nums text-foreground">
+            {account.accountNumber}
+          </span>
+          <CopyButton value={account.accountNumber} className="shrink-0" />
+        </div>
+      ) : (
         <Button
           variant="ghost"
           size="sm"
