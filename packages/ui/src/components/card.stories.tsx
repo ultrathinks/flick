@@ -15,19 +15,13 @@ export const Default: Story = {
       <Card>
         <p className="text-heading font-bold text-foreground">기본 카드</p>
         <p className="mt-1 text-body text-foreground-subtle">
-          은은한 그림자와 토큰 색을 사용해요.
-        </p>
-      </Card>
-      <Card flat>
-        <p className="text-heading font-bold text-foreground">플랫 카드</p>
-        <p className="mt-1 text-body text-foreground-subtle">
-          그림자 없이 보더로만 구분해요.
+          그림자 없이 보더로만 배경과 구분해요.
         </p>
       </Card>
       <Card hover>
         <p className="text-heading font-bold text-foreground">호버 카드</p>
         <p className="mt-1 text-body text-foreground-subtle">
-          마우스를 올리면 보더가 진해져요.
+          마우스를 올리면 배경이 살짝 밝아져요.
         </p>
       </Card>
       <Card className="bg-brand text-brand-foreground">

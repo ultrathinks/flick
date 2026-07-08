@@ -1,33 +1,29 @@
-import type { SelectHTMLAttributes } from "react";
-import { cn } from "../lib/cn";
+import type { ReactNode, SelectHTMLAttributes } from "react";
+import { FieldShell, fieldClass } from "../lib/field";
 
 interface Props extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
+  error?: string;
+  help?: ReactNode;
 }
 
-export function Select({ label, className, children, ...props }: Props) {
-  const field = (
-    <select
-      className={cn(
-        "h-11 w-full rounded-control border border-border bg-surface px-4 text-heading text-foreground outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </select>
-  );
-
-  if (!label) {
-    return field;
-  }
-
+export function Select({
+  label,
+  error,
+  help,
+  className,
+  children,
+  ...props
+}: Props) {
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-body font-medium text-foreground-muted">
-        {label}
-      </span>
-      {field}
-    </label>
+    <FieldShell label={label} error={error} help={help}>
+      <select
+        aria-invalid={error ? true : undefined}
+        className={fieldClass(Boolean(error), "h-11", className)}
+        {...props}
+      >
+        {children}
+      </select>
+    </FieldShell>
   );
 }

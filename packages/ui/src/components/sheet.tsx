@@ -39,12 +39,12 @@ export function Sheet({
       <button
         type="button"
         aria-label="닫기"
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0 animate-scrim-in bg-scrim"
         onClick={onClose}
       />
       <div
         className={cn(
-          "relative z-10 max-h-[88vh] w-full overflow-y-auto rounded-t-sheet border border-border bg-surface shadow-[var(--shadow-card)] sm:m-4 sm:max-w-md sm:rounded-sheet",
+          "relative z-10 max-h-[88vh] w-full animate-sheet-in overflow-y-auto rounded-t-sheet border border-border bg-surface shadow-[var(--shadow-overlay)] sm:m-4 sm:max-w-md sm:rounded-sheet",
           className,
         )}
       >
@@ -54,7 +54,7 @@ export function Sheet({
             <button
               type="button"
               aria-label="닫기"
-              className="rounded-full p-1 text-foreground-subtle transition-colors hover:bg-surface-muted hover:text-foreground"
+              className="flex size-9 items-center justify-center rounded-full text-foreground-subtle transition-colors hover:bg-surface-muted hover:text-foreground"
               onClick={onClose}
             >
               <X className="size-5" />

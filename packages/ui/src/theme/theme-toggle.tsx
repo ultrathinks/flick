@@ -36,7 +36,7 @@ export function ThemeToggle({ className }: { className?: string }) {
             className={cn(
               "flex size-9 items-center justify-center rounded-[calc(var(--radius-control)-0.25rem)] transition-colors [&>svg]:size-[18px]",
               active
-                ? "bg-surface text-brand shadow-[var(--shadow-card)]"
+                ? "bg-surface text-brand"
                 : "text-foreground-subtle hover:text-foreground",
             )}
           >

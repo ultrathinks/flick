@@ -36,16 +36,20 @@ export function ListRow({
           </span>
         )}
       </span>
-      {right && (
-        <span className="flex shrink-0 items-center text-body text-foreground-muted">
-          {right}
+      {(right || withArrow) && (
+        <span className="flex shrink-0 items-center gap-1">
+          {right && (
+            <span className="flex items-center text-body text-foreground-muted">
+              {right}
+            </span>
+          )}
+          {withArrow && (
+            <ChevronRight
+              aria-hidden
+              className="size-5 shrink-0 text-foreground-subtle"
+            />
+          )}
         </span>
-      )}
-      {withArrow && (
-        <ChevronRight
-          aria-hidden
-          className="size-5 shrink-0 text-foreground-faint"
-        />
       )}
     </>
   );

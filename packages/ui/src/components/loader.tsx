@@ -7,8 +7,8 @@ type Size = "sm" | "md" | "lg";
 
 const sizes: Record<Size, string> = {
   sm: "size-4 border-2",
-  md: "size-5 border-2",
-  lg: "size-6 border-[3px]",
+  md: "size-6 border-2",
+  lg: "size-8 border-[3px]",
 };
 
 export function Loader({
