@@ -1,9 +1,11 @@
 import { Button, Money, useConfirm } from "@/shared/ui";
 
 export type OrderSummaryItem = {
+  lineId: string;
   name: string;
   quantity: number;
   totalAmount: number;
+  options: string[];
 };
 
 type OrderSummaryPanelProps = {
@@ -39,13 +41,18 @@ export function OrderSummaryPanel({
       <ul className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
         {items.map((item) => (
           <li
-            key={item.name}
+            key={item.lineId}
             className="flex items-start justify-between gap-2"
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-subtitle font-semibold text-foreground">
                 {item.name}
               </p>
+              {item.options.length > 0 ? (
+                <p className="mt-0.5 truncate text-caption text-foreground-subtle">
+                  {item.options.join(" · ")}
+                </p>
+              ) : null}
               <p className="mt-0.5 text-body font-medium text-foreground-faint">
                 {item.quantity}개
               </p>

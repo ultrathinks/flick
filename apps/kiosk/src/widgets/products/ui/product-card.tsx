@@ -5,17 +5,21 @@ import { Money } from "@/shared/ui";
 type ProductCardProps = {
   product: Product;
   cartQuantity: number;
-  onAddProduct: (product: Product) => void;
+  onPick: (product: Product) => void;
 };
 
 export function ProductCard({
   product,
   cartQuantity,
-  onAddProduct,
+  onPick,
 }: ProductCardProps) {
-  const isSoldOut = product.stock <= 0;
-  const isAtStockLimit = cartQuantity >= product.stock;
+  const isSoldOut =
+    product.status === "soldout" ||
+    (product.stock !== null && product.stock <= 0);
+  const isAtStockLimit =
+    product.stock !== null && cartQuantity >= product.stock;
   const inCart = cartQuantity > 0;
+  const hasOptions = product.optionGroups.length > 0;
 
   return (
     <button
@@ -28,7 +32,7 @@ export function ProductCard({
           ? "opacity-60"
           : "active:-translate-y-0.5 active:shadow-[var(--shadow-overlay)]"
       }`}
-      onClick={() => onAddProduct(product)}
+      onClick={() => onPick(product)}
     >
       <div className="relative aspect-[4/3] w-full bg-surface-muted">
         {product.imageUrl ? (
@@ -67,7 +71,11 @@ export function ProductCard({
               isSoldOut ? "text-foreground-subtle" : "text-brand"
             }`}
           />
-          {!isSoldOut ? (
+          {isSoldOut ? null : hasOptions ? (
+            <span className="shrink-0 text-caption font-bold text-foreground-subtle">
+              옵션 선택
+            </span>
+          ) : product.stock !== null ? (
             <span
               className={`shrink-0 text-caption font-bold ${
                 isAtStockLimit ? "text-danger" : "text-foreground-subtle"

@@ -44,8 +44,9 @@ export function useCheckout({ onError }: UseCheckoutOptions) {
         const order = await createOrder(
           token,
           cartItems.map((item) => ({
-            productId: item.id,
+            productId: item.productId,
             quantity: item.quantity,
+            optionValueIds: item.optionValueIds,
           })),
         );
         orderId = order.id;

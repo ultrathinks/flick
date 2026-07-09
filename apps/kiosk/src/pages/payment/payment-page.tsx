@@ -29,9 +29,11 @@ function isValidPaymentSnapshot(snapshot: PaymentSnapshot) {
 
 function toSummaryItem(item: CartItem): OrderSummaryItem {
   return {
+    lineId: item.lineId,
     name: item.name,
     quantity: item.quantity,
     totalAmount: item.price * item.quantity,
+    options: item.options.map((option) => option.valueName),
   };
 }
 

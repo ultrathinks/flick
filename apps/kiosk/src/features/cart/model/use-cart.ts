@@ -4,9 +4,11 @@ import { getCartItems, setCartItems } from "@/shared/model/storage";
 import type { CartItem } from "@/shared/model/types";
 import { useLocalState } from "@/shared/model/use-local-state";
 import {
-  addProductToCart,
+  addLineToCart,
   getCartTotalAmount,
   getCartTotalCount,
+  type OptionSelection,
+  productQuantityInCart,
   updateCartQuantity,
 } from "./cart";
 
@@ -23,34 +25,48 @@ export function useCart({ products, onStockLimited }: UseCartOptions) {
   const cartItems = items ?? [];
 
   const addProduct = useCallback(
-    (product: Product) => {
-      if (product.stock <= 0) {
+    (product: Product, selection: OptionSelection) => {
+      if (
+        product.status === "soldout" ||
+        (product.stock !== null && product.stock <= 0)
+      ) {
         onStockLimited("품절된 상품입니다");
         return;
       }
-      const current =
-        cartItems.find((item) => item.id === product.id)?.quantity ?? 0;
-      if (current >= product.stock) {
+      const current = productQuantityInCart(cartItems, product.id);
+      if (product.stock !== null && current >= product.stock) {
         onStockLimited("재고가 부족합니다");
         return;
       }
-      setItems((prev) => addProductToCart(prev, product));
+      setItems((prev) => addLineToCart(prev, product, selection));
     },
     [cartItems, onStockLimited, setItems],
   );
 
   const changeQuantity = useCallback(
-    (productId: string, quantity: number) => {
+    (lineId: string, quantity: number) => {
       if (quantity > 0) {
-        const product = products.find((item) => item.id === productId);
-        if (product && quantity > product.stock) {
-          onStockLimited("재고가 부족합니다");
-          return;
+        const line = cartItems.find((item) => item.lineId === lineId);
+        const product = line
+          ? products.find((item) => item.id === line.productId)
+          : undefined;
+        if (product && product.stock !== null) {
+          const others = cartItems.reduce(
+            (sum, item) =>
+              item.productId === product.id && item.lineId !== lineId
+                ? sum + item.quantity
+                : sum,
+            0,
+          );
+          if (others + quantity > product.stock) {
+            onStockLimited("재고가 부족합니다");
+            return;
+          }
         }
       }
-      setItems((prev) => updateCartQuantity(prev, productId, quantity));
+      setItems((prev) => updateCartQuantity(prev, lineId, quantity));
     },
-    [products, onStockLimited, setItems],
+    [cartItems, products, onStockLimited, setItems],
   );
 
   const clear = useCallback(() => setItems([]), [setItems]);
