@@ -13,12 +13,14 @@ export function Sheet({
   onClose,
   title,
   children,
+  footer,
   className,
 }: {
   open: boolean;
   onClose: () => void;
   title?: string;
   children: ReactNode;
+  footer?: ReactNode;
   className?: string;
 }) {
   const titleId = useId();
@@ -120,6 +122,11 @@ export function Sheet({
           </div>
         )}
         <div className="overflow-y-auto p-5">{children}</div>
+        {footer && (
+          <div className="shrink-0 border-t border-border bg-surface px-5 py-4">
+            {footer}
+          </div>
+        )}
       </div>
     </div>,
     document.body,
