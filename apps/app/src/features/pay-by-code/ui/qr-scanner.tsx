@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { KeyboardIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button, Icon, Input } from "@/shared/ui";
@@ -47,7 +48,13 @@ export const QrScanner = ({ onDetect, onClose }: QrScannerProps) => {
   const showManual = mode === "manual" || cameraError;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black text-white">
+    <motion.div
+      className="fixed inset-0 z-50 flex flex-col bg-black text-white"
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
+    >
       <header className="flex items-center justify-between px-5 pt-[env(safe-area-inset-top)]">
         <div className="flex h-14 items-center">
           <span className="text-heading font-semibold">결제 코드 스캔</span>
@@ -130,6 +137,6 @@ export const QrScanner = ({ onDetect, onClose }: QrScannerProps) => {
           </div>
         </>
       )}
-    </div>
+    </motion.div>
   );
 };

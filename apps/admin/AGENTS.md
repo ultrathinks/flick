@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # apps/admin
 
-Platform-operator back-office (Next.js 16 App Router + React 19). Operators approve/reject booths, monitor all orders, process student payouts (환급), charge balances by scanning user QR codes (충전), search users, and read the audit trail. Refunds are NOT here — they belong to the booth operator in `apps/pos`.
+Platform-operator back-office (Next.js 16 App Router + React 19). Operators approve/reject booths, monitor all orders, view student payout accounts (환급 — the bank account each student's leftover balance is returned to after the festival; read-only, no approval/pay flow), charge balances by scanning user QR codes (충전), search users, and read the audit trail. Refunds are NOT here — they belong to the booth operator in `apps/pos`.
 
 ## Run
 

@@ -340,12 +340,11 @@ describe("refund", () => {
 });
 
 describe("payout", () => {
-  it("requests once and pays out with ledger debit", async () => {
-    const admin = await createUser({ isAdmin: true });
-    const user = await createUser({ balance: 5000 });
+  it("saves a payout account and reports available balance", async () => {
+    const user = await createUser({ balance: 20000 });
 
-    const reqRes = await app.request("/v1/users/me/payout", {
-      method: "POST",
+    const putRes = await app.request("/v1/users/me/payout", {
+      method: "PUT",
       headers: authHeaders(user.accessToken),
       body: JSON.stringify({
         bankName: "Bank",
@@ -353,118 +352,76 @@ describe("payout", () => {
         accountHolder: "User",
       }),
     });
-    expect(reqRes.status).toBe(201);
-    const payout = (await reqRes.json()) as { id: string };
-    expect(payout.id).toBeTruthy();
+    expect(putRes.status).toBe(200);
+    const saved = (await putRes.json()) as { accountNumber: string };
+    expect(saved.accountNumber).toBe("1234567890");
 
-    const dupe = await app.request("/v1/users/me/payout", {
-      method: "POST",
+    const getRes = await app.request("/v1/users/me/payout", {
       headers: authHeaders(user.accessToken),
-      body: JSON.stringify({
-        bankName: "Bank",
-        accountNumber: "1234567890",
-        accountHolder: "User",
-      }),
     });
-    expect(dupe.status).toBe(409);
+    expect(getRes.status).toBe(200);
+    const summary = (await getRes.json()) as {
+      availableAmount: number;
+      account: { bankName: string; accountNumber: string } | null;
+    };
+    expect(summary.availableAmount).toBe(14000);
+    expect(summary.account?.accountNumber).toBe("1234567890");
 
-    const payRes = await app.request(`/v1/payouts/${payout.id}/pay`, {
-      method: "POST",
-      headers: authHeaders(admin.accessToken),
-    });
-    expect(payRes.status).toBe(200);
-    const paid = (await payRes.json()) as { amount: number };
-    expect(paid.amount).toBe(4000);
-    expect(await balanceOf(user.id)).toBe(1000);
-    expect(await ledgerOf(user.id)).toBe(1000);
+    expect(await balanceOf(user.id)).toBe(20000);
+    expect(await ledgerOf(user.id)).toBe(20000);
   });
 
-  it("pays out based on balance at pay time, not request time", async () => {
-    const admin = await createUser({ isAdmin: true });
-    const user = await createUser({ balance: 5000 });
+  it("overwrites the account on repeat save", async () => {
+    const user = await createUser({ balance: 20000 });
 
-    const reqRes = await app.request("/v1/users/me/payout", {
-      method: "POST",
-      headers: authHeaders(user.accessToken),
-      body: JSON.stringify({
-        bankName: "Bank",
-        accountNumber: "1234567890",
-        accountHolder: "User",
-      }),
-    });
-    expect(reqRes.status).toBe(201);
-    const payout = (await reqRes.json()) as { id: string };
-
-    await getDb()
-      .insert(transactions)
-      .values({ userId: user.id, amount: -3000, type: "purchase" });
-    await getDb()
-      .update(users)
-      .set({ balance: 2000 })
-      .where(eq(users.id, user.id));
-
-    const payRes = await app.request(`/v1/payouts/${payout.id}/pay`, {
-      method: "POST",
-      headers: authHeaders(admin.accessToken),
-    });
-    expect(payRes.status).toBe(200);
-    const paid = (await payRes.json()) as { amount: number };
-    expect(paid.amount).toBe(1000);
-    expect(await balanceOf(user.id)).toBe(1000);
-    expect(await ledgerOf(user.id)).toBe(1000);
-  });
-
-  it("rejects payout when the balance is fully spent after request", async () => {
-    const admin = await createUser({ isAdmin: true });
-    const user = await createUser({ balance: 5000 });
-
-    const reqRes = await app.request("/v1/users/me/payout", {
-      method: "POST",
-      headers: authHeaders(user.accessToken),
-      body: JSON.stringify({
-        bankName: "Bank",
-        accountNumber: "1234567890",
-        accountHolder: "User",
-      }),
-    });
-    const payout = (await reqRes.json()) as { id: string };
-
-    await getDb()
-      .insert(transactions)
-      .values({ userId: user.id, amount: -4000, type: "purchase" });
-    await getDb()
-      .update(users)
-      .set({ balance: 1000 })
-      .where(eq(users.id, user.id));
-
-    const payRes = await app.request(`/v1/payouts/${payout.id}/pay`, {
-      method: "POST",
-      headers: authHeaders(admin.accessToken),
-    });
-    expect(payRes.status).toBe(409);
-    expect(await balanceOf(user.id)).toBe(1000);
-    expect(await ledgerOf(user.id)).toBe(1000);
-  });
-
-  it("rejects a payout request with no payable balance", async () => {
-    const user = await createUser({ balance: 1000 });
-    const res = await app.request("/v1/users/me/payout", {
-      method: "POST",
-      headers: authHeaders(user.accessToken),
-      body: JSON.stringify({
-        bankName: "Bank",
-        accountNumber: "1234567890",
-        accountHolder: "User",
-      }),
-    });
-    expect(res.status).toBe(409);
-  });
-
-  it("masks account number in admin list", async () => {
-    const admin = await createUser({ isAdmin: true });
-    const user = await createUser({ balance: 5000 });
     await app.request("/v1/users/me/payout", {
-      method: "POST",
+      method: "PUT",
+      headers: authHeaders(user.accessToken),
+      body: JSON.stringify({
+        bankName: "Bank",
+        accountNumber: "1234567890",
+        accountHolder: "User",
+      }),
+    });
+    const second = await app.request("/v1/users/me/payout", {
+      method: "PUT",
+      headers: authHeaders(user.accessToken),
+      body: JSON.stringify({
+        bankName: "Other Bank",
+        accountNumber: "9876543210",
+        accountHolder: "User",
+      }),
+    });
+    expect(second.status).toBe(200);
+
+    const rows = await getDb()
+      .select()
+      .from(payouts)
+      .where(eq(payouts.userId, user.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.accountNumber).toBe("9876543210");
+    expect(rows[0]?.bankName).toBe("Other Bank");
+  });
+
+  it("returns a null account when none is saved", async () => {
+    const user = await createUser({ balance: 20000 });
+    const getRes = await app.request("/v1/users/me/payout", {
+      headers: authHeaders(user.accessToken),
+    });
+    expect(getRes.status).toBe(200);
+    const summary = (await getRes.json()) as {
+      availableAmount: number;
+      account: unknown;
+    };
+    expect(summary.availableAmount).toBe(14000);
+    expect(summary.account).toBeNull();
+  });
+
+  it("exposes the plain account and available balance in the admin list", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const user = await createUser({ balance: 20000 });
+    await app.request("/v1/users/me/payout", {
+      method: "PUT",
       headers: authHeaders(user.accessToken),
       body: JSON.stringify({
         bankName: "Bank",
@@ -475,8 +432,13 @@ describe("payout", () => {
     const res = await app.request("/v1/payouts", {
       headers: authHeaders(admin.accessToken),
     });
-    const list = (await res.json()) as Array<{ accountNumber: string }>;
-    expect(list[0]?.accountNumber).toBe("******7890");
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as Array<{
+      accountNumber: string;
+      availableAmount: number;
+    }>;
+    expect(list[0]?.accountNumber).toBe("1234567890");
+    expect(list[0]?.availableAmount).toBe(14000);
   });
 });
 
@@ -1051,60 +1013,5 @@ describe("response field exposure", () => {
     for (const row of list) {
       expect(row).not.toHaveProperty("approvedBy");
     }
-  });
-});
-
-describe("payout reject guard", () => {
-  it("rejects a requested payout and blocks rejecting a paid one", async () => {
-    const admin = await createUser({ isAdmin: true });
-    const user = await createUser({ balance: 5000 });
-    const reqRes = await app.request("/v1/users/me/payout", {
-      method: "POST",
-      headers: authHeaders(user.accessToken),
-      body: JSON.stringify({
-        bankName: "Bank",
-        accountNumber: "1234567890",
-        accountHolder: "User",
-      }),
-    });
-    const payout = (await reqRes.json()) as { id: string };
-
-    const payRes = await app.request(`/v1/payouts/${payout.id}/pay`, {
-      method: "POST",
-      headers: authHeaders(admin.accessToken),
-    });
-    expect(payRes.status).toBe(200);
-
-    const rejectRes = await app.request(`/v1/payouts/${payout.id}/reject`, {
-      method: "POST",
-      headers: authHeaders(admin.accessToken),
-    });
-    expect(rejectRes.status).toBe(409);
-    const [row] = await getDb()
-      .select()
-      .from(payouts)
-      .where(eq(payouts.id, payout.id));
-    expect(row?.status).toBe("paid");
-  });
-
-  it("rejects a requested payout", async () => {
-    const admin = await createUser({ isAdmin: true });
-    const user = await createUser({ balance: 5000 });
-    const reqRes = await app.request("/v1/users/me/payout", {
-      method: "POST",
-      headers: authHeaders(user.accessToken),
-      body: JSON.stringify({
-        bankName: "Bank",
-        accountNumber: "1234567890",
-        accountHolder: "User",
-      }),
-    });
-    const payout = (await reqRes.json()) as { id: string };
-    const rejectRes = await app.request(`/v1/payouts/${payout.id}/reject`, {
-      method: "POST",
-      headers: authHeaders(admin.accessToken),
-    });
-    expect(rejectRes.status).toBe(200);
-    expect(await balanceOf(user.id)).toBe(5000);
   });
 });

@@ -8,7 +8,6 @@ const TYPE_LABEL: Record<TransactionType, string> = {
   charge: "실충전",
   purchase: "구매",
   refund: "환불",
-  payout: "환급 지급",
   adjustment: "조정",
 };
 
@@ -21,7 +20,6 @@ export function DashboardStats({ stats }: { stats: Stats }) {
   const charge = total(stats, "charge");
   const purchase = Math.abs(total(stats, "purchase"));
   const refund = total(stats, "refund");
-  const payout = Math.abs(total(stats, "payout"));
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -37,7 +35,6 @@ export function DashboardStats({ stats }: { stats: Stats }) {
       />
       <Stat label={TYPE_LABEL.purchase} value={formatWon(purchase)} />
       <Stat label={TYPE_LABEL.refund} value={formatWon(refund)} />
-      <Stat label={TYPE_LABEL.payout} value={formatWon(payout)} />
     </div>
   );
 }

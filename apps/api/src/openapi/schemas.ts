@@ -139,37 +139,6 @@ export const resolvedUserSchema = z
   })
   .openapi("ResolvedUser");
 
-export const payoutRequestSchema = z
-  .object({
-    id: z.string(),
-    status: z.enum(["requested", "paid", "rejected"]),
-    createdAt: z.date(),
-  })
-  .openapi("PayoutRequest");
-
-export const payoutSummarySchema = z
-  .object({
-    availableAmount: z.number(),
-    request: payoutRequestSchema.nullable(),
-  })
-  .openapi("PayoutSummary");
-
-export const maskedPayoutSchema = z
-  .object({
-    id: z.string(),
-    userId: z.string(),
-    amount: z.number().nullable(),
-    availableAmount: z.number(),
-    status: z.enum(["requested", "paid", "rejected"]),
-    accountHolder: z.string(),
-    bankName: z.string(),
-    accountNumber: z.string(),
-    paidAt: z.date().nullable(),
-    paidBy: z.string().nullable(),
-    createdAt: z.date(),
-  })
-  .openapi("MaskedPayout");
-
 export const payoutAccountSchema = z
   .object({
     bankName: z.string(),
@@ -177,6 +146,25 @@ export const payoutAccountSchema = z
     accountHolder: z.string(),
   })
   .openapi("PayoutAccount");
+
+export const payoutSummarySchema = z
+  .object({
+    availableAmount: z.number(),
+    account: payoutAccountSchema.nullable(),
+  })
+  .openapi("PayoutSummary");
+
+export const adminPayoutSchema = z
+  .object({
+    id: z.string(),
+    userId: z.string(),
+    availableAmount: z.number(),
+    accountHolder: z.string(),
+    bankName: z.string(),
+    accountNumber: z.string(),
+    createdAt: z.date(),
+  })
+  .openapi("AdminPayout");
 
 export const orderItemWithOptionsSchema = z
   .object({

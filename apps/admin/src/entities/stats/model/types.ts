@@ -17,5 +17,4 @@ export type TransactionType =
   | "charge"
   | "purchase"
   | "refund"
-  | "payout"
   | "adjustment";

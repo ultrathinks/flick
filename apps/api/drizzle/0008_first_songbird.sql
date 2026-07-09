@@ -1,1 +1,0 @@
-ALTER TYPE "public"."product_status" ADD VALUE 'soldout' BEFORE 'hidden';
