@@ -4,10 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3003",
+    "dev:mock": "NEXT_PUBLIC_MOCK=1 BASE_API_URL=http://localhost:3000/v1 BASE_INTERNAL_API_URL=http://localhost:3000/v1 BASE_URL=http://localhost:3003 DAUTH_AUTHORIZE_URL=https://dauth.b1nd.com/authorize DAUTH_CLIENT_ID=mock DAUTH_REDIRECT_URI=http://localhost:3003/api/auth/callback next dev --port 3003",
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@flick/ui": "workspace:*",
@@ -26,12 +30,20 @@
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
     "@flick/typescript-config": "workspace:*",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.0.0",
     "babel-plugin-react-compiler": "1.0.0",
+    "jsdom": "^25.0.1",
+    "msw": "^2.14.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.9"
   }
 }

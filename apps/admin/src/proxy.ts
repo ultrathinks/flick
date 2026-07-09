@@ -11,8 +11,9 @@ export function proxy(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  const loginUrl = new URL("/login", request.url);
-  return NextResponse.redirect(loginUrl);
+  const fallback =
+    process.env.NEXT_PUBLIC_MOCK === "1" ? "/api/mock/seed" : "/login";
+  return NextResponse.redirect(new URL(fallback, request.url));
 }
 
 export const config = {
