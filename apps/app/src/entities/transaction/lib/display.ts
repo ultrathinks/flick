@@ -5,7 +5,6 @@ const labels: Record<TransactionType, string> = {
   charge: "충전",
   purchase: "결제",
   refund: "환불",
-  payout: "출금",
   adjustment: "조정",
 };
 

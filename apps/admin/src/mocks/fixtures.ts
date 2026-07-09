@@ -2,10 +2,7 @@ import type { z } from "zod";
 import type { auditLogSchema } from "@/entities/audit";
 import type { boothSchema } from "@/entities/booth";
 import type { adminOrderSchema } from "@/entities/order/model/types.ts";
-import type {
-  maskedPayoutSchema,
-  payoutAccountSchema,
-} from "@/entities/payout";
+import type { adminPayoutSchema } from "@/entities/payout";
 import type { Stats } from "@/entities/stats";
 import type { adminUserSchema } from "@/entities/user";
 import type {
@@ -17,8 +14,7 @@ import type { meSchema } from "@/shared/auth/me.ts";
 type Booth = z.input<typeof boothSchema>;
 type AdminOrder = z.input<typeof adminOrderSchema>;
 type AdminUser = z.input<typeof adminUserSchema>;
-type MaskedPayout = z.input<typeof maskedPayoutSchema>;
-type PayoutAccount = z.input<typeof payoutAccountSchema>;
+type AdminPayout = z.input<typeof adminPayoutSchema>;
 type AuditLog = z.input<typeof auditLogSchema>;
 type Me = z.input<typeof meSchema>;
 type ResolvedUser = z.input<typeof resolvedUserSchema>;
@@ -118,26 +114,53 @@ export const users: AdminUser[] = [
   },
 ];
 
-export const payouts: MaskedPayout[] = [
+export const payouts: AdminPayout[] = [
   {
     id: "payout-1",
     userId: "user-1",
-    amount: 128000,
-    status: "requested",
+    availableAmount: 128000,
     accountHolder: "김학생",
     bankName: "토스뱅크",
-    accountNumber: "****3456",
-    paidAt: null,
-    paidBy: null,
+    accountNumber: "100012345678",
     createdAt: "2026-07-07T18:00:00+09:00",
   },
+  {
+    id: "payout-2",
+    userId: "user-2",
+    availableAmount: 34000,
+    accountHolder: "이영희",
+    bankName: "카카오뱅크",
+    accountNumber: "3333019876543",
+    createdAt: "2026-07-07T17:20:00+09:00",
+  },
+  {
+    id: "payout-3",
+    userId: "user-3",
+    availableAmount: 9000,
+    accountHolder: "박민수",
+    bankName: "국민은행",
+    accountNumber: "12345604123456",
+    createdAt: "2026-07-07T16:05:00+09:00",
+  },
+  {
+    id: "payout-4",
+    userId: "user-4",
+    availableAmount: 51000,
+    accountHolder: "최지우",
+    bankName: "신한은행",
+    accountNumber: "110123456789",
+    createdAt: "2026-07-07T15:40:00+09:00",
+  },
+  {
+    id: "payout-5",
+    userId: "user-5",
+    availableAmount: 7000,
+    accountHolder: "정하늘",
+    bankName: "농협은행",
+    accountNumber: "3021234567891",
+    createdAt: "2026-07-07T14:10:00+09:00",
+  },
 ];
-
-export const payoutAccount: PayoutAccount = {
-  bankName: "토스뱅크",
-  accountNumber: "100012345678",
-  accountHolder: "김학생",
-};
 
 export const auditLogs: AuditLog[] = [
   {
@@ -166,7 +189,6 @@ export const stats: Stats = {
   totals: [
     { type: "charge", amount: 500000 },
     { type: "purchase", amount: 320000 },
-    { type: "payout", amount: 128000 },
   ],
   boothSales: [
     { boothId: "booth-2", name: "음료 부스", amount: 220000 },

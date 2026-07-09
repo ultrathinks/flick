@@ -30,7 +30,7 @@ Hono API with Drizzle ORM over node-postgres. ESM (`"type": "module"`).
 
 ## Money invariant
 
-`users.balance == SUM(transactions of user)`. Every balance change writes a `transactions` row and updates `users.balance` in the same DB transaction. Enforced by DB partial-unique indexes: one `grant` per user, one refund per purchase, charge idempotency `(admin_id, idempotency_key)`, one `requested` payout per user, one pending payment per order.
+`users.balance == SUM(transactions of user)`. Every balance change writes a `transactions` row and updates `users.balance` in the same DB transaction. Enforced by DB partial-unique indexes: one `grant` per user, one refund per purchase, charge idempotency `(admin_id, idempotency_key)`, one pending payment per order. Payouts are a static record of the account to return each user's leftover balance to after the festival (one row per user); the platform does not move that money, so payouts write no `transactions`.
 
 ## Notes
 
