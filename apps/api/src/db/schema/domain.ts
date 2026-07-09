@@ -43,14 +43,7 @@ export const transactionType = pgEnum("transaction_type", [
   "charge",
   "purchase",
   "refund",
-  "payout",
   "adjustment",
-]);
-
-export const payoutStatus = pgEnum("payout_status", [
-  "requested",
-  "paid",
-  "rejected",
 ]);
 
 export const booths = pgTable(
@@ -350,24 +343,14 @@ export const payouts = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
-    amount: bigint("amount", { mode: "number" }),
     bankName: text("bank_name").notNull(),
     accountNumber: text("account_number").notNull(),
     accountHolder: text("account_holder").notNull(),
-    status: payoutStatus("status").notNull().default("requested"),
-    paidAt: timestamp("paid_at", { withTimezone: true }),
-    paidBy: uuid("paid_by").references(() => users.id),
-    payoutTransactionId: uuid("payout_transaction_id").unique(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
-  (table) => [
-    index("payouts_user_id_idx").on(table.userId),
-    uniqueIndex("payouts_one_requested_per_user_idx")
-      .on(table.userId)
-      .where(sql`${table.status} = 'requested'`),
-  ],
+  (table) => [uniqueIndex("payouts_user_id_idx").on(table.userId)],
 );
 
 export const auditLogs = pgTable(
