@@ -25,12 +25,20 @@
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
     "@flick/typescript-config": "workspace:*",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.0.0",
     "babel-plugin-react-compiler": "1.0.0",
+    "jsdom": "^25.0.1",
+    "msw": "^2.14.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.9"
   }
 }
