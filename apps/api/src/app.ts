@@ -1,9 +1,10 @@
-import { OpenAPIHono } from "@hono/zod-openapi";
+import { type Hook, OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
-import { getCorsOrigins } from "./config.ts";
-import { AppError } from "./lib/errors.ts";
+import { secureHeaders } from "hono/secure-headers";
+import { getCorsOrigins, isProduction } from "./config.ts";
+import { AppError, ValidationError } from "./lib/errors.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { boothsRoutes } from "./routes/booths.ts";
@@ -21,7 +22,23 @@ import { statsRoutes } from "./routes/stats.ts";
 import { uploadsRoutes } from "./routes/uploads.ts";
 import { usersRoutes } from "./routes/users.ts";
 
-export const app = new OpenAPIHono();
+// biome-ignore lint/suspicious/noExplicitAny: hook context type varies per route
+const defaultHook: Hook<unknown, any, any, unknown> = (result) => {
+  if (!result.success) {
+    const issue = result.error.issues[0];
+    const path = issue?.path.join(".");
+    const message = issue
+      ? path
+        ? `${path}: ${issue.message}`
+        : issue.message
+      : "Validation failed";
+    throw new ValidationError(message);
+  }
+};
+
+export const app = new OpenAPIHono({ defaultHook });
+
+app.use("*", secureHeaders());
 
 app.use(
   "*",
@@ -55,7 +72,7 @@ app.onError((err, c) => {
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 
-const v1 = new OpenAPIHono();
+const v1 = new OpenAPIHono({ defaultHook });
 
 v1.route("/auth", authRoutes);
 v1.route("/users", usersRoutes);
@@ -76,7 +93,7 @@ const appRoutes = app.route("/v1", v1);
 
 export type AppType = typeof appRoutes;
 
-if (process.env.NODE_ENV !== "production") {
+if (!isProduction()) {
   app.openAPIRegistry.registerComponent("securitySchemes", "Bearer", {
     type: "http",
     scheme: "bearer",

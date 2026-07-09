@@ -37,7 +37,10 @@ export function decodeCursor(raw: string | undefined): Cursor | null {
     if (
       typeof parsed.createdAtMicros !== "string" ||
       typeof parsed.id !== "string" ||
-      !/^\d+$/.test(parsed.createdAtMicros)
+      !/^\d+$/.test(parsed.createdAtMicros) ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        parsed.id,
+      )
     ) {
       throw new Error("malformed cursor");
     }

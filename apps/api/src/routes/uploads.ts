@@ -17,7 +17,7 @@ import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 
 const presignBodySchema = z.object({
   kind: z.enum(["booth", "product"]),
-  targetId: z.string(),
+  targetId: z.string().uuid(),
   contentType: z.enum(ALLOWED_UPLOAD_CONTENT_TYPES as [string, ...string[]]),
 });
 

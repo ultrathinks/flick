@@ -1,5 +1,5 @@
-import type { CartItem } from "@/entities/cart/model/types";
 import type { Product } from "@/shared/api/types";
+import type { CartItem } from "@/shared/model/types";
 
 export function addProductToCart(items: CartItem[], product: Product) {
   const existing = items.find((item) => item.id === product.id);

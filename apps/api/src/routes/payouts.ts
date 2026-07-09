@@ -14,11 +14,7 @@ import {
   users,
 } from "../db/schema/index.ts";
 import { BASE_GRANT_AMOUNT } from "../lib/constants.ts";
-import {
-  BadRequestError,
-  ConflictError,
-  NotFoundError,
-} from "../lib/errors.ts";
+import { ConflictError, NotFoundError } from "../lib/errors.ts";
 import { maskAccountNumber } from "../lib/security.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
@@ -34,19 +30,24 @@ const payoutBodySchema = z.object({
   accountHolder: z.string().min(1).max(64),
 });
 
-async function ledgerBalance(userId: string): Promise<number> {
-  const [row] = await getDb()
-    .select({ total: sql<number>`coalesce(sum(${transactions.amount}), 0)` })
-    .from(transactions)
-    .where(eq(transactions.userId, userId));
-  return row?.total ?? 0;
+function payableBalance(balance: number): number {
+  return Math.max(0, balance - BASE_GRANT_AMOUNT);
 }
 
-function maskedPayout(row: Payout) {
+async function userBalance(userId: string): Promise<number> {
+  const [row] = await getDb()
+    .select({ balance: users.balance })
+    .from(users)
+    .where(eq(users.id, userId));
+  return row?.balance ?? 0;
+}
+
+function maskedPayout(row: Payout, balance: number) {
   return {
     id: row.id,
     userId: row.userId,
     amount: row.amount,
+    availableAmount: row.status === "requested" ? payableBalance(balance) : 0,
     status: row.status,
     accountHolder: row.accountHolder,
     bankName: row.bankName,
@@ -79,17 +80,13 @@ payoutsRoutes.openapi(
       .where(eq(payouts.userId, user.id))
       .orderBy(desc(payouts.createdAt))
       .limit(1);
-    const availableAmount = Math.max(
-      0,
-      (await ledgerBalance(user.id)) - BASE_GRANT_AMOUNT,
-    );
+    const availableAmount = payableBalance(await userBalance(user.id));
     return c.json(
       {
         availableAmount,
         request: existing
           ? {
               id: existing.id,
-              amount: existing.amount,
               status: existing.status,
               createdAt: existing.createdAt,
             }
@@ -122,20 +119,16 @@ payoutsRoutes.openapi(
     const body = c.req.valid("json");
     const result = await getDb().transaction(async (tx) => {
       const [balanceRow] = await tx
-        .select({
-          total: sql<number>`coalesce(sum(${transactions.amount}), 0)`,
-        })
-        .from(transactions)
-        .where(eq(transactions.userId, user.id));
-      const amount = Math.max(0, (balanceRow?.total ?? 0) - BASE_GRANT_AMOUNT);
-      if (amount <= 0) {
-        throw new BadRequestError("no payable balance");
+        .select({ balance: users.balance })
+        .from(users)
+        .where(eq(users.id, user.id));
+      if (payableBalance(balanceRow?.balance ?? 0) <= 0) {
+        throw new ConflictError("no payable balance");
       }
       const [row] = await tx
         .insert(payouts)
         .values({
           userId: user.id,
-          amount,
           bankName: body.bankName,
           accountNumber: body.accountNumber,
           accountHolder: body.accountHolder,
@@ -150,7 +143,6 @@ payoutsRoutes.openapi(
     return c.json(
       {
         id: result.id,
-        amount: result.amount,
         status: result.status,
         createdAt: result.createdAt,
       },
@@ -178,13 +170,17 @@ payoutsRoutes.openapi(
   async (c) => {
     const status = c.req.valid("query").status;
     const rows = await getDb()
-      .select()
+      .select({ payout: payouts, balance: users.balance })
       .from(payouts)
+      .innerJoin(users, eq(payouts.userId, users.id))
       .orderBy(desc(payouts.createdAt));
     const filtered = status
-      ? rows.filter((row) => row.status === status)
+      ? rows.filter((row) => row.payout.status === status)
       : rows;
-    return c.json(filtered.map(maskedPayout), 200);
+    return c.json(
+      filtered.map((row) => maskedPayout(row.payout, row.balance)),
+      200,
+    );
   },
 );
 
@@ -195,7 +191,7 @@ payoutsRoutes.openapi(
     tags: ["payouts"],
     security: [{ Bearer: [] }],
     middleware: [requireAdmin] as const,
-    request: { params: z.object({ id: z.string() }) },
+    request: { params: z.object({ id: z.string().uuid() }) },
     responses: {
       200: jsonContent(payoutAccountSchema, "Plain payout account"),
       401: errorResponse("Unauthorized"),
@@ -237,7 +233,7 @@ payoutsRoutes.openapi(
     tags: ["payouts"],
     security: [{ Bearer: [] }],
     middleware: [requireAdmin] as const,
-    request: { params: z.object({ id: z.string() }) },
+    request: { params: z.object({ id: z.string().uuid() }) },
     responses: {
       200: jsonContent(maskedPayoutSchema, "Paid payout"),
       401: errorResponse("Unauthorized"),
@@ -261,16 +257,20 @@ payoutsRoutes.openapi(
       if (payout.status !== "requested") {
         throw new ConflictError("payout is not requested");
       }
-      await tx
-        .select()
+      const [payoutUser] = await tx
+        .select({ balance: users.balance })
         .from(users)
         .where(eq(users.id, payout.userId))
         .for("update");
+      const amount = payableBalance(payoutUser?.balance ?? 0);
+      if (amount <= 0) {
+        throw new ConflictError("no payable balance");
+      }
       const [transaction] = await tx
         .insert(transactions)
         .values({
           userId: payout.userId,
-          amount: -payout.amount,
+          amount: -amount,
           type: "payout",
           adminId: admin.id,
         })
@@ -281,13 +281,14 @@ payoutsRoutes.openapi(
       await tx
         .update(users)
         .set({
-          balance: sql<number>`${users.balance} - ${payout.amount}`,
+          balance: sql<number>`${users.balance} - ${amount}`,
           updatedAt: new Date(),
         })
         .where(eq(users.id, payout.userId));
       const [updated] = await tx
         .update(payouts)
         .set({
+          amount,
           status: "paid",
           paidAt: new Date(),
           paidBy: admin.id,
@@ -300,14 +301,14 @@ payoutsRoutes.openapi(
         action: "payout.pay",
         targetType: "payout",
         targetId: payoutId,
-        metadata: { amount: payout.amount },
+        metadata: { amount },
       });
       return updated;
     });
     if (!result) {
       throw new NotFoundError("payout not found");
     }
-    return c.json(maskedPayout(result), 200);
+    return c.json(maskedPayout(result, 0), 200);
   },
 );
 
@@ -318,7 +319,7 @@ payoutsRoutes.openapi(
     tags: ["payouts"],
     security: [{ Bearer: [] }],
     middleware: [requireAdmin] as const,
-    request: { params: z.object({ id: z.string() }) },
+    request: { params: z.object({ id: z.string().uuid() }) },
     responses: {
       200: jsonContent(maskedPayoutSchema, "Rejected payout"),
       401: errorResponse("Unauthorized"),
@@ -358,6 +359,6 @@ payoutsRoutes.openapi(
     if (!result) {
       throw new NotFoundError("payout not found");
     }
-    return c.json(maskedPayout(result), 200);
+    return c.json(maskedPayout(result, 0), 200);
   },
 );

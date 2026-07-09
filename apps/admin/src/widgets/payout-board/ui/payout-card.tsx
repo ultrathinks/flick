@@ -33,7 +33,7 @@ export function PayoutCard({ payout }: { payout: MaskedPayout }) {
   async function pay() {
     const ok = await confirm({
       title: "환급을 지급할까요?",
-      description: `${payout.accountHolder} 님에게 ${formatWon(payout.amount)}을 지급해요. 지급 후에는 되돌릴 수 없어요.`,
+      description: `${payout.accountHolder} 님에게 ${formatWon(payout.availableAmount)}을 지급해요. 지급 후에는 되돌릴 수 없어요.`,
       confirmLabel: "지급",
       tone: "brand",
     });
@@ -49,7 +49,7 @@ export function PayoutCard({ payout }: { payout: MaskedPayout }) {
   async function reject() {
     const ok = await confirm({
       title: "환급 요청을 거절할까요?",
-      description: `${payout.accountHolder} 님의 ${formatWon(payout.amount)} 환급 요청을 거절해요.`,
+      description: `${payout.accountHolder} 님의 ${formatWon(payout.availableAmount)} 환급 요청을 거절해요.`,
       confirmLabel: "거절",
       tone: "danger",
     });
@@ -63,6 +63,8 @@ export function PayoutCard({ payout }: { payout: MaskedPayout }) {
   }
 
   const isRequested = payout.status === "requested";
+  const isRejected = payout.status === "rejected";
+  const displayAmount = payout.amount ?? payout.availableAmount;
 
   return (
     <Card className="flex flex-col gap-3 px-4 py-3.5">
@@ -70,7 +72,7 @@ export function PayoutCard({ payout }: { payout: MaskedPayout }) {
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="text-body font-semibold tabular-nums text-foreground">
-              {formatWon(payout.amount)}
+              {isRejected ? "—" : formatWon(displayAmount)}
             </span>
             <Badge tone={PAYOUT_STATUS_TONE[payout.status]}>
               {PAYOUT_STATUS_LABEL[payout.status]}
