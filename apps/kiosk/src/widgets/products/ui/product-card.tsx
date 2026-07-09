@@ -56,8 +56,8 @@ export function ProductCard({
           </div>
         ) : null}
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-4">
-        <h2 className="line-clamp-2 text-subtitle font-semibold text-foreground">
+      <div className="flex flex-1 flex-col gap-2 p-5">
+        <h2 className="line-clamp-2 text-title font-semibold text-foreground">
           {product.name}
         </h2>
         <div className="mt-auto flex items-end justify-between gap-2 pt-1">

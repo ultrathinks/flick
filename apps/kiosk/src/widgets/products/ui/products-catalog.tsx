@@ -58,7 +58,7 @@ export function ProductsCatalog({
               description="부스 관리 화면에서 상품 상태를 확인해주세요"
             />
           ) : (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
               {products.map((product) => (
                 <ProductCard
                   key={product.id}
