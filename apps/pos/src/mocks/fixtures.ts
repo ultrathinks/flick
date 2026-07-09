@@ -1,6 +1,5 @@
 import type { Booth } from "@/entities/booth";
 import type { KioskPairing } from "@/entities/kiosk";
-import type { OptionGroup } from "@/entities/option";
 import type { Order } from "@/entities/order";
 import type { Product } from "@/entities/product";
 
@@ -36,13 +35,47 @@ export const products: Product[] = [
     name: "국물 떡볶이",
     description: "기본 국물 떡볶이",
     imageUrl: null,
-    price: 3500,
+    price: 3000,
     stock: null,
     status: "available",
     sortOrder: 0,
     archivedAt: null,
     createdAt: "2026-06-28T12:10:00+09:00",
     updatedAt: "2026-06-28T12:10:00+09:00",
+    optionGroups: [
+      {
+        id: "group-1",
+        productId: "product-1",
+        name: "맵기",
+        required: true,
+        maxSelect: 1,
+        sortOrder: 0,
+        archivedAt: null,
+        createdAt: "2026-06-28T12:20:00+09:00",
+        values: [
+          {
+            id: "value-1",
+            groupId: "group-1",
+            name: "순한맛",
+            priceDelta: 0,
+            isDefault: true,
+            sortOrder: 0,
+            archivedAt: null,
+            createdAt: "2026-06-28T12:20:00+09:00",
+          },
+          {
+            id: "value-2",
+            groupId: "group-1",
+            name: "매운맛",
+            priceDelta: 0,
+            isDefault: false,
+            sortOrder: 1,
+            archivedAt: null,
+            createdAt: "2026-06-28T12:20:00+09:00",
+          },
+        ],
+      },
+    ],
   },
   {
     id: "product-2",
@@ -50,47 +83,29 @@ export const products: Product[] = [
     name: "치즈 떡볶이",
     description: "모짜렐라 듬뿍",
     imageUrl: null,
-    price: 4500,
+    price: 2500,
     stock: 20,
-    status: "available",
+    status: "soldout",
     sortOrder: 1,
     archivedAt: null,
     createdAt: "2026-06-28T12:11:00+09:00",
     updatedAt: "2026-06-28T12:11:00+09:00",
+    optionGroups: [],
   },
-];
-
-export const optionGroups: OptionGroup[] = [
   {
-    id: "group-1",
-    productId: "product-1",
-    name: "맵기",
-    required: true,
-    sortOrder: 0,
+    id: "product-3",
+    boothId: booth.id,
+    name: "김말이 튀김",
+    description: "바삭한 김말이",
+    imageUrl: null,
+    price: 2000,
+    stock: null,
+    status: "hidden",
+    sortOrder: 2,
     archivedAt: null,
-    createdAt: "2026-06-28T12:20:00+09:00",
-    values: [
-      {
-        id: "value-1",
-        groupId: "group-1",
-        name: "순한맛",
-        priceDelta: 0,
-        isDefault: true,
-        sortOrder: 0,
-        archivedAt: null,
-        createdAt: "2026-06-28T12:20:00+09:00",
-      },
-      {
-        id: "value-2",
-        groupId: "group-1",
-        name: "매운맛",
-        priceDelta: 0,
-        isDefault: false,
-        sortOrder: 1,
-        archivedAt: null,
-        createdAt: "2026-06-28T12:20:00+09:00",
-      },
-    ],
+    createdAt: "2026-06-28T12:12:00+09:00",
+    updatedAt: "2026-06-28T12:12:00+09:00",
+    optionGroups: [],
   },
 ];
 
