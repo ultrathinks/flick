@@ -6,12 +6,20 @@ import {
   useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../lib/cn";
 
 const MenuCloseContext = createContext<() => void>(() => {});
+
+interface MenuPosition {
+  top: number;
+  left?: number;
+  right?: number;
+}
 
 export function Menu({
   trigger,
@@ -33,10 +41,14 @@ export function Menu({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [position, setPosition] = useState<MenuPosition | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const close = () => setOpen(false);
+
+  useEffect(() => setMounted(true), []);
 
   const items = () =>
     listRef.current
@@ -54,6 +66,32 @@ export function Menu({
     list[next]?.focus();
   };
 
+  useLayoutEffect(() => {
+    if (!open) {
+      setPosition(null);
+      return;
+    }
+    const updatePosition = () => {
+      const triggerEl = rootRef.current?.firstElementChild;
+      if (!triggerEl) {
+        return;
+      }
+      const rect = triggerEl.getBoundingClientRect();
+      setPosition(
+        align === "end"
+          ? { top: rect.bottom + 8, right: window.innerWidth - rect.right }
+          : { top: rect.bottom + 8, left: rect.left },
+      );
+    };
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open, align]);
+
   useEffect(() => {
     if (!open) {
       return;
@@ -62,9 +100,14 @@ export function Menu({
       listRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     });
     const onPointer = (e: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
+      const target = e.target as Node;
+      if (
+        rootRef.current?.contains(target) ||
+        listRef.current?.contains(target)
+      ) {
+        return;
       }
+      setOpen(false);
     };
     document.addEventListener("pointerdown", onPointer);
     return () => {
@@ -111,21 +154,29 @@ export function Menu({
           "aria-controls": menuId,
         },
       })}
-      {open && (
-        <div
-          id={menuId}
-          ref={listRef}
-          role="menu"
-          onKeyDown={onKeyDown}
-          className={cn(
-            "absolute top-[calc(100%+0.5rem)] z-(--z-overlay) max-w-[calc(100vw-2rem)] min-w-52 motion-safe:animate-menu-in overflow-hidden rounded-card border border-border bg-surface p-1.5 shadow-[var(--shadow-overlay)]",
-            align === "end" ? "right-0" : "left-0",
-            className,
-          )}
-        >
-          <MenuCloseContext value={close}>{children}</MenuCloseContext>
-        </div>
-      )}
+      {open &&
+        mounted &&
+        position &&
+        createPortal(
+          <div
+            id={menuId}
+            ref={listRef}
+            role="menu"
+            onKeyDown={onKeyDown}
+            style={{
+              top: position.top,
+              left: position.left,
+              right: position.right,
+            }}
+            className={cn(
+              "fixed z-(--z-overlay) max-w-[calc(100vw-2rem)] min-w-52 motion-safe:animate-menu-in overflow-hidden rounded-card border border-border bg-surface p-1.5 shadow-[var(--shadow-overlay)]",
+              className,
+            )}
+          >
+            <MenuCloseContext value={close}>{children}</MenuCloseContext>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
