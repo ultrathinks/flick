@@ -23,7 +23,7 @@ export const BalanceCard = ({
         type="button"
         onClick={scan}
         aria-label="QR 스캔하여 결제하기"
-        className="relative block aspect-[1.586/1] w-full overflow-hidden rounded-card shadow-overlay"
+        className="relative block aspect-[1.586/1] w-full overflow-hidden rounded-card shadow-[0_1px_1px_rgb(0_0_0/0.12),0_8px_20px_-6px_rgb(0_0_0/0.45),0_20px_40px_-12px_rgb(0_0_0/0.5)]"
         whileTap={{ scale: 0.96 }}
         transition={{ type: "spring", stiffness: 400, damping: 25 }}
       >
