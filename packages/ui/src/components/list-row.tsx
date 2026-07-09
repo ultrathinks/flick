@@ -64,7 +64,7 @@ export function ListRow({
         onClick={onClick}
         className={cn(
           base,
-          "-mx-2 w-[calc(100%+1rem)] rounded-card-sm px-2 outline-hidden transition-colors hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-brand/40 active:bg-surface-muted",
+          "-mx-4 w-[calc(100%+2rem)] rounded-card-sm px-4 outline-hidden transition-colors hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-brand/40 active:bg-surface-muted",
           className,
         )}
       >
