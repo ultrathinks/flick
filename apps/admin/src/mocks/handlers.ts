@@ -5,7 +5,6 @@ import {
   chargeTransaction,
   me,
   orders,
-  payoutAccount,
   payouts,
   resolvedUser,
   stats,
@@ -61,31 +60,15 @@ export function createHandlers(base: string) {
       return page(rows);
     }),
 
-    http.get(url("payouts"), ({ request }) => {
-      const status = new URL(request.url).searchParams.get("status");
-      const rows = status
-        ? payouts.filter((p) => p.status === status)
-        : payouts;
-      return HttpResponse.json(rows);
-    }),
-    http.post(url("payouts/:payoutId/pay"), ({ params }) => {
-      const payout =
-        payouts.find((p) => p.id === params.payoutId) ?? payouts[0];
+    http.get(url("payouts"), () => HttpResponse.json(payouts)),
+    http.put(url("users/me/payout"), async ({ request }) => {
+      const input = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
-        ...payout,
-        status: "paid",
-        paidAt: new Date().toISOString(),
-        paidBy: me.id,
+        bankName: String(input.bankName ?? ""),
+        accountNumber: String(input.accountNumber ?? ""),
+        accountHolder: String(input.accountHolder ?? ""),
       });
     }),
-    http.post(url("payouts/:payoutId/reject"), ({ params }) => {
-      const payout =
-        payouts.find((p) => p.id === params.payoutId) ?? payouts[0];
-      return HttpResponse.json({ ...payout, status: "rejected" });
-    }),
-    http.get(url("payouts/:payoutId/account"), () =>
-      HttpResponse.json(payoutAccount),
-    ),
 
     http.get(url("audit-logs"), ({ request }) => {
       const action = new URL(request.url).searchParams.get("action");
