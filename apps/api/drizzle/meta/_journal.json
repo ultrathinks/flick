@@ -50,6 +50,20 @@
       "when": 1783526503832,
       "tag": "0006_unknown_mercury",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783565472181,
+      "tag": "0007_overconfident_skullbuster",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783576952645,
+      "tag": "0008_first_songbird",
+      "breakpoints": true
     }
   ]
 }

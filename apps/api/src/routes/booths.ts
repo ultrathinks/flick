@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import {
   type AuthVariables,
   requireAdmin,
@@ -13,17 +13,23 @@ import {
   orders,
   products,
 } from "../db/schema/index.ts";
+import { MAX_PRODUCT_PRICE } from "../lib/constants.ts";
 import {
   BadRequestError,
   ForbiddenError,
   NotFoundError,
 } from "../lib/errors.ts";
+import {
+  loadProductOptions,
+  optionsInputSchema,
+  replaceProductOptions,
+} from "../lib/product-options.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   boothSchema,
   kioskPairingSchema,
   orderSchema,
-  productSchema,
+  productWithOptionsSchema,
 } from "../openapi/schemas.ts";
 import {
   serializeBooth,
@@ -41,10 +47,11 @@ const productBodySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   imageUrl: z.string().url().optional(),
-  price: z.number().int().positive(),
+  price: z.number().int().positive().max(MAX_PRODUCT_PRICE),
   stock: z.number().int().min(0).nullable().optional(),
-  status: z.enum(["available", "hidden"]).optional(),
+  status: z.enum(["available", "soldout", "hidden"]).optional(),
   sortOrder: z.number().int().optional(),
+  options: optionsInputSchema.optional(),
 });
 
 const idParam = z.object({ id: z.string().uuid() });
@@ -325,7 +332,7 @@ boothsRoutes.openapi(
     middleware: [requireAuth] as const,
     request: { params: idParam },
     responses: {
-      200: jsonContent(z.array(productSchema), "Booth products"),
+      200: jsonContent(z.array(productWithOptionsSchema), "Booth products"),
       401: errorResponse("Unauthorized"),
       404: errorResponse("Not found"),
     },
@@ -342,11 +349,23 @@ boothsRoutes.openapi(
         and(
           eq(products.boothId, boothId),
           isNull(products.archivedAt),
-          canSeeHidden ? undefined : eq(products.status, "available"),
+          canSeeHidden
+            ? undefined
+            : inArray(products.status, ["available", "soldout"]),
         ),
       )
       .orderBy(asc(products.sortOrder), asc(products.createdAt));
-    return c.json(rows, 200);
+    const optionsByProduct = await loadProductOptions(
+      getDb(),
+      rows.map((product) => product.id),
+    );
+    return c.json(
+      rows.map((product) => ({
+        ...product,
+        optionGroups: optionsByProduct.get(product.id) ?? [],
+      })),
+      200,
+    );
   },
 );
 
@@ -393,7 +412,7 @@ boothsRoutes.openapi(
       body: { content: { "application/json": { schema: productBodySchema } } },
     },
     responses: {
-      201: jsonContent(productSchema, "Created product"),
+      201: jsonContent(productWithOptionsSchema, "Created product"),
       401: errorResponse("Unauthorized"),
       403: errorResponse("Forbidden"),
       404: errorResponse("Not found"),
@@ -406,13 +425,20 @@ boothsRoutes.openapi(
     if (!owns && !user.isAdmin) {
       throw new ForbiddenError();
     }
-    const [row] = await getDb()
-      .insert(products)
-      .values({ ...c.req.valid("json"), boothId })
-      .returning();
-    if (!row) {
-      throw new Error("failed to create product");
-    }
-    return c.json(row, 201);
+    const { options, ...productInput } = c.req.valid("json");
+    const created = await getDb().transaction(async (tx) => {
+      const [row] = await tx
+        .insert(products)
+        .values({ ...productInput, boothId })
+        .returning();
+      if (!row) {
+        throw new Error("failed to create product");
+      }
+      const optionGroups = options
+        ? await replaceProductOptions(tx, row.id, options)
+        : [];
+      return { ...row, optionGroups };
+    });
+    return c.json(created, 201);
   },
 );
