@@ -1,6 +1,6 @@
 import { useRouter } from "@b1nd/aid-kit/navigation";
 import { useSafeArea } from "@b1nd/aid-kit/safe-area-provider";
-import { Landmark, MoreHorizontal } from "lucide-react";
+import { CreditCard, Landmark, MoreHorizontal } from "lucide-react";
 import { Menu, MenuItem } from "@/shared/ui";
 
 export const HomeHeader = () => {
@@ -33,6 +33,12 @@ export const HomeHeader = () => {
             </button>
           )}
         >
+          <MenuItem
+            icon={<CreditCard aria-hidden />}
+            onClick={() => stack.push("/cards")}
+          >
+            카드
+          </MenuItem>
           <MenuItem
             icon={<Landmark aria-hidden />}
             onClick={() => stack.push("/payout")}
