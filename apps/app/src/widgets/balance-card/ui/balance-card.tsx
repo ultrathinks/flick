@@ -1,34 +1,32 @@
 import { useRouter } from "@b1nd/aid-kit/navigation";
 import { RollingNumber } from "@flick/ui";
-import { motion } from "framer-motion";
+import {
+  CardVisual,
+  getCardTheme,
+  useSelectedCardThemeId,
+} from "@/entities/card";
 import { usePayByCode } from "@/features/pay-by-code";
-import { type CardTheme, defaultCardTheme } from "../model/card-theme.ts";
-import { CardFace } from "./card-face.tsx";
 
 interface BalanceCardProps {
   balance: number;
-  theme?: CardTheme;
 }
 
-export const BalanceCard = ({
-  balance,
-  theme = defaultCardTheme,
-}: BalanceCardProps) => {
+export const BalanceCard = ({ balance }: BalanceCardProps) => {
   const { stack } = useRouter();
   const { scan } = usePayByCode();
+  const selectedId = useSelectedCardThemeId();
+  const theme = getCardTheme(selectedId);
 
   return (
     <div className="space-y-4">
-      <motion.button
+      <button
         type="button"
         onClick={scan}
         aria-label="QR 스캔하여 결제하기"
-        className="relative block aspect-[1.586/1] w-full overflow-hidden rounded-card shadow-[0_1px_1px_rgb(0_0_0/0.12),0_8px_20px_-6px_rgb(0_0_0/0.45),0_20px_40px_-12px_rgb(0_0_0/0.5)]"
-        whileTap={{ scale: 0.96 }}
-        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        className="block w-full transition-transform active:scale-[0.98]"
       >
-        <CardFace theme={theme} />
-      </motion.button>
+        <CardVisual theme={theme} />
+      </button>
 
       <div className="flex items-center justify-between rounded-card border border-border bg-surface px-5 py-4">
         <div className="min-w-0">
