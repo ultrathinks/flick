@@ -1,5 +1,6 @@
 import { useRouter } from "@b1nd/aid-kit/navigation";
 import { RollingNumber } from "@flick/ui";
+import { motion } from "framer-motion";
 import { usePayByCode } from "@/features/pay-by-code";
 import { type CardTheme, defaultCardTheme } from "../model/card-theme.ts";
 import { CardFace } from "./card-face.tsx";
@@ -18,14 +19,16 @@ export const BalanceCard = ({
 
   return (
     <div className="space-y-4">
-      <button
+      <motion.button
         type="button"
         onClick={scan}
         aria-label="QR 스캔하여 결제하기"
-        className="relative block aspect-[1.586/1] w-full overflow-hidden rounded-card shadow-overlay transition-transform active:scale-[0.98]"
+        className="relative block aspect-[1.586/1] w-full overflow-hidden rounded-card shadow-overlay"
+        whileTap={{ scale: 0.96 }}
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
       >
         <CardFace theme={theme} />
-      </button>
+      </motion.button>
 
       <div className="flex items-center justify-between rounded-card border border-border bg-surface px-5 py-4">
         <div className="min-w-0">

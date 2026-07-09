@@ -61,6 +61,7 @@ export function PayByCodeProvider({ children }: { children: ReactNode }) {
   });
 
   const scan = useCallback(() => {
+    send(Actions.HAPTIC, { style: "light" });
     if (hasNativeBridge()) {
       send(Actions.QR_SCAN);
       return;
