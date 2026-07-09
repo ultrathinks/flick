@@ -604,6 +604,60 @@ describe("kiosk order options", () => {
     });
     expect(orderRes.status).toBe(400);
   });
+
+  it("allows multiple values when maxSelect is unlimited", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 10000 });
+    const { boothId, deviceToken } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 10 });
+    const toppings = await createOptionGroup(productId, {
+      name: "Toppings",
+      required: false,
+      maxSelect: null,
+    });
+    const cheese = await createOptionValue(toppings, {
+      name: "Cheese",
+      priceDelta: 500,
+    });
+    const egg = await createOptionValue(toppings, {
+      name: "Egg",
+      priceDelta: 300,
+    });
+
+    const orderRes = await app.request("/v1/orders", {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+      body: JSON.stringify({
+        items: [{ productId, quantity: 1, optionValueIds: [cheese, egg] }],
+      }),
+    });
+    expect(orderRes.status).toBe(201);
+    const order = (await orderRes.json()) as { totalAmount: number };
+    expect(order.totalAmount).toBe(1800);
+    expect(buyer.id).toBeDefined();
+  });
+
+  it("rejects selecting more values than maxSelect allows", async () => {
+    const owner = await createUser();
+    const { boothId, deviceToken } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 10 });
+    const group = await createOptionGroup(productId, {
+      name: "Sauce",
+      required: false,
+      maxSelect: 1,
+    });
+    const mild = await createOptionValue(group, { name: "Mild" });
+    const spicy = await createOptionValue(group, { name: "Spicy" });
+
+    const orderRes = await app.request("/v1/orders", {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+      body: JSON.stringify({
+        items: [{ productId, quantity: 1, optionValueIds: [mild, spicy] }],
+      }),
+    });
+    expect(orderRes.status).toBe(400);
+  });
 });
 
 describe("booth approval gate", () => {
@@ -657,52 +711,112 @@ describe("unlimited stock", () => {
 });
 
 describe("option management", () => {
-  it("creates and lists option groups with values, archives on delete", async () => {
+  it("creates a product with nested options and lists them", async () => {
     const owner = await createUser();
     const { boothId } = await createBoothWithKiosk(owner.id);
-    const productId = await createProduct(boothId, { price: 1000 });
 
-    const groupRes = await app.request(
-      `/v1/products/${productId}/option-groups`,
-      {
-        method: "POST",
-        headers: authHeaders(owner.accessToken),
-        body: JSON.stringify({ name: "Size" }),
-      },
-    );
-    expect(groupRes.status).toBe(201);
-    const group = (await groupRes.json()) as { id: string };
-
-    const valueRes = await app.request(`/v1/option-groups/${group.id}/values`, {
+    const createRes = await app.request(`/v1/booths/${boothId}/products`, {
       method: "POST",
       headers: authHeaders(owner.accessToken),
-      body: JSON.stringify({ name: "L", priceDelta: 500, isDefault: true }),
+      body: JSON.stringify({
+        name: "Tteokbokki",
+        price: 3000,
+        options: [
+          {
+            name: "Size",
+            required: true,
+            maxSelect: 1,
+            values: [
+              { name: "M", priceDelta: 0, isDefault: true },
+              { name: "L", priceDelta: 500 },
+            ],
+          },
+        ],
+      }),
     });
-    expect(valueRes.status).toBe(201);
+    expect(createRes.status).toBe(201);
+    const created = (await createRes.json()) as {
+      id: string;
+      optionGroups: Array<{
+        name: string;
+        maxSelect: number | null;
+        values: Array<{ name: string; priceDelta: number; isDefault: boolean }>;
+      }>;
+    };
+    expect(created.optionGroups).toHaveLength(1);
+    expect(created.optionGroups[0]?.name).toBe("Size");
+    expect(created.optionGroups[0]?.maxSelect).toBe(1);
+    expect(created.optionGroups[0]?.values).toHaveLength(2);
+    expect(created.optionGroups[0]?.values[0]?.isDefault).toBe(true);
 
-    const listRes = await app.request(`/v1/products/${productId}/options`, {
+    const listRes = await app.request(`/v1/booths/${boothId}/products`, {
       headers: authHeaders(owner.accessToken),
     });
     expect(listRes.status).toBe(200);
-    const groups = (await listRes.json()) as Array<{
+    const list = (await listRes.json()) as Array<{
       id: string;
-      values: Array<{ name: string; priceDelta: number; isDefault: boolean }>;
+      optionGroups: Array<{ values: unknown[] }>;
     }>;
-    expect(groups).toHaveLength(1);
-    expect(groups[0]?.values[0]?.name).toBe("L");
-    expect(groups[0]?.values[0]?.isDefault).toBe(true);
+    expect(list[0]?.optionGroups[0]?.values).toHaveLength(2);
+  });
 
-    const deleteRes = await app.request(`/v1/option-groups/${group.id}`, {
-      method: "DELETE",
-      headers: authHeaders(owner.accessToken),
-    });
-    expect(deleteRes.status).toBe(204);
+  it("rejects a base price above the maximum", async () => {
+    const owner = await createUser();
+    const { boothId } = await createBoothWithKiosk(owner.id);
 
-    const afterRes = await app.request(`/v1/products/${productId}/options`, {
+    const res = await app.request(`/v1/booths/${boothId}/products`, {
+      method: "POST",
       headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ name: "Pricey", price: 3001 }),
     });
-    const after = (await afterRes.json()) as unknown[];
-    expect(after).toHaveLength(0);
+    expect(res.status).toBe(400);
+  });
+
+  it("replaces options on patch and leaves them untouched when omitted", async () => {
+    const owner = await createUser();
+    const { boothId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000 });
+    const group = await createOptionGroup(productId, { name: "Size" });
+    await createOptionValue(group, { name: "L" });
+
+    const patchNameRes = await app.request(`/v1/products/${productId}`, {
+      method: "PATCH",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ name: "Renamed" }),
+    });
+    expect(patchNameRes.status).toBe(200);
+    const patchedName = (await patchNameRes.json()) as {
+      name: string;
+      optionGroups: unknown[];
+    };
+    expect(patchedName.name).toBe("Renamed");
+    expect(patchedName.optionGroups).toHaveLength(1);
+
+    const replaceRes = await app.request(`/v1/products/${productId}`, {
+      method: "PATCH",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({
+        options: [
+          { name: "Spice", required: false, values: [{ name: "Hot" }] },
+        ],
+      }),
+    });
+    expect(replaceRes.status).toBe(200);
+    const replaced = (await replaceRes.json()) as {
+      optionGroups: Array<{ name: string; values: Array<{ name: string }> }>;
+    };
+    expect(replaced.optionGroups).toHaveLength(1);
+    expect(replaced.optionGroups[0]?.name).toBe("Spice");
+    expect(replaced.optionGroups[0]?.values[0]?.name).toBe("Hot");
+
+    const clearRes = await app.request(`/v1/products/${productId}`, {
+      method: "PATCH",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ options: [] }),
+    });
+    expect(clearRes.status).toBe(200);
+    const cleared = (await clearRes.json()) as { optionGroups: unknown[] };
+    expect(cleared.optionGroups).toHaveLength(0);
   });
 
   it("forbids managing options on a booth you do not own", async () => {
@@ -711,10 +825,12 @@ describe("option management", () => {
     const { boothId } = await createBoothWithKiosk(owner.id);
     const productId = await createProduct(boothId, { price: 1000 });
 
-    const res = await app.request(`/v1/products/${productId}/option-groups`, {
-      method: "POST",
+    const res = await app.request(`/v1/products/${productId}`, {
+      method: "PATCH",
       headers: authHeaders(other.accessToken),
-      body: JSON.stringify({ name: "Size" }),
+      body: JSON.stringify({
+        options: [{ name: "Size", values: [{ name: "L" }] }],
+      }),
     });
     expect(res.status).toBe(403);
   });
@@ -772,6 +888,52 @@ describe("booth product visibility", () => {
     expect(otherRes.status).toBe(200);
     const otherList = (await otherRes.json()) as Array<{ id: string }>;
     expect(otherList.map((p) => p.id)).toEqual([availableId]);
+  });
+});
+
+describe("sold-out products", () => {
+  it("shows sold-out products to the kiosk but hides hidden ones", async () => {
+    const owner = await createUser();
+    const { boothId, deviceToken } = await createBoothWithKiosk(owner.id);
+    const availableId = await createProduct(boothId, { status: "available" });
+    const soldoutId = await createProduct(boothId, { status: "soldout" });
+    await createProduct(boothId, { status: "hidden" });
+
+    const res = await app.request("/v1/kiosks/me/products", {
+      headers: kioskHeaders(deviceToken),
+    });
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as Array<{ id: string; status: string }>;
+    expect(list.map((p) => p.id).sort()).toEqual(
+      [availableId, soldoutId].sort(),
+    );
+  });
+
+  it("rejects orders for a sold-out product", async () => {
+    const owner = await createUser();
+    const { boothId, deviceToken } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { status: "soldout" });
+
+    const orderRes = await app.request("/v1/orders", {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+      body: JSON.stringify({ items: [{ productId, quantity: 1 }] }),
+    });
+    expect(orderRes.status).toBe(400);
+  });
+
+  it("accepts a product created with sold-out status", async () => {
+    const owner = await createUser();
+    const { boothId } = await createBoothWithKiosk(owner.id);
+
+    const res = await app.request(`/v1/booths/${boothId}/products`, {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ name: "품절템", price: 3000, status: "soldout" }),
+    });
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as { status: string };
+    expect(created.status).toBe("soldout");
   });
 });
 
