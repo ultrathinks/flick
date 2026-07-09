@@ -1,10 +1,12 @@
 import { HttpResponse, http } from "msw";
+import type { PayoutAccount } from "@/entities/payout";
 import {
   lowBalanceView,
   me,
   order,
   orderWithItems,
   paymentCodeView,
+  payoutSummary,
   session,
   transactions,
   userCode,
@@ -14,10 +16,22 @@ function errorResponse(status: number, code: string, message: string) {
   return HttpResponse.json({ error: { code, message } }, { status });
 }
 
+let payoutAccount = payoutSummary.account;
+
 export const handlers = [
   http.get("/v1/users/me", () => HttpResponse.json(me)),
   http.get("/v1/users/me/transactions", () => HttpResponse.json(transactions)),
   http.get("/v1/users/me/code", () => HttpResponse.json(userCode)),
+  http.get("/v1/users/me/payout", () =>
+    HttpResponse.json({
+      availableAmount: payoutSummary.availableAmount,
+      account: payoutAccount,
+    }),
+  ),
+  http.put("/v1/users/me/payout", async ({ request }) => {
+    payoutAccount = (await request.json()) as PayoutAccount;
+    return HttpResponse.json(payoutAccount);
+  }),
   http.get("/v1/payment-codes/:code", ({ params }) => {
     const code = String(params.code);
     if (code === "EXPIRED") {

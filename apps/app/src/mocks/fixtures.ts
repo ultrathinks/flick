@@ -6,6 +6,7 @@ import type {
   Payment,
   PaymentCodeView,
 } from "@/entities/payment";
+import type { PayoutSummary } from "@/entities/payout";
 import type { Session } from "@/entities/session";
 import type { Transaction } from "@/entities/transaction";
 import type { Me } from "@/entities/user";
@@ -135,3 +136,8 @@ export function paymentCodeView(): PaymentCodeView {
 export function lowBalanceView(): PaymentCodeView {
   return { ...paymentCodeView(), balance: 2000 };
 }
+
+export const payoutSummary: PayoutSummary = {
+  availableAmount: 108000,
+  account: null,
+};

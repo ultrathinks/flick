@@ -3,6 +3,7 @@ import { TransactionRow, useMyTransactions } from "@/entities/transaction";
 import { useMe } from "@/entities/user";
 import { Button, Card, QueryState, Screen, Skeleton } from "@/shared/ui";
 import { BalanceCard } from "@/widgets/balance-card";
+import { HomeHeader } from "@/widgets/home-header";
 
 export const HomePage = () => {
   const { stack } = useRouter();
@@ -12,7 +13,8 @@ export const HomePage = () => {
 
   return (
     <Screen className="flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-md space-y-6 px-5 pb-10 pt-6">
+      <HomeHeader />
+      <div className="mx-auto w-full max-w-md space-y-6 px-5 pb-10 pt-2">
         {me.isPending ? (
           <div className="space-y-4">
             <Skeleton className="aspect-[1.586/1] w-full rounded-card" />
