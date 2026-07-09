@@ -21,7 +21,11 @@ export const boothStatus = pgEnum("booth_status", [
   "rejected",
 ]);
 
-export const productStatus = pgEnum("product_status", ["available", "hidden"]);
+export const productStatus = pgEnum("product_status", [
+  "available",
+  "soldout",
+  "hidden",
+]);
 
 export const orderStatus = pgEnum("order_status", [
   "pending",
@@ -110,6 +114,7 @@ export const productOptionGroups = pgTable(
       .references(() => products.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     required: boolean("required").notNull().default(true),
+    maxSelect: integer("max_select"),
     sortOrder: integer("sort_order").notNull().default(0),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })

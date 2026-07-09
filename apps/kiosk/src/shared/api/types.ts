@@ -22,6 +22,25 @@ export type Booth = {
   updatedAt: string;
 };
 
+export type OptionValue = {
+  id: string;
+  groupId: string;
+  name: string;
+  priceDelta: number;
+  isDefault: boolean;
+  sortOrder: number;
+};
+
+export type OptionGroup = {
+  id: string;
+  productId: string;
+  name: string;
+  required: boolean;
+  maxSelect: number | null;
+  sortOrder: number;
+  values: OptionValue[];
+};
+
 export type Product = {
   id: string;
   boothId: string;
@@ -29,11 +48,12 @@ export type Product = {
   description: string | null;
   imageUrl: string | null;
   price: number;
-  stock: number;
-  status: "available" | "hidden";
+  stock: number | null;
+  status: "available" | "soldout" | "hidden";
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  optionGroups: OptionGroup[];
 };
 
 export type Order = {

@@ -3,18 +3,25 @@ import { eq } from "drizzle-orm";
 import { type AuthVariables, requireAuth } from "../auth/middleware.ts";
 import { getDb } from "../db/index.ts";
 import { booths, products } from "../db/schema/index.ts";
+import { MAX_PRODUCT_PRICE } from "../lib/constants.ts";
 import { ForbiddenError, NotFoundError } from "../lib/errors.ts";
+import {
+  loadProductOptions,
+  optionsInputSchema,
+  replaceProductOptions,
+} from "../lib/product-options.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
-import { productSchema } from "../openapi/schemas.ts";
+import { productWithOptionsSchema } from "../openapi/schemas.ts";
 
 const productPatchSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   imageUrl: z.string().url().optional(),
-  price: z.number().int().positive().optional(),
+  price: z.number().int().positive().max(MAX_PRODUCT_PRICE).optional(),
   stock: z.number().int().min(0).nullable().optional(),
-  status: z.enum(["available", "hidden"]).optional(),
+  status: z.enum(["available", "soldout", "hidden"]).optional(),
   sortOrder: z.number().int().optional(),
+  options: optionsInputSchema.optional(),
 });
 
 export const productsRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
@@ -33,7 +40,7 @@ productsRoutes.openapi(
       },
     },
     responses: {
-      200: jsonContent(productSchema, "Updated product"),
+      200: jsonContent(productWithOptionsSchema, "Updated product"),
       401: errorResponse("Unauthorized"),
       403: errorResponse("Forbidden"),
       404: errorResponse("Not found"),
@@ -53,15 +60,23 @@ productsRoutes.openapi(
     if (!user.isAdmin && product.booth.ownerId !== user.id) {
       throw new ForbiddenError();
     }
-    const [row] = await getDb()
-      .update(products)
-      .set({ ...c.req.valid("json"), updatedAt: new Date() })
-      .where(eq(products.id, productId))
-      .returning();
-    if (!row) {
-      throw new NotFoundError("product not found");
-    }
-    return c.json(row, 200);
+    const { options, ...productInput } = c.req.valid("json");
+    const updated = await getDb().transaction(async (tx) => {
+      const [row] = await tx
+        .update(products)
+        .set({ ...productInput, updatedAt: new Date() })
+        .where(eq(products.id, productId))
+        .returning();
+      if (!row) {
+        throw new NotFoundError("product not found");
+      }
+      const optionGroups =
+        options !== undefined
+          ? await replaceProductOptions(tx, productId, options)
+          : ((await loadProductOptions(tx, [productId])).get(productId) ?? []);
+      return { ...row, optionGroups };
+    });
+    return c.json(updated, 200);
   },
 );
 

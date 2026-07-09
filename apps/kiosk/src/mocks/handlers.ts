@@ -5,7 +5,11 @@ const PAYMENT_EXPIRES_MS = 5 * 60 * 1000;
 const AUTO_COMPLETE_MS = 8000;
 
 type CreateOrderBody = {
-  items: { productId: string; quantity: number }[];
+  items: {
+    productId: string;
+    quantity: number;
+    optionValueIds?: string[];
+  }[];
 };
 
 let lastOrderTotal = 0;
@@ -17,7 +21,19 @@ function errorResponse(status: number, code: string, message: string) {
 function totalFor(items: CreateOrderBody["items"]) {
   return items.reduce((sum, item) => {
     const product = products.find((entry) => entry.id === item.productId);
-    return sum + (product ? product.price * item.quantity : 0);
+    if (!product) {
+      return sum;
+    }
+    const optionDelta = (item.optionValueIds ?? []).reduce((delta, valueId) => {
+      for (const group of product.optionGroups) {
+        const value = group.values.find((entry) => entry.id === valueId);
+        if (value) {
+          return delta + value.priceDelta;
+        }
+      }
+      return delta;
+    }, 0);
+    return sum + (product.price + optionDelta) * item.quantity;
   }, 0);
 }
 

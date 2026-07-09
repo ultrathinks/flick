@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # apps/pos
 
-Booth-operator management web app (Next.js 16 App Router + React 19). Operators register a booth, manage menus (products) and single-select options, and toggle sold-out during operation. Orders/payments happen on the kiosk, not here.
+Booth-operator management web app (Next.js 16 App Router + React 19). Operators register a booth, manage menus (products) with their option groups/values (single- or multi-select, priced) inline in one create/edit modal, and toggle sold-out during operation. Product base price is capped at 3,000 won. Orders/payments happen on the kiosk, not here.
 
 ## Run
 

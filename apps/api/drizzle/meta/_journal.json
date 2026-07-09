@@ -57,6 +57,13 @@
       "when": 1783563579331,
       "tag": "0007_spicy_old_lace",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783581383044,
+      "tag": "0008_worried_nova",
+      "breakpoints": true
     }
   ]
 }

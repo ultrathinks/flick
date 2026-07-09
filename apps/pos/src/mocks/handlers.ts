@@ -1,12 +1,5 @@
 import { HttpResponse, http } from "msw";
-import {
-  booth,
-  kioskPairings,
-  me,
-  optionGroups,
-  orders,
-  products,
-} from "./fixtures.ts";
+import { booth, kioskPairings, me, orders, products } from "./fixtures.ts";
 
 function errorResponse(status: number, code: string, message: string) {
   return HttpResponse.json({ error: { code, message } }, { status });
@@ -18,6 +11,53 @@ function nowIso(): string {
 
 function randomId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+type OptionValueInput = {
+  name?: string;
+  priceDelta?: number;
+  isDefault?: boolean;
+  sortOrder?: number;
+};
+
+type OptionGroupInput = {
+  name?: string;
+  required?: boolean;
+  maxSelect?: number | null;
+  sortOrder?: number;
+  values?: OptionValueInput[];
+};
+
+function materializeOptions(
+  productId: string,
+  input: OptionGroupInput[] | undefined,
+) {
+  if (!input) {
+    return [];
+  }
+  return input.map((group, groupIndex) => {
+    const groupId = randomId("group");
+    return {
+      id: groupId,
+      productId,
+      name: String(group.name ?? ""),
+      required: Boolean(group.required ?? true),
+      maxSelect: group.maxSelect ?? null,
+      sortOrder: group.sortOrder ?? groupIndex,
+      archivedAt: null,
+      createdAt: nowIso(),
+      values: (group.values ?? []).map((value, valueIndex) => ({
+        id: randomId("value"),
+        groupId,
+        name: String(value.name ?? ""),
+        priceDelta: Number(value.priceDelta ?? 0),
+        isDefault: Boolean(value.isDefault ?? false),
+        sortOrder: value.sortOrder ?? valueIndex,
+        archivedAt: null,
+        createdAt: nowIso(),
+      })),
+    };
+  });
 }
 
 export function createHandlers(base: string) {
@@ -55,8 +95,9 @@ export function createHandlers(base: string) {
     ),
     http.post(url("booths/:boothId/products"), async ({ params, request }) => {
       const input = (await request.json()) as Record<string, unknown>;
+      const id = randomId("product");
       return HttpResponse.json({
-        id: randomId("product"),
+        id,
         boothId: String(params.boothId),
         name: String(input.name ?? ""),
         description: (input.description as string | undefined) ?? null,
@@ -68,63 +109,30 @@ export function createHandlers(base: string) {
         archivedAt: null,
         createdAt: nowIso(),
         updatedAt: nowIso(),
+        optionGroups: materializeOptions(
+          id,
+          input.options as OptionGroupInput[] | undefined,
+        ),
       });
     }),
     http.patch(url("products/:id"), async ({ params, request }) => {
       const input = (await request.json()) as Record<string, unknown>;
-      const target = products.find((p) => p.id === params.id) ?? products[0];
+      const id = String(params.id);
+      const target = products.find((p) => p.id === id) ?? products[0];
+      const { options, ...rest } = input;
       return HttpResponse.json({
         ...target,
-        ...input,
-        id: String(params.id),
+        ...rest,
+        id,
         updatedAt: nowIso(),
+        optionGroups:
+          options !== undefined
+            ? materializeOptions(id, options as OptionGroupInput[] | undefined)
+            : (target?.optionGroups ?? []),
       });
     }),
     http.delete(
       url("products/:id"),
-      () => new HttpResponse(null, { status: 204 }),
-    ),
-
-    http.get(url("products/:productId/options"), () =>
-      HttpResponse.json(optionGroups),
-    ),
-    http.post(
-      url("products/:productId/option-groups"),
-      async ({ params, request }) => {
-        const input = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({
-          id: randomId("group"),
-          productId: String(params.productId),
-          name: String(input.name ?? ""),
-          required: Boolean(input.required ?? false),
-          sortOrder: Number(input.sortOrder ?? 0),
-          archivedAt: null,
-          createdAt: nowIso(),
-        });
-      },
-    ),
-    http.delete(
-      url("option-groups/:groupId"),
-      () => new HttpResponse(null, { status: 204 }),
-    ),
-    http.post(
-      url("option-groups/:groupId/values"),
-      async ({ params, request }) => {
-        const input = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({
-          id: randomId("value"),
-          groupId: String(params.groupId),
-          name: String(input.name ?? ""),
-          priceDelta: Number(input.priceDelta ?? 0),
-          isDefault: Boolean(input.isDefault ?? false),
-          sortOrder: Number(input.sortOrder ?? 0),
-          archivedAt: null,
-          createdAt: nowIso(),
-        });
-      },
-    ),
-    http.delete(
-      url("option-values/:valueId"),
       () => new HttpResponse(null, { status: 204 }),
     ),
 

@@ -97,7 +97,11 @@ export async function createBoothWithKiosk(
 
 export async function createProduct(
   boothId: string,
-  options?: { price?: number; stock?: number | null },
+  options?: {
+    price?: number;
+    stock?: number | null;
+    status?: "available" | "soldout" | "hidden";
+  },
 ): Promise<string> {
   const [product] = await getDb()
     .insert(products)
@@ -106,6 +110,7 @@ export async function createProduct(
       name: "Item",
       price: options?.price ?? 1000,
       stock: options?.stock === undefined ? 10 : options.stock,
+      status: options?.status ?? "available",
     })
     .returning();
   if (!product) {
@@ -116,7 +121,7 @@ export async function createProduct(
 
 export async function createOptionGroup(
   productId: string,
-  options?: { name?: string; required?: boolean },
+  options?: { name?: string; required?: boolean; maxSelect?: number | null },
 ): Promise<string> {
   const [group] = await getDb()
     .insert(productOptionGroups)
@@ -124,6 +129,7 @@ export async function createOptionGroup(
       productId,
       name: options?.name ?? "Size",
       required: options?.required ?? true,
+      maxSelect: options?.maxSelect === undefined ? 1 : options.maxSelect,
     })
     .returning();
   if (!group) {

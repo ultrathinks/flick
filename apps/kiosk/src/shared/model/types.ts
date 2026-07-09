@@ -1,8 +1,17 @@
+export type CartLineOption = {
+  groupName: string;
+  valueName: string;
+  priceDelta: number;
+};
+
 export type CartItem = {
-  id: string;
+  lineId: string;
+  productId: string;
   name: string;
   price: number;
   quantity: number;
+  optionValueIds: string[];
+  options: CartLineOption[];
 };
 
 export type PaymentSnapshot = {

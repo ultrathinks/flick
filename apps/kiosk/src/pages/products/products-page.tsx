@@ -1,8 +1,10 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { resolveSelection } from "@/features/cart/model/cart";
 import { useCart } from "@/features/cart/model/use-cart";
 import { useKioskProducts } from "@/features/catalog/model/use-kiosk-products";
 import { useCheckout } from "@/features/checkout/model/use-checkout";
+import type { Product } from "@/shared/api/types";
 import { getPaymentSnapshot, takeAlert } from "@/shared/model/storage";
 import { useToast } from "@/shared/ui";
 import { ProductsCatalog } from "@/widgets/products/ui/products-catalog";
@@ -35,6 +37,13 @@ export function ProductsPage() {
   const cart = useCart({ products, onStockLimited: toast.error });
   const { checkout, isCheckingOut } = useCheckout({ onError: toast.error });
 
+  const handleAddProduct = useCallback(
+    (product: Product, optionValueIds: string[]) => {
+      cart.addProduct(product, resolveSelection(product, optionValueIds));
+    },
+    [cart],
+  );
+
   return (
     <ProductsCatalog
       products={products}
@@ -44,7 +53,7 @@ export function ProductsPage() {
       cartTotalAmount={cart.totalAmount}
       cartTotalCount={cart.totalCount}
       isCheckingOut={isCheckingOut}
-      onAddProduct={cart.addProduct}
+      onAddProduct={handleAddProduct}
       onClearCart={cart.clear}
       onUpdateCartQuantity={cart.changeQuantity}
       onCheckout={() => checkout(cart.cartItems)}

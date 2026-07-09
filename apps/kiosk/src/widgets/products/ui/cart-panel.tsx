@@ -10,7 +10,7 @@ type CartPanelProps = {
   totalCount: number;
   isCheckingOut: boolean;
   onClearCart: () => void;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
+  onUpdateQuantity: (lineId: string, quantity: number) => void;
   onCheckout: () => void;
 };
 
@@ -76,21 +76,38 @@ export function CartPanel({
         ) : (
           <div className="px-6">
             {items.map((item) => {
-              const product = products.find((entry) => entry.id === item.id);
-              const maxReached = product
-                ? item.quantity >= product.stock
-                : false;
+              const product = products.find(
+                (entry) => entry.id === item.productId,
+              );
+              const productQuantity = items.reduce(
+                (sum, entry) =>
+                  entry.productId === item.productId
+                    ? sum + entry.quantity
+                    : sum,
+                0,
+              );
+              const maxReached =
+                product && product.stock !== null
+                  ? productQuantity >= product.stock
+                  : false;
 
               return (
                 <div
                   className="flex flex-col gap-3 border-b border-border py-4"
-                  key={item.id}
+                  key={item.lineId}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate text-subtitle font-semibold text-foreground">
                         {item.name}
                       </h3>
+                      {item.options.length > 0 ? (
+                        <p className="mt-0.5 truncate text-caption text-foreground-subtle">
+                          {item.options
+                            .map((option) => option.valueName)
+                            .join(" · ")}
+                        </p>
+                      ) : null}
                       <p className="mt-0.5 text-body text-foreground-subtle">
                         <Money amount={item.price} />
                         /개
@@ -101,7 +118,7 @@ export function CartPanel({
                       size="icon"
                       aria-label="삭제"
                       className="-mr-1 shrink-0 text-foreground-subtle hover:text-danger"
-                      onClick={() => onUpdateQuantity(item.id, 0)}
+                      onClick={() => onUpdateQuantity(item.lineId, 0)}
                     >
                       <X strokeWidth={2} />
                     </Button>
@@ -118,7 +135,7 @@ export function CartPanel({
                         aria-label="수량 줄이기"
                         className="rounded-full"
                         onClick={() =>
-                          onUpdateQuantity(item.id, item.quantity - 1)
+                          onUpdateQuantity(item.lineId, item.quantity - 1)
                         }
                       >
                         <Minus strokeWidth={2.5} />
@@ -131,7 +148,7 @@ export function CartPanel({
                         aria-label="수량 늘리기"
                         className="rounded-full"
                         onClick={() =>
-                          onUpdateQuantity(item.id, item.quantity + 1)
+                          onUpdateQuantity(item.lineId, item.quantity + 1)
                         }
                         disabled={maxReached}
                       >

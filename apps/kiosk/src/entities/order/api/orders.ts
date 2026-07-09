@@ -4,6 +4,7 @@ import type { Order, Payment } from "@/shared/api/types";
 export type CreateOrderItem = {
   productId: string;
   quantity: number;
+  optionValueIds?: string[];
 };
 
 export function createOrder(token: string, items: CreateOrderItem[]) {

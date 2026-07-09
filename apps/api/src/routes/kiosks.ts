@@ -146,7 +146,7 @@ kiosksRoutes.openapi(
       .where(
         and(
           eq(products.boothId, kiosk.boothId),
-          eq(products.status, "available"),
+          inArray(products.status, ["available", "soldout"]),
           isNull(products.archivedAt),
         ),
       )

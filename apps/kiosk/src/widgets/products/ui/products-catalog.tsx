@@ -1,9 +1,12 @@
+import { useState } from "react";
+import { productQuantityInCart } from "@/features/cart/model/cart";
 import type { Product } from "@/shared/api/types";
 import type { CartItem } from "@/shared/model/types";
 import { BrandHeader } from "@/shared/ui/brand-header";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Loading } from "@/shared/ui/loading";
 import { CartPanel } from "./cart-panel";
+import { OptionSheet } from "./option-sheet";
 import { ProductCard } from "./product-card";
 import { ProductsErrorState } from "./products-error-state";
 
@@ -15,9 +18,9 @@ type ProductsCatalogProps = {
   cartTotalAmount: number;
   cartTotalCount: number;
   isCheckingOut: boolean;
-  onAddProduct: (product: Product) => void;
+  onAddProduct: (product: Product, optionValueIds: string[]) => void;
   onClearCart: () => void;
-  onUpdateCartQuantity: (productId: string, quantity: number) => void;
+  onUpdateCartQuantity: (lineId: string, quantity: number) => void;
   onCheckout: () => void;
   onRetry: () => void;
 };
@@ -36,6 +39,16 @@ export function ProductsCatalog({
   onCheckout,
   onRetry,
 }: ProductsCatalogProps) {
+  const [optionProduct, setOptionProduct] = useState<Product | null>(null);
+
+  const handlePick = (product: Product) => {
+    if (product.optionGroups.length > 0) {
+      setOptionProduct(product);
+      return;
+    }
+    onAddProduct(product, []);
+  };
+
   if (isLoading) {
     return (
       <main className="min-h-dvh bg-bg">
@@ -63,11 +76,8 @@ export function ProductsCatalog({
                 <ProductCard
                   key={product.id}
                   product={product}
-                  cartQuantity={
-                    cartItems.find((item) => item.id === product.id)
-                      ?.quantity ?? 0
-                  }
-                  onAddProduct={onAddProduct}
+                  cartQuantity={productQuantityInCart(cartItems, product.id)}
+                  onPick={handlePick}
                 />
               ))}
             </div>
@@ -84,6 +94,14 @@ export function ProductsCatalog({
           onCheckout={onCheckout}
         />
       </div>
+      <OptionSheet
+        product={optionProduct}
+        onClose={() => setOptionProduct(null)}
+        onConfirm={(product, optionValueIds) => {
+          onAddProduct(product, optionValueIds);
+          setOptionProduct(null);
+        }}
+      />
     </main>
   );
 }

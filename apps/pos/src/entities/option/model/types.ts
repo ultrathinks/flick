@@ -16,6 +16,7 @@ export const optionGroupSchema = z.object({
   productId: z.string(),
   name: z.string(),
   required: z.boolean(),
+  maxSelect: z.number().nullable(),
   sortOrder: z.number(),
   archivedAt: z.string().nullable(),
   createdAt: z.string(),

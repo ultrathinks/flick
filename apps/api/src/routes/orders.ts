@@ -130,7 +130,13 @@ ordersRoutes.openapi(
     >();
     const groupById = new Map<
       string,
-      { id: string; productId: string; name: string; required: boolean }
+      {
+        id: string;
+        productId: string;
+        name: string;
+        required: boolean;
+        maxSelect: number | null;
+      }
     >();
     if (allValueIds.length > 0) {
       const valueRows = await getDb()
@@ -162,6 +168,7 @@ ordersRoutes.openapi(
           productId: row.group.productId,
           name: row.group.name,
           required: row.group.required,
+          maxSelect: row.group.maxSelect,
         });
       }
     }
@@ -185,12 +192,15 @@ ordersRoutes.openapi(
           return { value, group };
         });
 
-        const seenGroups = new Set<string>();
+        const countByGroup = new Map<string, number>();
         for (const { group } of selectedValues) {
-          if (seenGroups.has(group.id)) {
-            throw new BadRequestError("duplicate option group");
+          countByGroup.set(group.id, (countByGroup.get(group.id) ?? 0) + 1);
+        }
+        for (const [groupId, count] of countByGroup) {
+          const maxSelect = groupById.get(groupId)?.maxSelect;
+          if (maxSelect != null && count > maxSelect) {
+            throw new BadRequestError("too many options");
           }
-          seenGroups.add(group.id);
         }
 
         const requiredGroups = await getDb()
@@ -204,7 +214,7 @@ ordersRoutes.openapi(
             ),
           );
         for (const group of requiredGroups) {
-          if (!seenGroups.has(group.id)) {
+          if (!countByGroup.has(group.id)) {
             throw new BadRequestError("missing required option");
           }
         }

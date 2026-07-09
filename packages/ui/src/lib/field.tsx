@@ -18,11 +18,13 @@ export function FieldShell({
   label,
   error,
   help,
+  required,
   children,
 }: {
   label?: string;
   error?: string;
   help?: ReactNode;
+  required?: boolean;
   children: ReactNode;
 }) {
   if (!label && !error && !help) {
@@ -34,6 +36,7 @@ export function FieldShell({
       {label && (
         <span className="mb-1.5 block text-body font-medium text-foreground-muted">
           {label}
+          {required && <span className="ml-0.5 text-danger">*</span>}
         </span>
       )}
       {children}

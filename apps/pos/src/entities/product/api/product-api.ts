@@ -6,14 +6,30 @@ export function fetchBoothProducts(boothId: string): Promise<Product[]> {
   return request(z.array(productSchema), `booths/${boothId}/products`);
 }
 
+export interface OptionValueInput {
+  name: string;
+  priceDelta?: number;
+  isDefault?: boolean;
+  sortOrder?: number;
+}
+
+export interface OptionGroupInput {
+  name: string;
+  required?: boolean;
+  maxSelect?: number | null;
+  sortOrder?: number;
+  values: OptionValueInput[];
+}
+
 export interface ProductInput {
   name: string;
   description?: string;
   imageUrl?: string;
   price: number;
   stock: number | null;
-  status?: "available" | "hidden";
+  status?: "available" | "soldout" | "hidden";
   sortOrder?: number;
+  options?: OptionGroupInput[];
 }
 
 export function createProduct(
