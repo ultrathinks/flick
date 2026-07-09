@@ -88,10 +88,10 @@ export function CartPanel({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-heading font-semibold text-foreground">
+                      <h3 className="truncate text-subtitle font-semibold text-foreground">
                         {item.name}
                       </h3>
-                      <p className="mt-0.5 text-caption text-foreground-subtle">
+                      <p className="mt-0.5 text-body text-foreground-subtle">
                         <Money amount={item.price} />
                         /개
                       </p>

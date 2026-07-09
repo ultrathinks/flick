@@ -43,16 +43,16 @@ export function OrderSummaryPanel({
             className="flex items-start justify-between gap-2"
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate text-heading font-semibold text-foreground">
+              <p className="truncate text-subtitle font-semibold text-foreground">
                 {item.name}
               </p>
-              <p className="mt-0.5 text-caption font-medium text-foreground-faint">
+              <p className="mt-0.5 text-body font-medium text-foreground-faint">
                 {item.quantity}개
               </p>
             </div>
             <Money
               amount={item.totalAmount}
-              className="shrink-0 text-heading font-bold text-foreground"
+              className="shrink-0 text-subtitle font-bold text-foreground"
             />
           </li>
         ))}
