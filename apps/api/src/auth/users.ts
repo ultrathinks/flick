@@ -1,15 +1,26 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db/index.ts";
 import { transactions, type User, users } from "../db/schema/index.ts";
+import { generateDigitCode, generateUniqueCode } from "../lib/codes.ts";
 import { BASE_GRANT_AMOUNT } from "../lib/constants.ts";
-import { generateSecret } from "../lib/security.ts";
 import type { DauthProfile } from "./dauth.ts";
 
 export async function upsertByDauthId(user: DauthProfile): Promise<User> {
   return getDb().transaction(async (tx) => {
+    const code = await generateUniqueCode(
+      () => generateDigitCode(6),
+      async (candidate) => {
+        const [existing] = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.code, candidate))
+          .limit(1);
+        return Boolean(existing);
+      },
+    );
     const [row] = await tx
       .insert(users)
-      .values({ ...user, code: generateSecret(24) })
+      .values({ ...user, code })
       .onConflictDoUpdate({
         target: users.dauthPublicId,
         set: {

@@ -92,9 +92,14 @@ export function ChargePanel() {
           </p>
           <div className="flex gap-2">
             <Input
-              placeholder="코드 직접 입력"
+              placeholder="6자리 코드 입력"
               value={manualCode}
-              onChange={(event) => setManualCode(event.target.value)}
+              inputMode="numeric"
+              maxLength={6}
+              className="text-center tracking-[0.3em] tabular-nums"
+              onChange={(event) =>
+                setManualCode(event.target.value.replace(/\D/g, "").slice(0, 6))
+              }
             />
             <Button
               variant="outline"
