@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 import {
   type AuthVariables,
   requireAdmin,
@@ -10,6 +10,7 @@ import {
   auditLogs,
   booths,
   kioskPairings,
+  kiosks,
   orders,
   products,
 } from "../db/schema/index.ts";
@@ -19,13 +20,16 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "../lib/errors.ts";
+import { publishBoothEvent } from "../lib/events.ts";
 import {
   loadProductOptions,
   optionsInputSchema,
   replaceProductOptions,
 } from "../lib/product-options.ts";
+import { boothEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
+  boothKiosksSchema,
   boothSchema,
   kioskPairingSchema,
   orderSchema,
@@ -33,6 +37,7 @@ import {
 } from "../openapi/schemas.ts";
 import {
   serializeBooth,
+  serializeKiosk,
   serializeKioskPairing,
 } from "../openapi/serializers.ts";
 import { createKioskPairing } from "./kiosks.ts";
@@ -73,6 +78,19 @@ async function requireBoothOwnerOrAdmin(userId: string, boothId: string) {
 }
 
 export const boothsRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
+
+boothsRoutes.get("/:id/events", requireAuth, async (c) => {
+  const user = c.get("user");
+  const boothId = c.req.param("id");
+  if (!boothId) {
+    throw new NotFoundError("booth not found");
+  }
+  const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
+  if (!owns && !user.isAdmin) {
+    throw new ForbiddenError();
+  }
+  return boothEventStream(c, { boothId });
+});
 
 boothsRoutes.openapi(
   createRoute({
@@ -141,7 +159,7 @@ boothsRoutes.openapi(
     middleware: [requireAuth] as const,
     request: { params: idParam },
     responses: {
-      200: jsonContent(z.array(kioskPairingSchema), "Booth kiosk pairings"),
+      200: jsonContent(boothKiosksSchema, "Booth kiosks and pending pairings"),
       401: errorResponse("Unauthorized"),
       403: errorResponse("Forbidden"),
       404: errorResponse("Not found"),
@@ -154,11 +172,30 @@ boothsRoutes.openapi(
     if (!owns && !user.isAdmin) {
       throw new ForbiddenError();
     }
-    const rows = await getDb()
+    const now = new Date();
+    const deviceRows = await getDb()
+      .select()
+      .from(kiosks)
+      .where(and(eq(kiosks.boothId, boothId), isNull(kiosks.revokedAt)))
+      .orderBy(desc(kiosks.createdAt));
+    const pendingRows = await getDb()
       .select()
       .from(kioskPairings)
-      .where(eq(kioskPairings.boothId, boothId));
-    return c.json(rows.map(serializeKioskPairing), 200);
+      .where(
+        and(
+          eq(kioskPairings.boothId, boothId),
+          isNull(kioskPairings.claimedAt),
+          gt(kioskPairings.expiresAt, now),
+        ),
+      )
+      .orderBy(desc(kioskPairings.createdAt));
+    return c.json(
+      {
+        devices: deviceRows.map(serializeKiosk),
+        pending: pendingRows.map(serializeKioskPairing),
+      },
+      200,
+    );
   },
 );
 
@@ -438,6 +475,10 @@ boothsRoutes.openapi(
         ? await replaceProductOptions(tx, row.id, options)
         : [];
       return { ...row, optionGroups };
+    });
+    await publishBoothEvent(boothId, {
+      type: "product.updated",
+      productId: created.id,
     });
     return c.json(created, 201);
   },

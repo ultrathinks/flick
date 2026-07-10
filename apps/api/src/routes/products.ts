@@ -5,6 +5,7 @@ import { getDb } from "../db/index.ts";
 import { booths, products } from "../db/schema/index.ts";
 import { MAX_PRODUCT_PRICE } from "../lib/constants.ts";
 import { ForbiddenError, NotFoundError } from "../lib/errors.ts";
+import { publishBoothEvent } from "../lib/events.ts";
 import {
   loadProductOptions,
   optionsInputSchema,
@@ -76,6 +77,10 @@ productsRoutes.openapi(
           : ((await loadProductOptions(tx, [productId])).get(productId) ?? []);
       return { ...row, optionGroups };
     });
+    await publishBoothEvent(updated.boothId, {
+      type: "product.updated",
+      productId: updated.id,
+    });
     return c.json(updated, 200);
   },
 );
@@ -113,6 +118,10 @@ productsRoutes.openapi(
       .update(products)
       .set({ archivedAt: new Date(), updatedAt: new Date() })
       .where(eq(products.id, productId));
+    await publishBoothEvent(product.product.boothId, {
+      type: "product.updated",
+      productId,
+    });
     return c.body(null, 204);
   },
 );

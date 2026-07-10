@@ -64,6 +64,13 @@ export const kioskPairingSchema = z
   )
   .openapi("KioskPairing");
 
+export const boothKiosksSchema = z
+  .object({
+    devices: z.array(kioskSchema),
+    pending: z.array(kioskPairingSchema),
+  })
+  .openapi("BoothKiosks");
+
 export const orderSchema = z
   .object(createSelectSchema(orders).shape)
   .openapi("Order");
