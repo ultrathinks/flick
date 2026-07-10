@@ -5,7 +5,7 @@ Hono API with Drizzle ORM over node-postgres. ESM (`"type": "module"`).
 ## Run
 
 - Infra up (repo root): `docker compose up -d` (Postgres host 5432, Redis host 6379)
-- Env: copy `apps/api/.env.example` and fill values. `REDIS_URL` optional (rate limit falls back to in-memory when unset).
+- Env: copy `apps/api/.env.example` and fill values. `REDIS_URL` is required: rate limiting falls back to in-memory when unset, but the realtime event bus (`src/lib/events.ts`) needs Redis pub/sub.
 - Dev (watch): `pnpm dev` (tsx)
 - Build: `pnpm build` (tsc → `dist/`); start: `pnpm start`
 - Migrations: `pnpm db:generate` then `pnpm db:migrate` (drizzle-kit)
@@ -26,7 +26,18 @@ Hono API with Drizzle ORM over node-postgres. ESM (`"type": "module"`).
 
 - New routes must use `createRoute` + `OpenAPIHono.openapi()` with explicit `responses` (including 201/204 and error statuses) and shared schemas from `src/openapi/schemas.ts`. The `responses` map is type-load-bearing, not just docs: omitting a status used by `c.json(body, status)` fails `tsc`.
 - `app.fetch`/`app.request` and the error envelope `{ error: { code, message } }` (via `app.onError`) are preserved; `AppType` (`typeof appRoutes`) is exported from `src/app.ts` for future `hono/client` (hc) consumption.
-- The SSE endpoint `GET /v1/payments/:id/events` is a plain Hono handler (not `createRoute`) and is intentionally excluded from the OpenAPI spec.
+- The SSE endpoints (`GET /v1/booths/:id/events` for owners/admins, `GET /v1/kiosks/me/events` for kiosks, `GET /v1/payments/:id/events` for the kiosk payment wait screen) are plain Hono handlers (not `createRoute`) and are intentionally excluded from the OpenAPI spec. They share `src/lib/sse.ts` (`boothEventStream`), which subscribes to the Redis-backed booth event bus (`src/lib/events.ts`, channel `booth:{boothId}`), heartbeats, and cleans up on abort.
+
+## Realtime event bus
+
+- `src/lib/events.ts` publishes/subscribes discriminated `BoothEvent`s (`order.*`, `payment.*`, `product.updated`, `kiosk.presence`, `kiosk.revoked`) over Redis pub/sub on channel `booth:{boothId}`. One shared subscriber connection multiplexes channels via a ref-counted `channel → handlers` map; a separate publisher connection is used for `PUBLISH`. `closeEvents()` runs on shutdown.
+- Publish happens **after** the DB transaction commits (never inside `tx`) so rolled-back state is never broadcast — see the confirm/cancel/create handlers in `routes/orders.ts` and product writes in `routes/products.ts`/`routes/booths.ts`.
+- Delivery is at-most-once (Redis pub/sub has no persistence). Clients MUST do an authoritative full refetch on every stream (re)connect and treat live events as deltas; a missed event during the subscribe window or a reconnect gap is healed by that refetch.
+- Kiosk presence: kiosks POST `/v1/kiosks/me/heartbeat` (~15s) to refresh `kiosks.last_seen_at` and publish `kiosk.presence{online:true}`; POS derives offline locally when `last_seen_at` is older than `KIOSK_PRESENCE_TTL_MS`. `POST /v1/kiosks/:id/revoke` publishes `kiosk.revoked` and force-closes that kiosk's stream.
+
+## Short codes
+
+- `src/lib/codes.ts`: `generateDigitCode` (numeric) and `generatePairingCode` (Crockford-style unambiguous uppercase) plus `generateUniqueCode(make, exists)` retry-on-collision. Pairing codes are 6-char unambiguous, payment codes 6-digit, user charge codes 6-digit — all short enough to key in by hand, uniqueness guaranteed by retry against the live/stored set. `generateSecret` (base64url) stays reserved for security tokens (session/device tokens), never user-facing codes.
 
 ## Money invariant
 
