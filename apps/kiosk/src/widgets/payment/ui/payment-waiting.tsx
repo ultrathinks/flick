@@ -58,7 +58,7 @@ export function PaymentWaiting({
       />
       <section className="flex min-h-0 flex-1 gap-6 p-6">
         <div className="flex flex-1 items-center justify-center rounded-card border border-border bg-surface">
-          <QrSection code={code} totalAmount={totalAmount} />
+          <QrSection code={code} />
         </div>
         <OrderSummaryPanel
           items={items}

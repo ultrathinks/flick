@@ -46,10 +46,14 @@ export function PairingForm({
         </label>
         <Input
           id="pairing-code"
-          className="h-16 text-center text-title font-bold uppercase tracking-[0.2em]"
+          className="h-16 text-center text-display font-bold uppercase tracking-[0.4em]"
           value={code}
-          onChange={(event) => onCodeChange(event.target.value)}
-          placeholder="CODE"
+          onChange={(event) =>
+            onCodeChange(event.target.value.toUpperCase().slice(0, 6))
+          }
+          placeholder="------"
+          inputMode="text"
+          maxLength={6}
           autoCapitalize="characters"
           autoComplete="one-time-code"
           disabled={isPairing}

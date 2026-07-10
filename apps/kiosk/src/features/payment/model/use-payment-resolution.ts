@@ -7,14 +7,28 @@ export type PaymentOutcome = "completed" | "canceled";
 
 const POLL_INTERVAL_MS = 5000;
 
-function toOutcome(event: string): PaymentOutcome | null {
-  if (event === "completed") {
+function toOutcome(status: string): PaymentOutcome | null {
+  if (status === "completed") {
     return "completed";
   }
-  if (event === "expired" || event === "canceled") {
+  if (status === "expired" || status === "canceled") {
     return "canceled";
   }
   return null;
+}
+
+function outcomeFromEvent(event: {
+  event: string;
+  data: Record<string, unknown>;
+}): PaymentOutcome | null {
+  const type = typeof event.data.type === "string" ? event.data.type : null;
+  if (type === "payment.completed") {
+    return "completed";
+  }
+  if (type === "payment.expired" || type === "payment.canceled") {
+    return "canceled";
+  }
+  return toOutcome(event.event);
 }
 
 type UsePaymentResolutionOptions = {
@@ -46,7 +60,7 @@ export function usePaymentResolution({
     if (!lastEvent) {
       return;
     }
-    const outcome = toOutcome(lastEvent.event);
+    const outcome = outcomeFromEvent(lastEvent);
     if (outcome) {
       resolve(outcome);
     }

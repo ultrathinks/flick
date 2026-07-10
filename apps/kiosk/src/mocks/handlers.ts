@@ -43,7 +43,7 @@ function paymentEventStream() {
   return new ReadableStream({
     start(controller) {
       timer = setTimeout(() => {
-        const frame = `event: completed\ndata: ${JSON.stringify({ status: "completed" })}\n\n`;
+        const frame = `data: ${JSON.stringify({ type: "payment.completed", paymentId: "payment_mock", orderId: "order_mock", kioskId: "kiosk_1" })}\n\n`;
         controller.enqueue(encoder.encode(frame));
         controller.close();
       }, AUTO_COMPLETE_MS);
@@ -69,6 +69,31 @@ export const handlers = [
 
   http.get("/v1/kiosks/me", () => HttpResponse.json({ kiosk, booth })),
 
+  http.post(
+    "/v1/kiosks/me/heartbeat",
+    () => new HttpResponse(null, { status: 204 }),
+  ),
+
+  http.post(
+    "/v1/kiosks/me/unpair",
+    () => new HttpResponse(null, { status: 204 }),
+  ),
+
+  http.get("/v1/kiosks/me/events", () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(": connected\n\n"));
+      },
+    });
+    return new HttpResponse(stream, {
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+        connection: "keep-alive",
+      },
+    });
+  }),
+
   http.get("/v1/kiosks/me/products", async () => {
     await delay(300);
     return HttpResponse.json(products);
@@ -88,7 +113,7 @@ export const handlers = [
     await delay(300);
     return HttpResponse.json({
       payment: makePayment(PAYMENT_EXPIRES_MS),
-      code: "FLICK-1234",
+      code: "482913",
     });
   }),
 
