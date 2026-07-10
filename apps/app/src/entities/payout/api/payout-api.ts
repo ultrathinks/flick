@@ -1,8 +1,8 @@
 import { request } from "@/shared/api";
 import {
   type PayoutAccount,
-  payoutAccountSchema,
   type PayoutSummary,
+  payoutAccountSchema,
   payoutSummarySchema,
 } from "../model/types.ts";
 
