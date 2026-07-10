@@ -5,12 +5,14 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Button } from "@/shared/ui";
 
-export function ImageField({
+export function ImagePicker({
+  label,
   file,
   currentUrl,
   onSelect,
   onClear,
 }: {
+  label: string;
   file: File | null;
   currentUrl: string | null;
   onSelect: (file: File | null) => void;
@@ -33,7 +35,7 @@ export function ImageField({
   return (
     <div className="block">
       <span className="mb-1.5 block text-body font-medium text-foreground-muted">
-        메뉴 사진
+        {label}
       </span>
       <div className="flex items-center gap-3">
         <div className="relative size-16 shrink-0 overflow-hidden rounded-card-sm border border-border bg-surface-muted">

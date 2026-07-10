@@ -1,20 +1,29 @@
 "use client";
 
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Product } from "@/entities/product";
-import { useCreateProduct, useUpdateProduct } from "@/entities/product";
-import { uploadImage } from "@/features/image-upload";
-import { Button, Field, SectionHeader, useToast } from "@/shared/ui";
+import {
+  useArchiveProduct,
+  useCreateProduct,
+  useUpdateProduct,
+} from "@/entities/product";
+import { ImagePicker, uploadImage } from "@/features/image-upload";
+import {
+  Button,
+  Field,
+  SectionHeader,
+  useConfirm,
+  useToast,
+} from "@/shared/ui";
 import {
   type DraftGroup,
   draftFromProduct,
   draftGroupsToInput,
   isDraftGroupsValid,
 } from "../model/option-draft.ts";
-import { ImageField } from "./image-field.tsx";
 import { OptionEditor } from "./option-editor.tsx";
 import { SwitchRow } from "./switch-row.tsx";
 
@@ -37,6 +46,7 @@ export function ProductForm({
   const [stock, setStock] = useState(
     product && product.stock !== null ? String(product.stock) : "",
   );
+  const [soldOut, setSoldOut] = useState(product?.status === "soldout");
   const [groups, setGroups] = useState<DraftGroup[]>(
     product ? draftFromProduct(product) : [],
   );
@@ -44,6 +54,8 @@ export function ProductForm({
   const [uploading, setUploading] = useState(false);
   const create = useCreateProduct(boothId);
   const update = useUpdateProduct(boothId);
+  const archive = useArchiveProduct(boothId);
+  const confirm = useConfirm();
   const toast = useToast();
 
   const priceValue = Number(price);
@@ -55,18 +67,46 @@ export function ProductForm({
     priceValue > 0 &&
     priceValue <= MAX_PRICE &&
     (!tracked ||
-      (Number.isInteger(stockValue) && (stockValue as number) >= 0)) &&
+      (stock.trim() !== "" &&
+        Number.isInteger(stockValue) &&
+        (stockValue as number) >= 0)) &&
     isDraftGroupsValid(groups);
 
-  const pending = create.isPending || update.isPending || uploading;
+  const pending =
+    create.isPending || update.isPending || archive.isPending || uploading;
 
   const back = () => router.push("/");
+
+  const status: "available" | "soldout" | "hidden" = soldOut
+    ? "soldout"
+    : product?.status === "hidden"
+      ? "hidden"
+      : "available";
+
+  const handleDelete = async () => {
+    if (!product) return;
+    const ok = await confirm({
+      title: "이 메뉴를 삭제할까요?",
+      description: `‘${product.name}’ 메뉴가 목록에서 완전히 사라져요.`,
+      confirmLabel: "삭제",
+      tone: "danger",
+    });
+    if (!ok) return;
+    archive.mutate(product.id, {
+      onSuccess: () => {
+        toast.success("메뉴를 삭제했어요.");
+        back();
+      },
+      onError: () => toast.error("삭제에 실패했어요."),
+    });
+  };
 
   const handleSubmit = async () => {
     const base = {
       name: name.trim(),
       price: priceValue,
       stock: stockValue,
+      status,
       options: draftGroupsToInput(groups),
     };
 
@@ -164,7 +204,8 @@ export function ProductForm({
               }
               help={`옵션 추가금은 별도이고, 기본 가격은 최대 ${MAX_PRICE.toLocaleString()}원이에요.`}
             />
-            <ImageField
+            <ImagePicker
+              label="메뉴 사진"
               file={file}
               currentUrl={product?.imageUrl ?? null}
               onSelect={setFile}
@@ -197,6 +238,21 @@ export function ProductForm({
               )}
             </div>
           </section>
+
+          <section className="space-y-3 border-t border-border pt-5">
+            <SectionHeader
+              title="판매 상태"
+              description="품절로 표시하면 손님 화면에서 선택할 수 없어요."
+            />
+            <div className="divide-y divide-border">
+              <SwitchRow
+                title="품절"
+                description="지금은 판매하지 않아요."
+                checked={soldOut}
+                onChange={setSoldOut}
+              />
+            </div>
+          </section>
         </div>
 
         <section className="space-y-3 md:border-l md:border-border md:pl-10">
@@ -207,6 +263,20 @@ export function ProductForm({
           <OptionEditor groups={groups} onChange={setGroups} />
         </section>
       </div>
+
+      {isEdit && (
+        <div className="mt-8 border-t border-border pt-5">
+          <Button
+            variant="ghost"
+            className="text-danger"
+            disabled={pending}
+            onClick={handleDelete}
+          >
+            <Trash2 className="size-4" />
+            메뉴 삭제
+          </Button>
+        </div>
+      )}
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface px-4 py-3 lg:px-10">
         <div className="mx-auto flex w-full max-w-4xl justify-end gap-2">

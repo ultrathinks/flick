@@ -1,11 +1,10 @@
 "use client";
 
-import { Save, Upload } from "lucide-react";
-import Image from "next/image";
+import { Save } from "lucide-react";
 import { useState } from "react";
 import type { Booth } from "@/entities/booth";
 import { useUpdateBooth } from "@/entities/booth";
-import { uploadImage } from "@/features/image-upload";
+import { ImagePicker, uploadImage } from "@/features/image-upload";
 import { Button, Card, Field, Textarea, useToast } from "@/shared/ui";
 import { StatusNote } from "./status-note.tsx";
 
@@ -60,17 +59,7 @@ export function BoothSettings({ booth }: { booth: Booth }) {
     <div className="space-y-6">
       <StatusNote status={booth.status} />
 
-      <Card className="max-w-xl space-y-4">
-        {booth.imageUrl && (
-          <Image
-            src={booth.imageUrl}
-            alt={booth.name}
-            width={640}
-            height={160}
-            unoptimized
-            className="h-36 w-full rounded-card-sm object-cover"
-          />
-        )}
+      <Card className="max-w-xl space-y-5">
         <Field
           label="부스 이름"
           value={name}
@@ -82,24 +71,14 @@ export function BoothSettings({ booth }: { booth: Booth }) {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="부스 소개를 입력하세요 (선택)"
         />
-        <div className="block">
-          <span className="mb-1.5 block text-body font-medium text-foreground-muted">
-            대표 이미지 (선택)
-          </span>
-          <label className="flex h-11 w-full cursor-pointer items-center gap-2 rounded-card-sm border border-dashed border-border bg-surface px-3 text-body text-foreground-subtle transition-colors hover:border-brand hover:text-foreground">
-            <Upload className="size-4" />
-            <span className="truncate">
-              {file ? file.name : "이미지 파일 선택"}
-            </span>
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-          </label>
-        </div>
-        <div className="flex items-center gap-3">
+        <ImagePicker
+          label="대표 이미지 (선택)"
+          file={file}
+          currentUrl={booth.imageUrl ?? null}
+          onSelect={setFile}
+          onClear={() => setFile(null)}
+        />
+        <div className="flex items-center gap-3 border-t border-border pt-4">
           <Button
             loading={update.isPending || uploading}
             disabled={!dirty || !valid}
