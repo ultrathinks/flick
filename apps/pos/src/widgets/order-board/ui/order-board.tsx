@@ -1,10 +1,12 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { CreditCard, Receipt, Wallet } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Booth } from "@/entities/booth";
 import { type Order, type OrderStatus, useBoothOrders } from "@/entities/order";
 import { useRefund } from "@/features/refund";
+import { useBoothEvents } from "@/shared/api/use-booth-events.ts";
 import {
   Badge,
   Button,
@@ -74,7 +76,32 @@ export function OrderBoard({ booth }: { booth: Booth }) {
   const refund = useRefund(booth.id);
   const confirm = useConfirm();
   const toast = useToast();
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Filter>("all");
+
+  useBoothEvents(booth.id, {
+    onEvent: (event) => {
+      if (
+        event.type === "order.created" ||
+        event.type === "order.updated" ||
+        event.type === "payment.completed" ||
+        event.type === "payment.canceled" ||
+        event.type === "payment.expired"
+      ) {
+        queryClient.invalidateQueries({ queryKey: ["orders", booth.id] });
+      }
+    },
+    onReconnect: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders", booth.id] });
+    },
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ["orders", booth.id] });
+    }, 30_000);
+    return () => clearInterval(timer);
+  }, [booth.id, queryClient]);
 
   async function handleRefund(orderId: string) {
     const ok = await confirm({

@@ -13,7 +13,7 @@ interface BalanceCardProps {
 
 export const BalanceCard = ({ balance }: BalanceCardProps) => {
   const { stack } = useRouter();
-  const { scan } = usePayByCode();
+  const { scan, enterCode } = usePayByCode();
   const selectedId = useSelectedCardThemeId();
   const theme = getCardTheme(selectedId);
 
@@ -44,6 +44,14 @@ export const BalanceCard = ({ balance }: BalanceCardProps) => {
           충전
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={enterCode}
+        className="w-full text-center text-body font-medium text-foreground-subtle underline-offset-4 transition-colors hover:text-foreground"
+      >
+        QR 스캔이 어렵나요? 결제 코드 입력하기
+      </button>
     </div>
   );
 };

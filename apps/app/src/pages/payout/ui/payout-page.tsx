@@ -1,13 +1,6 @@
 import { usePayout } from "@/entities/payout";
 import { PayoutAccountForm } from "@/features/payout-account";
-import {
-  Button,
-  Card,
-  Money,
-  Screen,
-  Skeleton,
-  useToast,
-} from "@/shared/ui";
+import { Button, Card, Money, Screen, Skeleton, useToast } from "@/shared/ui";
 import { PageHeader } from "@/widgets/page-header";
 
 export const PayoutPage = () => {

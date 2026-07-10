@@ -1,23 +1,31 @@
 "use client";
 
-import { KeyRound, Monitor } from "lucide-react";
-import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { KeyRound, Monitor, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { Booth } from "@/entities/booth";
 import {
   type CreatePairingResult,
+  isKioskOnline,
+  type KioskDevice,
   type KioskPairing,
+  useBoothKiosks,
   useCreateKioskPairing,
-  useKioskPairings,
+  useRevokeKiosk,
 } from "@/entities/kiosk";
+import { useBoothEvents } from "@/shared/api/use-booth-events.ts";
 import {
   Badge,
   Button,
   CodeDisplay,
   EmptyState,
   Field,
+  Menu,
+  MenuItem,
   QueryState,
   Sheet,
   Skeleton,
+  useConfirm,
   useToast,
 } from "@/shared/ui";
 
@@ -30,11 +38,62 @@ function formatDate(iso: string): string {
   });
 }
 
-function PairingRow({ pairing }: { pairing: KioskPairing }) {
-  const claimed = pairing.claimedAt !== null;
-  const expired = !claimed && new Date(pairing.expiresAt) < new Date();
+function DeviceRow({
+  device,
+  onRevoke,
+}: {
+  device: KioskDevice;
+  onRevoke: (device: KioskDevice) => void;
+}) {
+  const online = isKioskOnline(device);
   return (
     <div className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface px-3 py-2.5">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <Monitor className="size-4 shrink-0 text-foreground-subtle" />
+        <div className="min-w-0">
+          <p className="truncate text-body font-medium text-foreground">
+            {device.name}
+          </p>
+          <p className="text-caption text-foreground-subtle">
+            {device.lastSeenAt
+              ? `마지막 연결 ${formatDate(device.lastSeenAt)}`
+              : "아직 연결된 적 없음"}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge tone={online ? "success" : "neutral"}>
+          {online ? "연결됨" : "연결 끊김"}
+        </Badge>
+        <Menu
+          trigger={({ toggle, triggerProps }) => (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="더보기"
+              onClick={toggle}
+              {...triggerProps}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          )}
+        >
+          <MenuItem
+            tone="danger"
+            icon={<Trash2 />}
+            onClick={() => onRevoke(device)}
+          >
+            연결 해제
+          </MenuItem>
+        </Menu>
+      </div>
+    </div>
+  );
+}
+
+function PendingRow({ pairing }: { pairing: KioskPairing }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-card border border-dashed border-border bg-surface px-3 py-2.5">
       <div className="flex min-w-0 items-center gap-2.5">
         <Monitor className="size-4 shrink-0 text-foreground-subtle" />
         <div className="min-w-0">
@@ -42,15 +101,11 @@ function PairingRow({ pairing }: { pairing: KioskPairing }) {
             {pairing.kioskName}
           </p>
           <p className="text-caption text-foreground-subtle">
-            {claimed
-              ? `연결됨 · ${formatDate(pairing.claimedAt as string)}`
-              : `만료 ${formatDate(pairing.expiresAt)}`}
+            코드 만료 {formatDate(pairing.expiresAt)}
           </p>
         </div>
       </div>
-      <Badge tone={claimed ? "success" : expired ? "neutral" : "warning"}>
-        {claimed ? "연결됨" : expired ? "만료" : "대기"}
-      </Badge>
+      <Badge tone="warning">대기</Badge>
     </div>
   );
 }
@@ -136,17 +191,56 @@ export function KioskManager({
   createOpen: boolean;
   onCreateOpenChange: (open: boolean) => void;
 }) {
-  const pairings = useKioskPairings(booth.id);
+  const kiosks = useBoothKiosks(booth.id);
+  const revoke = useRevokeKiosk(booth.id);
+  const confirm = useConfirm();
+  const queryClient = useQueryClient();
   const [created, setCreated] = useState<CreatePairingResult | null>(null);
   const toast = useToast();
+
+  useBoothEvents(booth.id, {
+    onEvent: (event) => {
+      if (event.type === "kiosk.presence" || event.type === "kiosk.revoked") {
+        queryClient.invalidateQueries({ queryKey: ["kiosks", booth.id] });
+      }
+    },
+    onReconnect: () => {
+      queryClient.invalidateQueries({ queryKey: ["kiosks", booth.id] });
+    },
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ["kiosks", booth.id] });
+    }, 30_000);
+    return () => clearInterval(timer);
+  }, [booth.id, queryClient]);
+
+  const handleRevoke = async (device: KioskDevice) => {
+    const ok = await confirm({
+      title: "이 키오스크 연결을 해제할까요?",
+      description: `‘${device.name}’ 기기는 다시 페어링해야 사용할 수 있어요.`,
+      confirmLabel: "연결 해제",
+      tone: "danger",
+    });
+    if (!ok) return;
+    revoke.mutate(device.id, {
+      onSuccess: () => toast.success("연결을 해제했어요."),
+      onError: () => toast.error("연결 해제에 실패했어요."),
+    });
+  };
+
+  const devices = kiosks.data?.devices ?? [];
+  const pending = kiosks.data?.pending ?? [];
+  const isEmpty = devices.length === 0 && pending.length === 0;
 
   return (
     <div className="space-y-6">
       <QueryState
-        isPending={pairings.isPending}
-        isError={pairings.isError}
-        isEmpty={(pairings.data?.length ?? 0) === 0}
-        onRetry={() => pairings.refetch()}
+        isPending={kiosks.isPending}
+        isError={kiosks.isError}
+        isEmpty={isEmpty}
+        onRetry={() => kiosks.refetch()}
         loading={
           <div className="space-y-2">
             <Skeleton className="h-14 w-full" />
@@ -162,8 +256,15 @@ export function KioskManager({
         }
       >
         <div className="space-y-2">
-          {(pairings.data ?? []).map((pairing) => (
-            <PairingRow key={pairing.id} pairing={pairing} />
+          {devices.map((device) => (
+            <DeviceRow
+              key={device.id}
+              device={device}
+              onRevoke={handleRevoke}
+            />
+          ))}
+          {pending.map((pairing) => (
+            <PendingRow key={pairing.id} pairing={pairing} />
           ))}
         </div>
       </QueryState>

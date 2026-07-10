@@ -2,6 +2,7 @@ import { Router } from "@b1nd/aid-kit/navigation";
 import { installSessionAuth } from "@/entities/session";
 import { AuthGate } from "@/features/auth-gate";
 import {
+  ManualCodeHost,
   PayByCodeProvider,
   PaymentSheetHost,
   QrScannerHost,
@@ -25,6 +26,7 @@ export const App = () => (
           </div>
         </div>
         <QrScannerHost />
+        <ManualCodeHost />
         <PaymentSheetHost />
       </PayByCodeProvider>
     </AuthGate>

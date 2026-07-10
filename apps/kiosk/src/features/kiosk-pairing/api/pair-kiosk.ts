@@ -11,3 +11,7 @@ export function pairKiosk(code: string) {
 export function getCurrentKiosk(token: string) {
   return apiRequest<{ kiosk: Kiosk; booth: Booth }>("/kiosks/me", { token });
 }
+
+export function unpairKiosk(token: string) {
+  return apiRequest<void>("/kiosks/me/unpair", { method: "POST", token });
+}

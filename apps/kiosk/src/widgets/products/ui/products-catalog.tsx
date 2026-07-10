@@ -4,10 +4,11 @@ import type { Product } from "@/shared/api/types";
 import type { CartItem } from "@/shared/model/types";
 import { BrandHeader } from "@/shared/ui/brand-header";
 import { EmptyState } from "@/shared/ui/empty-state";
-import { Loading } from "@/shared/ui/loading";
 import { CartPanel } from "./cart-panel";
+import { KioskSettings } from "./kiosk-settings";
 import { OptionSheet } from "./option-sheet";
 import { ProductCard } from "./product-card";
+import { ProductCardSkeleton } from "./product-card-skeleton";
 import { ProductsErrorState } from "./products-error-state";
 
 type ProductsCatalogProps = {
@@ -18,11 +19,14 @@ type ProductsCatalogProps = {
   cartTotalAmount: number;
   cartTotalCount: number;
   isCheckingOut: boolean;
+  boothName?: string | null;
+  kioskName?: string | null;
   onAddProduct: (product: Product, optionValueIds: string[]) => void;
   onClearCart: () => void;
   onUpdateCartQuantity: (lineId: string, quantity: number) => void;
   onCheckout: () => void;
   onRetry: () => void;
+  onUnpair?: () => void;
 };
 
 export function ProductsCatalog({
@@ -38,6 +42,9 @@ export function ProductsCatalog({
   onUpdateCartQuantity,
   onCheckout,
   onRetry,
+  onUnpair,
+  boothName,
+  kioskName,
 }: ProductsCatalogProps) {
   const [optionProduct, setOptionProduct] = useState<Product | null>(null);
 
@@ -49,20 +56,28 @@ export function ProductsCatalog({
     onAddProduct(product, []);
   };
 
-  if (isLoading) {
-    return (
-      <main className="min-h-dvh bg-bg">
-        <Loading label="상품을 불러오는 중입니다" />
-      </main>
-    );
-  }
-
   return (
     <main className="flex h-dvh flex-col bg-bg">
-      <BrandHeader />
+      <BrandHeader
+        right={
+          onUnpair ? (
+            <KioskSettings
+              boothName={boothName}
+              kioskName={kioskName}
+              onUnpair={onUnpair}
+            />
+          ) : undefined
+        }
+      />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <section className="flex-1 overflow-auto bg-bg p-6">
-          {errorMessage ? (
+          {isLoading ? (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
+              {["s1", "s2", "s3", "s4", "s5", "s6"].map((key) => (
+                <ProductCardSkeleton key={key} />
+              ))}
+            </div>
+          ) : errorMessage ? (
             <ProductsErrorState onRetry={onRetry} />
           ) : products.length === 0 ? (
             <EmptyState

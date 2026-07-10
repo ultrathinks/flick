@@ -14,14 +14,17 @@ import {
   productOptionValues,
   products,
 } from "../db/schema/index.ts";
+import { generatePairingCode, generateUniqueCode } from "../lib/codes.ts";
 import { PAIRING_TTL_MS } from "../lib/constants.ts";
 import {
   BadRequestError,
   ForbiddenError,
   NotFoundError,
 } from "../lib/errors.ts";
+import { publishBoothEvent } from "../lib/events.ts";
 import { rateLimit } from "../lib/rate-limit.ts";
 import { generateSecret, hashSecret } from "../lib/security.ts";
+import { boothEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   boothSchema,
@@ -60,6 +63,7 @@ kiosksRoutes.openapi(
   }),
   async (c) => {
     const { code } = c.req.valid("json");
+    const normalizedCode = code.trim().toUpperCase();
     const token = generateSecret();
     const now = new Date();
     const db = getDb();
@@ -69,7 +73,7 @@ kiosksRoutes.openapi(
         .set({ claimedAt: now })
         .where(
           and(
-            eq(kioskPairings.codeHash, hashSecret(code)),
+            eq(kioskPairings.codeHash, hashSecret(normalizedCode)),
             isNull(kioskPairings.claimedAt),
             gt(kioskPairings.expiresAt, now),
           ),
@@ -241,7 +245,96 @@ kiosksRoutes.openapi(
     if (!updated) {
       throw new NotFoundError("kiosk not found");
     }
+    await publishBoothEvent(updated.boothId, {
+      type: "kiosk.revoked",
+      kioskId: updated.id,
+    });
+    await publishBoothEvent(updated.boothId, {
+      type: "kiosk.presence",
+      kioskId: updated.id,
+      online: false,
+    });
     return c.json(serializeKiosk(updated), 200);
+  },
+);
+
+kiosksRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/me/heartbeat",
+    tags: ["kiosks"],
+    security: [{ Kiosk: [] }],
+    middleware: [requireKiosk] as const,
+    responses: {
+      204: { description: "Heartbeat acknowledged" },
+      401: errorResponse("Unauthorized"),
+    },
+  }),
+  async (c) => {
+    const kiosk = c.get("kiosk");
+    await getDb()
+      .update(kiosks)
+      .set({ lastSeenAt: new Date() })
+      .where(eq(kiosks.id, kiosk.id));
+    await publishBoothEvent(kiosk.boothId, {
+      type: "kiosk.presence",
+      kioskId: kiosk.id,
+      online: true,
+    });
+    return c.body(null, 204);
+  },
+);
+
+kiosksRoutes.get("/me/events", requireKiosk, (c) => {
+  const kiosk = c.get("kiosk");
+  return boothEventStream(c, {
+    boothId: kiosk.boothId,
+    filter: (event) => {
+      switch (event.type) {
+        case "product.updated":
+          return true;
+        case "payment.completed":
+        case "payment.canceled":
+        case "payment.expired":
+        case "order.created":
+        case "order.updated":
+          return event.kioskId === kiosk.id;
+        case "kiosk.presence":
+        case "kiosk.revoked":
+          return event.kioskId === kiosk.id;
+        default:
+          return false;
+      }
+    },
+    shouldClose: (event) =>
+      event.type === "kiosk.revoked" && event.kioskId === kiosk.id,
+  });
+});
+
+kiosksRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/me/unpair",
+    tags: ["kiosks"],
+    security: [{ Kiosk: [] }],
+    middleware: [requireKiosk] as const,
+    responses: {
+      204: { description: "Unpaired kiosk" },
+      401: errorResponse("Unauthorized"),
+    },
+  }),
+  async (c) => {
+    const kiosk = c.get("kiosk");
+    await getDb()
+      .update(kiosks)
+      .set({ revokedAt: new Date() })
+      .where(eq(kiosks.id, kiosk.id));
+    await publishBoothEvent(kiosk.boothId, {
+      type: "kiosk.presence",
+      kioskId: kiosk.id,
+      online: false,
+    });
+    return c.body(null, 204);
   },
 );
 
@@ -250,7 +343,17 @@ export async function createKioskPairing(
   createdBy: string,
   name: string,
 ) {
-  const code = generateSecret(16);
+  const code = await generateUniqueCode(
+    () => generatePairingCode(),
+    async (candidate) => {
+      const [existing] = await getDb()
+        .select({ id: kioskPairings.id })
+        .from(kioskPairings)
+        .where(eq(kioskPairings.codeHash, hashSecret(candidate)))
+        .limit(1);
+      return Boolean(existing);
+    },
+  );
   const [row] = await getDb()
     .insert(kioskPairings)
     .values({

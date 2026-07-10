@@ -18,6 +18,7 @@ import {
   transactions,
   users,
 } from "../db/schema/index.ts";
+import { generateDigitCode, generateUniqueCode } from "../lib/codes.ts";
 import { MAX_ORDER_QUANTITY, PAYMENT_TTL_MS } from "../lib/constants.ts";
 import {
   BadRequestError,
@@ -28,8 +29,10 @@ import {
   PaymentExpiredError,
   PaymentNotPendingError,
 } from "../lib/errors.ts";
+import { publishBoothEvent } from "../lib/events.ts";
 import { rateLimit } from "../lib/rate-limit.ts";
-import { generateSecret, hashSecret } from "../lib/security.ts";
+import { hashSecret } from "../lib/security.ts";
+import { boothEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   createPaymentSchema,
@@ -279,6 +282,11 @@ ordersRoutes.openapi(
       }
       return created;
     });
+    await publishBoothEvent(kiosk.boothId, {
+      type: "order.created",
+      orderId: order.id,
+      kioskId: kiosk.id,
+    });
     return c.json(order, 201);
   },
 );
@@ -342,7 +350,7 @@ ordersRoutes.openapi(
     const kiosk = c.get("kiosk");
     const orderId = c.req.valid("param").id;
     const now = new Date();
-    const order = await getDb().transaction(async (tx) => {
+    const result = await getDb().transaction(async (tx) => {
       const [existing] = await tx
         .select()
         .from(orders)
@@ -356,15 +364,29 @@ ordersRoutes.openapi(
         .set({ status: "canceled", canceledAt: now })
         .where(eq(orders.id, orderId))
         .returning();
-      await tx
+      const [canceledPayment] = await tx
         .update(payments)
         .set({ status: "canceled" })
         .where(
           and(eq(payments.orderId, orderId), eq(payments.status, "pending")),
-        );
-      return updated;
+        )
+        .returning();
+      return { order: updated, payment: canceledPayment };
     });
-    return c.json(order, 200);
+    await publishBoothEvent(kiosk.boothId, {
+      type: "order.updated",
+      orderId,
+      kioskId: kiosk.id,
+    });
+    if (result.payment) {
+      await publishBoothEvent(kiosk.boothId, {
+        type: "payment.canceled",
+        paymentId: result.payment.id,
+        orderId,
+        kioskId: kiosk.id,
+      });
+    }
+    return c.json(result.order, 200);
   },
 );
 
@@ -385,7 +407,17 @@ ordersRoutes.openapi(
   async (c) => {
     const kiosk = c.get("kiosk");
     const orderId = c.req.valid("param").id;
-    const code = generateSecret(24);
+    const code = await generateUniqueCode(
+      () => generateDigitCode(6),
+      async (candidate) => {
+        const [existing] = await getDb()
+          .select({ id: payments.id })
+          .from(payments)
+          .where(eq(payments.codeHash, hashSecret(candidate)))
+          .limit(1);
+        return Boolean(existing);
+      },
+    );
     const result = await getDb().transaction(async (tx) => {
       const [order] = await tx
         .select()
@@ -512,7 +544,12 @@ paymentCodesRoutes.openapi(
         row.payment.status === "completed" &&
         row.payment.confirmedBy === user.id
       ) {
-        return row.order;
+        return {
+          order: row.order,
+          payment: row.payment,
+          productIds: [],
+          replayed: true,
+        };
       }
       if (row.payment.expiresAt <= now) {
         throw new PaymentExpiredError();
@@ -590,9 +627,33 @@ paymentCodesRoutes.openapi(
         .update(payments)
         .set({ status: "completed", completedAt: now, confirmedBy: user.id })
         .where(eq(payments.id, row.payment.id));
-      return order;
+      return {
+        order,
+        payment: row.payment,
+        productIds: items.map((item) => item.productId),
+        replayed: false,
+      };
     });
-    return c.json(result, 200);
+    await publishBoothEvent(result.order.boothId, {
+      type: "payment.completed",
+      paymentId: result.payment.id,
+      orderId: result.order.id,
+      kioskId: result.order.kioskId,
+    });
+    await publishBoothEvent(result.order.boothId, {
+      type: "order.updated",
+      orderId: result.order.id,
+      kioskId: result.order.kioskId,
+    });
+    if (!result.replayed) {
+      for (const productId of new Set(result.productIds)) {
+        await publishBoothEvent(result.order.boothId, {
+          type: "product.updated",
+          productId,
+        });
+      }
+    }
+    return c.json(result.order, 200);
   },
 );
 
@@ -646,67 +707,13 @@ paymentsRoutes.get("/:id/events", requireKiosk, async (c) => {
     throw new NotFoundError("payment not found");
   }
 
-  const encoder = new TextEncoder();
-  let onClose: (() => void) | null = null;
-  const stream = new ReadableStream({
-    start(controller) {
-      let closed = false;
-      const close = () => {
-        if (closed) {
-          return;
-        }
-        closed = true;
-        clearInterval(poll);
-        clearInterval(heartbeat);
-        clearTimeout(maxLifetime);
-        c.req.raw.signal.removeEventListener("abort", close);
-        try {
-          controller.close();
-        } catch {}
-      };
-      onClose = close;
-
-      const poll = setInterval(async () => {
-        try {
-          const [payment] = await getDb()
-            .select()
-            .from(payments)
-            .where(eq(payments.id, paymentId));
-          if (payment && payment.status !== "pending") {
-            controller.enqueue(
-              encoder.encode(
-                `event: ${payment.status}\ndata: ${JSON.stringify(serializePayment(payment))}\n\n`,
-              ),
-            );
-            close();
-          }
-        } catch {
-          close();
-        }
-      }, 1000);
-
-      const heartbeat = setInterval(() => {
-        try {
-          controller.enqueue(encoder.encode(": ping\n\n"));
-        } catch {
-          close();
-        }
-      }, 15000);
-
-      const maxLifetime = setTimeout(close, 5 * 60 * 1000);
-
-      c.req.raw.signal.addEventListener("abort", close);
-    },
-    cancel() {
-      onClose?.();
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
+  return boothEventStream(c, {
+    boothId: kiosk.boothId,
+    filter: (event) =>
+      (event.type === "payment.completed" ||
+        event.type === "payment.canceled" ||
+        event.type === "payment.expired") &&
+      event.paymentId === paymentId,
+    shouldClose: () => true,
   });
 });

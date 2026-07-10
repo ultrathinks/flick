@@ -102,7 +102,7 @@ export function PaymentPage() {
 
   if (!snapshot) {
     return (
-      <main className="min-h-dvh bg-bg">
+      <main className="flex min-h-dvh flex-col bg-bg">
         <Loading label="결제 정보를 불러오는 중입니다" />
       </main>
     );

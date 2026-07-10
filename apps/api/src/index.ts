@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 import { app } from "./app.ts";
 import { closePool } from "./db/index.ts";
+import { closeEvents } from "./lib/events.ts";
 import { closeRedis } from "./lib/redis.ts";
 
 function resolvePort(): number {
@@ -36,6 +37,7 @@ async function shutdown(signal: string): Promise<void> {
     ]);
     (server as { closeAllConnections?: () => void }).closeAllConnections?.();
     await closePool();
+    await closeEvents();
     await closeRedis();
   } catch (err) {
     console.error("error during shutdown", err);

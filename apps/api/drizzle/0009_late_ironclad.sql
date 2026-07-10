@@ -1,0 +1,1 @@
+ALTER TABLE "kiosks" ADD COLUMN "last_seen_at" timestamp with time zone;

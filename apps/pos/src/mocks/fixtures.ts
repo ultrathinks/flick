@@ -1,5 +1,5 @@
 import type { Booth } from "@/entities/booth";
-import type { KioskPairing } from "@/entities/kiosk";
+import type { BoothKiosks } from "@/entities/kiosk";
 import type { Order } from "@/entities/order";
 import type { Product } from "@/entities/product";
 
@@ -109,17 +109,37 @@ export const products: Product[] = [
   },
 ];
 
-export const kioskPairings: KioskPairing[] = [
-  {
-    id: "kiosk-1",
-    boothId: booth.id,
-    kioskName: "1번 키오스크",
-    expiresAt: "2026-07-10T09:00:00+09:00",
-    claimedAt: "2026-07-02T09:00:00+09:00",
-    createdBy: me.id,
-    createdAt: "2026-07-02T08:55:00+09:00",
-  },
-];
+export const boothKiosks: BoothKiosks = {
+  devices: [
+    {
+      id: "kiosk-1",
+      boothId: booth.id,
+      name: "1번 키오스크",
+      lastSeenAt: new Date().toISOString(),
+      revokedAt: null,
+      createdAt: "2026-07-02T08:55:00+09:00",
+    },
+    {
+      id: "kiosk-2",
+      boothId: booth.id,
+      name: "2번 키오스크",
+      lastSeenAt: "2026-07-02T09:00:00+09:00",
+      revokedAt: null,
+      createdAt: "2026-07-02T08:56:00+09:00",
+    },
+  ],
+  pending: [
+    {
+      id: "pairing-1",
+      boothId: booth.id,
+      kioskName: "3번 키오스크",
+      expiresAt: "2026-07-10T09:00:00+09:00",
+      claimedAt: null,
+      createdBy: me.id,
+      createdAt: "2026-07-02T08:57:00+09:00",
+    },
+  ],
+};
 
 export const orders: Order[] = [
   {

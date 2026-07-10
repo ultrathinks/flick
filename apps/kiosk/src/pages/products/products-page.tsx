@@ -4,8 +4,16 @@ import { resolveSelection } from "@/features/cart/model/cart";
 import { useCart } from "@/features/cart/model/use-cart";
 import { useKioskProducts } from "@/features/catalog/model/use-kiosk-products";
 import { useCheckout } from "@/features/checkout/model/use-checkout";
+import { unpairKiosk } from "@/features/kiosk-pairing/api/pair-kiosk";
 import type { Product } from "@/shared/api/types";
-import { getPaymentSnapshot, takeAlert } from "@/shared/model/storage";
+import { useKioskRealtime } from "@/shared/api/use-kiosk-realtime";
+import {
+  clearKioskData,
+  getKioskSession,
+  getPaymentSnapshot,
+  setAlert,
+  takeAlert,
+} from "@/shared/model/storage";
 import { useToast } from "@/shared/ui";
 import { ProductsCatalog } from "@/widgets/products/ui/products-catalog";
 
@@ -37,6 +45,15 @@ export function ProductsPage() {
   const cart = useCart({ products, onStockLimited: toast.error });
   const { checkout, isCheckingOut } = useCheckout({ onError: toast.error });
 
+  useKioskRealtime(getKioskSession().token, {
+    onProductUpdated: reload,
+    onRevoked: () => {
+      clearKioskData();
+      setAlert("키오스크 연결이 해제되었습니다.");
+      navigate("/pairing", { replace: true });
+    },
+  });
+
   const handleAddProduct = useCallback(
     (product: Product, optionValueIds: string[]) => {
       cart.addProduct(product, resolveSelection(product, optionValueIds));
@@ -58,6 +75,14 @@ export function ProductsPage() {
       onUpdateCartQuantity={cart.changeQuantity}
       onCheckout={() => checkout(cart.cartItems)}
       onRetry={reload}
+      onUnpair={() => {
+        const token = getKioskSession().token;
+        if (token) {
+          void unpairKiosk(token).catch(() => {});
+        }
+        clearKioskData();
+        navigate("/pairing", { replace: true });
+      }}
     />
   );
 }

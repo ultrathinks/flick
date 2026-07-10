@@ -30,9 +30,12 @@ function hasNativeBridge(): boolean {
 
 interface PayByCodeValue {
   scannerOpen: boolean;
+  manualOpen: boolean;
   activeCode: string | null;
   scan: () => void;
   closeScanner: () => void;
+  enterCode: () => void;
+  closeManual: () => void;
   submitCode: (code: string) => void;
   closePayment: () => void;
   rescan: () => void;
@@ -43,6 +46,7 @@ const PayByCodeContext = createContext<PayByCodeValue | null>(null);
 export function PayByCodeProvider({ children }: { children: ReactNode }) {
   const { send } = useBridgeProvider();
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
   const [activeCode, setActiveCode] = useState<string | null>(null);
 
   const openPayment = useCallback((code: string) => {
@@ -71,9 +75,17 @@ export function PayByCodeProvider({ children }: { children: ReactNode }) {
 
   const closeScanner = useCallback(() => setScannerOpen(false), []);
 
+  const enterCode = useCallback(() => {
+    send(Actions.HAPTIC, { style: "light" });
+    setManualOpen(true);
+  }, [send]);
+
+  const closeManual = useCallback(() => setManualOpen(false), []);
+
   const submitCode = useCallback(
     (code: string) => {
       setScannerOpen(false);
+      setManualOpen(false);
       openPayment(code);
     },
     [openPayment],
@@ -89,18 +101,24 @@ export function PayByCodeProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       scannerOpen,
+      manualOpen,
       activeCode,
       scan,
       closeScanner,
+      enterCode,
+      closeManual,
       submitCode,
       closePayment,
       rescan,
     }),
     [
       scannerOpen,
+      manualOpen,
       activeCode,
       scan,
       closeScanner,
+      enterCode,
+      closeManual,
       submitCode,
       closePayment,
       rescan,

@@ -1,9 +1,11 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus, UtensilsCrossed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Booth } from "@/entities/booth";
 import { useBoothProducts } from "@/entities/product";
+import { useBoothEvents } from "@/shared/api/use-booth-events.ts";
 import { Button, EmptyState, Page, QueryState, Skeleton } from "@/shared/ui";
 import { ProductCard } from "./product-card.tsx";
 
@@ -20,6 +22,18 @@ function AddButton() {
 export function BoothDashboard({ booth }: { booth: Booth }) {
   const products = useBoothProducts(booth.id);
   const count = products.data?.length ?? 0;
+  const queryClient = useQueryClient();
+
+  useBoothEvents(booth.id, {
+    onEvent: (event) => {
+      if (event.type === "product.updated") {
+        queryClient.invalidateQueries({ queryKey: ["products", booth.id] });
+      }
+    },
+    onReconnect: () => {
+      queryClient.invalidateQueries({ queryKey: ["products", booth.id] });
+    },
+  });
 
   return (
     <Page title="메뉴 관리" actions={<AddButton />}>
@@ -46,11 +60,7 @@ export function BoothDashboard({ booth }: { booth: Booth }) {
       >
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
           {(products.data ?? []).map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              boothId={booth.id}
-            />
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
       </QueryState>

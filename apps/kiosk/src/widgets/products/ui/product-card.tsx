@@ -34,7 +34,7 @@ export function ProductCard({
       }`}
       onClick={() => onPick(product)}
     >
-      <div className="relative aspect-[4/3] w-full bg-surface-muted">
+      <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-surface-muted">
         {product.imageUrl ? (
           <div
             role="img"
