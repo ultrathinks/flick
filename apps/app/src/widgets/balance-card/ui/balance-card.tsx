@@ -15,7 +15,7 @@ export const BalanceCard = ({
   theme = defaultCardTheme,
 }: BalanceCardProps) => {
   const { stack } = useRouter();
-  const { scan } = usePayByCode();
+  const { scan, enterCode } = usePayByCode();
 
   return (
     <div className="space-y-4">
@@ -46,6 +46,14 @@ export const BalanceCard = ({
           충전
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={enterCode}
+        className="w-full text-center text-body font-medium text-foreground-subtle underline-offset-4 transition-colors hover:text-foreground"
+      >
+        QR 스캔이 어렵나요? 결제 코드 입력하기
+      </button>
     </div>
   );
 };
