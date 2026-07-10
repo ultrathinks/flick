@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { type CardTheme, cardImageUrl } from "../model/card-theme.ts";
+import { cardImageUrl } from "../model/themes.ts";
+import type { CardTheme } from "../model/types.ts";
 
 interface CardFaceProps {
   theme: CardTheme;
@@ -21,7 +22,10 @@ export const CardFace = ({ theme }: CardFaceProps) => {
 
   return (
     <div className="absolute inset-0">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#23252c] via-[#14151a] to-[#0d0e12]" />
+      <div
+        className="absolute inset-0"
+        style={{ background: theme.background }}
+      />
       {!imageFailed && (
         <img
           src={cardImageUrl(theme)}
