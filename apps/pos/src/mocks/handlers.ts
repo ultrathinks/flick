@@ -1,5 +1,5 @@
 import { HttpResponse, http } from "msw";
-import { booth, kioskPairings, me, orders, products } from "./fixtures.ts";
+import { booth, boothKiosks, me, orders, products } from "./fixtures.ts";
 
 function errorResponse(status: number, code: string, message: string) {
   return HttpResponse.json({ error: { code, message } }, { status });
@@ -137,7 +137,7 @@ export function createHandlers(base: string) {
     ),
 
     http.get(url("booths/:boothId/kiosks"), () =>
-      HttpResponse.json(kioskPairings),
+      HttpResponse.json(boothKiosks),
     ),
     http.post(url("booths/:boothId/kiosks"), async ({ params, request }) => {
       const input = (await request.json()) as Record<string, unknown>;
@@ -150,7 +150,28 @@ export function createHandlers(base: string) {
         createdBy: me.id,
         createdAt: nowIso(),
       };
-      return HttpResponse.json({ pairing, code: "PAIR-CODE" });
+      return HttpResponse.json({ pairing, code: "K7P2Q9" }, { status: 201 });
+    }),
+    http.post(url("kiosks/:id/revoke"), ({ params }) =>
+      HttpResponse.json({
+        id: String(params.id),
+        boothId: booth.id,
+        name: "키오스크",
+        lastSeenAt: null,
+        revokedAt: nowIso(),
+        createdAt: nowIso(),
+      }),
+    ),
+
+    http.get(url("booths/:boothId/events"), () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(": connected\n\n"));
+        },
+      });
+      return new HttpResponse(stream, {
+        headers: { "Content-Type": "text/event-stream" },
+      });
     }),
 
     http.get(url("booths/:boothId/orders"), () => HttpResponse.json(orders)),

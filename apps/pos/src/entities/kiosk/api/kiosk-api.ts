@@ -1,9 +1,16 @@
 import { z } from "zod";
 import { request } from "@/shared/api";
-import { type KioskPairing, kioskPairingSchema } from "../model/types.ts";
+import {
+  type BoothKiosks,
+  boothKiosksSchema,
+  type KioskDevice,
+  type KioskPairing,
+  kioskDeviceSchema,
+  kioskPairingSchema,
+} from "../model/types.ts";
 
-export function fetchKioskPairings(boothId: string): Promise<KioskPairing[]> {
-  return request(z.array(kioskPairingSchema), `booths/${boothId}/kiosks`);
+export function fetchBoothKiosks(boothId: string): Promise<BoothKiosks> {
+  return request(boothKiosksSchema, `booths/${boothId}/kiosks`);
 }
 
 const createPairingResponseSchema = z.object({
@@ -22,3 +29,11 @@ export function createKioskPairing(
     json: { name },
   });
 }
+
+export function revokeKiosk(kioskId: string): Promise<KioskDevice> {
+  return request(kioskDeviceSchema, `kiosks/${kioskId}/revoke`, {
+    method: "post",
+  });
+}
+
+export type { KioskDevice, KioskPairing };

@@ -15,6 +15,18 @@ if (typeof window !== "undefined" && !window.matchMedia) {
   }));
 }
 
+if (typeof globalThis.EventSource === "undefined") {
+  class MockEventSource {
+    onopen: (() => void) | null = null;
+    onmessage: ((event: MessageEvent) => void) | null = null;
+    onerror: (() => void) | null = null;
+    close(): void {}
+    addEventListener(): void {}
+    removeEventListener(): void {}
+  }
+  globalThis.EventSource = MockEventSource as unknown as typeof EventSource;
+}
+
 function absolute(url: string): string {
   return url.startsWith("/") ? new URL(url, window.location.origin).href : url;
 }

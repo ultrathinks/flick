@@ -1,7 +1,20 @@
 export {
   type CreatePairingResult,
   createKioskPairing,
-  fetchKioskPairings,
+  fetchBoothKiosks,
+  revokeKiosk,
 } from "./api/kiosk-api.ts";
-export { type KioskPairing, kioskPairingSchema } from "./model/types.ts";
-export { useCreateKioskPairing, useKioskPairings } from "./model/use-kiosks.ts";
+export {
+  type BoothKiosks,
+  boothKiosksSchema,
+  isKioskOnline,
+  type KioskDevice,
+  type KioskPairing,
+  kioskDeviceSchema,
+  kioskPairingSchema,
+} from "./model/types.ts";
+export {
+  useBoothKiosks,
+  useCreateKioskPairing,
+  useRevokeKiosk,
+} from "./model/use-kiosks.ts";

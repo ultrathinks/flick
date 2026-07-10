@@ -35,10 +35,12 @@ async function forward(
       method: request.method,
       headers: {
         Authorization: `Bearer ${token}`,
+        Accept: request.headers.get("accept") ?? "application/json",
         "Content-Type":
           request.headers.get("content-type") ?? "application/json",
       },
       body,
+      signal: request.signal,
     });
 
   let response = await call(accessToken);
@@ -50,15 +52,30 @@ async function forward(
     }
   }
 
+  const contentType =
+    response.headers.get("content-type") ?? "application/json";
+
+  if (contentType.includes("text/event-stream") && response.body) {
+    return new NextResponse(response.body, {
+      status: response.status,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  }
+
   const text = await response.text();
   return new NextResponse(text, {
     status: response.status,
-    headers: {
-      "Content-Type":
-        response.headers.get("content-type") ?? "application/json",
-    },
+    headers: { "Content-Type": contentType },
   });
 }
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(
   request: Request,
