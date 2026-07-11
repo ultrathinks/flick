@@ -344,7 +344,7 @@ describe("payout", () => {
     const user = await createUser({ balance: 20000 });
 
     const putRes = await app.request("/v1/users/me/payout", {
-      method: "PUT",
+      method: "PATCH",
       headers: authHeaders(user.accessToken),
       body: JSON.stringify({
         bankName: "Bank",
@@ -375,7 +375,7 @@ describe("payout", () => {
     const user = await createUser({ balance: 20000 });
 
     await app.request("/v1/users/me/payout", {
-      method: "PUT",
+      method: "PATCH",
       headers: authHeaders(user.accessToken),
       body: JSON.stringify({
         bankName: "Bank",
@@ -384,7 +384,7 @@ describe("payout", () => {
       }),
     });
     const second = await app.request("/v1/users/me/payout", {
-      method: "PUT",
+      method: "PATCH",
       headers: authHeaders(user.accessToken),
       body: JSON.stringify({
         bankName: "Other Bank",
@@ -421,7 +421,7 @@ describe("payout", () => {
     const admin = await createUser({ isAdmin: true });
     const user = await createUser({ balance: 20000 });
     await app.request("/v1/users/me/payout", {
-      method: "PUT",
+      method: "PATCH",
       headers: authHeaders(user.accessToken),
       body: JSON.stringify({
         bankName: "Bank",
