@@ -4,68 +4,31 @@ const CARD_IMAGE_BASE = "cards";
 
 export const CARD_THEMES: [CardTheme, ...CardTheme[]] = [
   {
-    id: "midnight",
-    label: "미드나이트",
+    id: "black",
+    label: "블랙",
     background:
-      "linear-gradient(135deg, #23252c 0%, #14151a 55%, #0d0e12 100%)",
+      "linear-gradient(135deg, #3a3a3a 0%, #202020 55%, #131313 100%)",
     image: "1.png",
     textColor: "light",
+    watermark: { variant: "deboss-dark" },
   },
   {
-    id: "ocean",
-    label: "오션",
+    id: "titan",
+    label: "티타늄",
     background:
-      "linear-gradient(135deg, #2b6cff 0%, #1b3fb0 55%, #101c4d 100%)",
+      "linear-gradient(135deg, #4a515a 0%, #363b42 55%, #24272d 100%)",
     image: "2.png",
     textColor: "light",
+    watermark: { variant: "emboss-light" },
   },
   {
-    id: "forest",
-    label: "포레스트",
+    id: "teddy",
+    label: "테디",
     background:
-      "linear-gradient(135deg, #2fbf71 0%, #1a8f52 55%, #0d4d2c 100%)",
+      "linear-gradient(135deg, #fce3c4 0%, #f8d4a8 55%, #f2c489 100%)",
     image: "3.png",
-    textColor: "light",
-  },
-  {
-    id: "sunset",
-    label: "선셋",
-    background:
-      "linear-gradient(135deg, #ff8a5c 0%, #ff5e62 55%, #b02e63 100%)",
-    image: "4.png",
-    textColor: "light",
-  },
-  {
-    id: "grape",
-    label: "그레이프",
-    background:
-      "linear-gradient(135deg, #8a5cff 0%, #6a3fd6 55%, #3a1f8f 100%)",
-    image: "5.png",
-    textColor: "light",
-  },
-  {
-    id: "ivory",
-    label: "아이보리",
-    background:
-      "linear-gradient(135deg, #f5f1e8 0%, #e6ddc9 55%, #cdbfa0 100%)",
-    image: "6.png",
     textColor: "dark",
-  },
-  {
-    id: "rose",
-    label: "로즈골드",
-    background:
-      "linear-gradient(135deg, #f7c9c0 0%, #e79a94 55%, #c76b6b 100%)",
-    image: "7.png",
-    textColor: "dark",
-  },
-  {
-    id: "graphite",
-    label: "그래파이트",
-    background:
-      "linear-gradient(135deg, #6b7280 0%, #4b5159 55%, #2a2e34 100%)",
-    image: "8.png",
-    textColor: "light",
+    watermark: { variant: "soft-pastel" },
   },
 ];
 
