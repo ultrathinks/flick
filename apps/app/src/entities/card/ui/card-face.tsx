@@ -1,24 +1,49 @@
 import { useState } from "react";
 import { cardImageUrl } from "../model/themes.ts";
-import type { CardTheme } from "../model/types.ts";
+import type {
+  CardTheme,
+  CardWatermark,
+  CardWatermarkVariant,
+} from "../model/types.ts";
 
 interface CardFaceProps {
   theme: CardTheme;
 }
 
-const wordmarkColorClass: Record<CardTheme["textColor"], string> = {
-  light: "text-white/[0.13]",
-  dark: "text-black/[0.14]",
+const wordmarkColorClass: Record<CardWatermarkVariant, string> = {
+  "deboss-dark": "text-white/[0.16]",
+  "emboss-light": "text-white/[0.32]",
+  "soft-pastel": "text-black/[0.16]",
 };
 
-const wordmarkShadowClass: Record<CardTheme["textColor"], string> = {
-  light:
-    "[text-shadow:0_1px_1px_rgb(0_0_0/0.5),0_-1px_1px_rgb(255_255_255/0.14)]",
-  dark: "[text-shadow:0_1px_1px_rgb(255_255_255/0.6),0_-1px_1px_rgb(0_0_0/0.18)]",
+const wordmarkShadowClass: Record<CardWatermarkVariant, string> = {
+  "deboss-dark":
+    "[text-shadow:0_1px_0_rgb(255_255_255/0.14),0_-1px_1px_rgb(0_0_0/0.7)]",
+  "emboss-light":
+    "[text-shadow:0_-1px_1px_rgb(0_0_0/0.5),0_1px_1px_rgb(255_255_255/0.24)]",
+  "soft-pastel":
+    "[text-shadow:0_1px_1px_rgb(255_255_255/0.6),0_-1px_1px_rgb(0_0_0/0.12)]",
 };
+
+const wordmarkBlendClass: Record<CardWatermarkVariant, string> = {
+  "deboss-dark": "mix-blend-normal",
+  "emboss-light": "mix-blend-normal",
+  "soft-pastel": "mix-blend-multiply",
+};
+
+function resolveWatermark(theme: CardTheme): Required<CardWatermark> {
+  const variant: CardWatermarkVariant =
+    theme.watermark?.variant ??
+    (theme.textColor === "light" ? "emboss-light" : "soft-pastel");
+  return { variant, text: theme.watermark?.text ?? "Flick" };
+}
 
 export const CardFace = ({ theme }: CardFaceProps) => {
   const [imageFailed, setImageFailed] = useState(false);
+  const watermark = resolveWatermark(theme);
+  const watermarkColor = wordmarkColorClass[watermark.variant];
+  const watermarkShadow = wordmarkShadowClass[watermark.variant];
+  const watermarkBlend = wordmarkBlendClass[watermark.variant];
 
   return (
     <div className="absolute inset-0">
@@ -54,9 +79,9 @@ export const CardFace = ({ theme }: CardFaceProps) => {
       />
 
       <span
-        className={`absolute bottom-6 right-6 select-none text-title font-extrabold tracking-tight ${wordmarkColorClass[theme.textColor]} ${wordmarkShadowClass[theme.textColor]}`}
+        className={`absolute bottom-6 right-6 select-none text-title font-extrabold tracking-tight ${watermarkBlend} ${watermarkColor} ${watermarkShadow}`}
       >
-        Flick
+        {watermark.text}
       </span>
     </div>
   );
