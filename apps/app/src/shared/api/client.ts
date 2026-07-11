@@ -25,23 +25,17 @@ export const api: KyInstance = ky.create({
       },
     ],
     afterResponse: [
-      async (request, _options, response) => {
-        if (response.status !== 401 || !authHooks) {
-          return response;
-        }
-        if (request.headers.get("x-flick-retried") === "1") {
+      async (request, _options, response, state) => {
+        if (response.status !== 401 || !authHooks || state.retryCount > 0) {
           return response;
         }
         const token = await authHooks.refresh();
         if (!token) {
           return response;
         }
-        if (request.headers.get("x-flick-no-replay") === "1") {
-          return response;
-        }
-        request.headers.set("Authorization", `Bearer ${token}`);
-        request.headers.set("x-flick-retried", "1");
-        return ky(request);
+        const headers = new Headers(request.headers);
+        headers.set("Authorization", `Bearer ${token}`);
+        return ky.retry({ request: new Request(request, { headers }) });
       },
     ],
   },
