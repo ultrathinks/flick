@@ -12,7 +12,7 @@ export function fetchPayout(): Promise<PayoutSummary> {
 
 export function savePayout(account: PayoutAccount): Promise<PayoutAccount> {
   return request(payoutAccountSchema, "users/me/payout", {
-    method: "put",
+    method: "patch",
     json: account,
   });
 }

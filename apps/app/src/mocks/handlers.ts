@@ -28,7 +28,7 @@ export const handlers = [
       account: payoutAccount,
     }),
   ),
-  http.put("/v1/users/me/payout", async ({ request }) => {
+  http.patch("/v1/users/me/payout", async ({ request }) => {
     payoutAccount = (await request.json()) as PayoutAccount;
     return HttpResponse.json(payoutAccount);
   }),

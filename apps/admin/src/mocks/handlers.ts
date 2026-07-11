@@ -61,7 +61,7 @@ export function createHandlers(base: string) {
     }),
 
     http.get(url("payouts"), () => HttpResponse.json(payouts)),
-    http.put(url("users/me/payout"), async ({ request }) => {
+    http.patch(url("users/me/payout"), async ({ request }) => {
       const input = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         bankName: String(input.bankName ?? ""),

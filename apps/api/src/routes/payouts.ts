@@ -75,7 +75,7 @@ payoutsRoutes.openapi(
 
 payoutsRoutes.openapi(
   createRoute({
-    method: "put",
+    method: "patch",
     path: "/users/me/payout",
     tags: ["payouts"],
     security: [{ Bearer: [] }],
