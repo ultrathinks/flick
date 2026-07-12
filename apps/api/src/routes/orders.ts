@@ -22,6 +22,7 @@ import { generateDigitCode, generateUniqueCode } from "../lib/codes.ts";
 import { MAX_ORDER_QUANTITY, PAYMENT_TTL_MS } from "../lib/constants.ts";
 import {
   BadRequestError,
+  ConflictError,
   ForbiddenError,
   InsufficientBalanceError,
   NotFoundError,
@@ -343,6 +344,7 @@ ordersRoutes.openapi(
       200: jsonContent(orderSchema, "Canceled order"),
       401: errorResponse("Unauthorized"),
       404: errorResponse("Not found"),
+      409: errorResponse("Conflict"),
     },
   }),
   async (c) => {
@@ -355,8 +357,11 @@ ordersRoutes.openapi(
         .from(orders)
         .where(and(eq(orders.id, orderId), eq(orders.kioskId, kiosk.id)))
         .for("update");
-      if (existing?.status !== "pending") {
+      if (!existing) {
         throw new NotFoundError("order not found");
+      }
+      if (existing.status !== "pending") {
+        throw new ConflictError("order is not pending");
       }
       const [updated] = await tx
         .update(orders)
@@ -401,6 +406,7 @@ ordersRoutes.openapi(
       201: jsonContent(createPaymentSchema, "Created payment"),
       401: errorResponse("Unauthorized"),
       404: errorResponse("Not found"),
+      409: errorResponse("Conflict"),
     },
   }),
   async (c) => {
@@ -421,16 +427,13 @@ ordersRoutes.openapi(
       const [order] = await tx
         .select()
         .from(orders)
-        .where(
-          and(
-            eq(orders.id, orderId),
-            eq(orders.kioskId, kiosk.id),
-            eq(orders.status, "pending"),
-          ),
-        )
+        .where(and(eq(orders.id, orderId), eq(orders.kioskId, kiosk.id)))
         .limit(1);
       if (!order) {
         throw new NotFoundError("order not found");
+      }
+      if (order.status !== "pending") {
+        throw new ConflictError("order is not pending");
       }
       await tx
         .update(payments)

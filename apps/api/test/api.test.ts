@@ -244,6 +244,62 @@ describe("payment confirm", () => {
       .where(eq(orders.id, orderId));
     expect(row?.status).toBe("canceled");
   });
+
+  it("returns 409 when canceling an order that is not pending", async () => {
+    const owner = await createUser();
+    const { boothId, kioskId, deviceToken } = await createBoothWithKiosk(
+      owner.id,
+    );
+    const productId = await createProduct(boothId, { price: 1000, stock: 5 });
+    const { orderId } = await createOrderWithPayment(
+      boothId,
+      kioskId,
+      productId,
+    );
+    const first = await app.request(`/v1/orders/${orderId}/cancel`, {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+    });
+    expect(first.status).toBe(200);
+    const second = await app.request(`/v1/orders/${orderId}/cancel`, {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+    });
+    expect(second.status).toBe(409);
+  });
+
+  it("returns 404 when canceling an unknown order", async () => {
+    const owner = await createUser();
+    const { deviceToken } = await createBoothWithKiosk(owner.id);
+    const res = await app.request(
+      "/v1/orders/00000000-0000-0000-0000-000000000000/cancel",
+      { method: "POST", headers: kioskHeaders(deviceToken) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 409 when creating a payment for a non-pending order", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 5000 });
+    const { boothId, kioskId, deviceToken } = await createBoothWithKiosk(
+      owner.id,
+    );
+    const productId = await createProduct(boothId, { price: 1000, stock: 5 });
+    const { orderId, code } = await createOrderWithPayment(
+      boothId,
+      kioskId,
+      productId,
+    );
+    await app.request(`/v1/payment-codes/${code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+    const res = await app.request(`/v1/orders/${orderId}/payments`, {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+    });
+    expect(res.status).toBe(409);
+  });
 });
 
 describe("refund", () => {
