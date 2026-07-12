@@ -39,7 +39,7 @@ export function channelEventStream<E extends ChannelEvent>(
         }
         unsubscribe?.();
         c.req.raw.signal.removeEventListener("abort", close);
-        void options.onClose?.();
+        void Promise.resolve(options.onClose?.()).catch(() => undefined);
         try {
           controller.close();
         } catch {}
@@ -79,7 +79,7 @@ export function channelEventStream<E extends ChannelEvent>(
       );
 
       c.req.raw.signal.addEventListener("abort", close);
-      void options.onOpen?.();
+      void Promise.resolve(options.onOpen?.()).catch(() => undefined);
     },
   });
 

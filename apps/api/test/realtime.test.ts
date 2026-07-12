@@ -136,27 +136,28 @@ describe("booth SSE stream", () => {
 });
 
 describe("kiosk presence", () => {
-  it("publishes presence and updates last_seen_at on heartbeat", async () => {
+  it("marks online on stream open and offline on close", async () => {
     const owner = await createUser();
-    const { boothId, deviceToken } = await createBoothWithKiosk(owner.id);
+    const { boothId, kioskId, deviceToken } = await createBoothWithKiosk(
+      owner.id,
+    );
 
     const received: boolean[] = [];
     const unsub = subscribeBoothEvents(boothId, (event) => {
-      if (event.type === "kiosk.presence") {
+      if (event.type === "kiosk.presence" && event.data.kioskId === kioskId) {
         received.push(event.data.online);
       }
     });
     await new Promise((r) => setTimeout(r, 150));
 
-    const res = await app.request("/v1/kiosks/me/heartbeat", {
-      method: "POST",
+    const controller = new AbortController();
+    const streamRes = await app.request("/v1/kiosks/me/events", {
       headers: kioskHeaders(deviceToken),
+      signal: controller.signal,
     });
-    expect(res.status).toBe(204);
+    expect(streamRes.status).toBe(200);
 
-    await waitFor(() => (received.length > 0 ? received : undefined));
-    unsub();
-    expect(received).toContain(true);
+    await waitFor(() => (received.includes(true) ? received : undefined));
 
     const meRes = await app.request("/v1/kiosks/me", {
       headers: kioskHeaders(deviceToken),
@@ -165,6 +166,13 @@ describe("kiosk presence", () => {
       kiosk: { lastSeenAt: string | null };
     };
     expect(body.kiosk.lastSeenAt).not.toBeNull();
+
+    controller.abort();
+    await waitFor(() => (received.includes(false) ? received : undefined));
+    unsub();
+
+    expect(received).toContain(true);
+    expect(received).toContain(false);
   });
 });
 

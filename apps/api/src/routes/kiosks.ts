@@ -262,34 +262,18 @@ kiosksRoutes.openapi(
   },
 );
 
-kiosksRoutes.openapi(
-  createRoute({
-    method: "post",
-    path: "/me/heartbeat",
-    tags: ["kiosks"],
-    security: [{ Kiosk: [] }],
-    middleware: [requireKiosk] as const,
-    responses: {
-      204: { description: "Heartbeat acknowledged" },
-      401: errorResponse("Unauthorized"),
-    },
-  }),
-  async (c) => {
-    const kiosk = c.get("kiosk");
+kiosksRoutes.get("/me/events", requireKiosk, (c) => {
+  const kiosk = c.get("kiosk");
+  const markPresence = async (online: boolean) => {
     await getDb()
       .update(kiosks)
       .set({ lastSeenAt: new Date() })
       .where(eq(kiosks.id, kiosk.id));
     await publishBoothEvent(kiosk.boothId, {
       type: "kiosk.presence",
-      data: { kioskId: kiosk.id, online: true },
+      data: { kioskId: kiosk.id, online },
     });
-    return c.body(null, 204);
-  },
-);
-
-kiosksRoutes.get("/me/events", requireKiosk, (c) => {
-  const kiosk = c.get("kiosk");
+  };
   return channelEventStream<BoothEvent>(c, {
     subscribe: (handler) => subscribeBoothEvents(kiosk.boothId, handler),
     filter: (event) => {
@@ -308,6 +292,8 @@ kiosksRoutes.get("/me/events", requireKiosk, (c) => {
           return false;
       }
     },
+    onOpen: () => markPresence(true),
+    onClose: () => markPresence(false),
     shouldClose: (event) =>
       event.type === "kiosk.revoked" && event.data.kioskId === kiosk.id,
   });
