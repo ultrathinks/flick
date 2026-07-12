@@ -24,12 +24,12 @@
     "@biomejs/biome": "^2.5.0",
     "@flick/typescript-config": "workspace:*",
     "@tailwindcss/vite": "^4.0.0",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^4.3.4",
     "msw": "^2.14.6",
     "tailwindcss": "^4",
-    "typescript": "^5",
+    "typescript": "~6.0.3",
     "vite": "^6.0.5"
   }
 }
