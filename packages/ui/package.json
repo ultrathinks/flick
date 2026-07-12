@@ -9,6 +9,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./theme": "./src/theme/index.ts",
+    "./theme-script": "./src/theme/theme-script.ts",
     "./styles.css": "./src/styles.css"
   },
   "scripts": {
