@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: flick_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/flick_test
+      CORS_ORIGIN: http://localhost:3000
+      DAUTH_CLIENT_ID: ci
+      DAUTH_CLIENT_SECRET: ci
+      DAUTH_REDIRECT_URI: http://localhost:3000/auth/callback
+      DAUTH_POS_CLIENT_ID: ci
+      DAUTH_POS_CLIENT_SECRET: ci
+      DAUTH_POS_REDIRECT_URI: http://localhost:3002/auth/callback
+      DAUTH_ADMIN_CLIENT_ID: ci
+      DAUTH_ADMIN_CLIENT_SECRET: ci
+      DAUTH_ADMIN_REDIRECT_URI: http://localhost:3001/auth/callback
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: ci
+      S3_ACCESS_KEY: ci
+      S3_SECRET_KEY: ci
+      S3_PUBLIC_BASE_URL: http://localhost:9000/ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Apply migrations
+        run: pnpm --filter api db:migrate
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
