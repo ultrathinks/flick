@@ -17,7 +17,11 @@ import {
   users,
 } from "../db/schema/index.ts";
 import { MAX_TRANSACTION_AMOUNT } from "../lib/constants.ts";
-import { isForeignKeyViolation, isUniqueViolation } from "../lib/db-errors.ts";
+import {
+  isCheckViolation,
+  isForeignKeyViolation,
+  isUniqueViolation,
+} from "../lib/db-errors.ts";
 import {
   BadRequestError,
   ConflictError,
@@ -36,6 +40,17 @@ const resolveSchema = z.object({ code: z.string().min(1) });
 const chargeSchema = z.object({
   userId: z.string().uuid(),
   amount: z.number().int().positive().max(MAX_TRANSACTION_AMOUNT),
+  idempotencyKey: z.string().min(1),
+});
+const adjustmentSchema = z.object({
+  userId: z.string().uuid(),
+  amount: z
+    .number()
+    .int()
+    .gte(-MAX_TRANSACTION_AMOUNT)
+    .lte(MAX_TRANSACTION_AMOUNT)
+    .refine((value) => value !== 0, "amount must be non-zero"),
+  reason: z.string().max(200).optional(),
   idempotencyKey: z.string().min(1),
 });
 const refundBodySchema = z.object({
@@ -152,6 +167,87 @@ moneyRoutes.openapi(
       });
       return c.json(serializeTransaction(result), 201);
     } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        throw new NotFoundError("user not found");
+      }
+      throw error;
+    }
+  },
+);
+
+moneyRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/adjustments",
+    tags: ["money"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAdmin] as const,
+    request: {
+      body: { content: { "application/json": { schema: adjustmentSchema } } },
+    },
+    responses: {
+      201: jsonContent(transactionSchema, "Created adjustment"),
+      400: errorResponse("Bad request"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
+  async (c) => {
+    const admin = c.get("user");
+    const body = c.req.valid("json");
+    try {
+      const result = await getDb().transaction(async (tx) => {
+        const [inserted] = await tx
+          .insert(transactions)
+          .values({
+            userId: body.userId,
+            amount: body.amount,
+            type: "adjustment",
+            adminId: admin.id,
+            idempotencyKey: body.idempotencyKey,
+          })
+          .onConflictDoNothing()
+          .returning();
+        if (!inserted) {
+          const [existing] = await tx
+            .select()
+            .from(transactions)
+            .where(
+              and(
+                eq(transactions.adminId, admin.id),
+                eq(transactions.idempotencyKey, body.idempotencyKey),
+              ),
+            )
+            .limit(1);
+          if (!existing) {
+            throw new Error(
+              "adjustment conflict without an existing transaction",
+            );
+          }
+          return existing;
+        }
+        await tx
+          .update(users)
+          .set({
+            balance: sql<number>`${users.balance} + ${body.amount}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, body.userId));
+        await tx.insert(auditLogs).values({
+          actorId: admin.id,
+          action: "adjustment.create",
+          targetType: "user",
+          targetId: body.userId,
+          metadata: { amount: body.amount, reason: body.reason ?? null },
+        });
+        return inserted;
+      });
+      return c.json(serializeTransaction(result), 201);
+    } catch (error) {
+      if (isCheckViolation(error)) {
+        throw new BadRequestError("adjustment would make balance negative");
+      }
       if (isForeignKeyViolation(error)) {
         throw new NotFoundError("user not found");
       }

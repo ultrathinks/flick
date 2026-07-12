@@ -325,6 +325,95 @@ describe("user code (stable per-user identifier)", () => {
   });
 });
 
+describe("POST /v1/adjustments (admin balance adjustment)", () => {
+  async function adjust(
+    token: string,
+    body: { userId: string; amount: number; reason?: string; key?: string },
+  ) {
+    return app.request("/v1/adjustments", {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify({
+        userId: body.userId,
+        amount: body.amount,
+        reason: body.reason,
+        idempotencyKey: body.key ?? "adj-1",
+      }),
+    });
+  }
+
+  it("credits and debits balance with a signed amount", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const target = await createUser({ balance: 1000 });
+
+    const credit = await adjust(admin.accessToken, {
+      userId: target.id,
+      amount: 2000,
+      key: "adj-credit",
+    });
+    expect(credit.status).toBe(201);
+    expect((await credit.json()).type).toBe("adjustment");
+    expect(await balanceOf(target.id)).toBe(3000);
+
+    const debit = await adjust(admin.accessToken, {
+      userId: target.id,
+      amount: -500,
+      key: "adj-debit",
+    });
+    expect(debit.status).toBe(201);
+    expect(await balanceOf(target.id)).toBe(2500);
+  });
+
+  it("rejects a debit that would make balance negative with 400", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const target = await createUser({ balance: 500 });
+    const res = await adjust(admin.accessToken, {
+      userId: target.id,
+      amount: -1000,
+    });
+    expect(res.status).toBe(400);
+    expect(await balanceOf(target.id)).toBe(500);
+  });
+
+  it("applies a repeated idempotency key only once", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const target = await createUser({ balance: 0 });
+    const first = await adjust(admin.accessToken, {
+      userId: target.id,
+      amount: 1500,
+      key: "adj-once",
+    });
+    const second = await adjust(admin.accessToken, {
+      userId: target.id,
+      amount: 1500,
+      key: "adj-once",
+    });
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect((await first.json()).id).toBe((await second.json()).id);
+    expect(await balanceOf(target.id)).toBe(1500);
+  });
+
+  it("forbids a non-admin", async () => {
+    const target = await createUser({ balance: 1000 });
+    const user = await createUser();
+    const res = await adjust(user.accessToken, {
+      userId: target.id,
+      amount: 100,
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 for an unknown user", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const res = await adjust(admin.accessToken, {
+      userId: "00000000-0000-0000-0000-000000000000",
+      amount: 100,
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
 async function balanceOf(userId: string): Promise<number> {
   const [row] = await getDb()
     .select({ balance: users.balance })

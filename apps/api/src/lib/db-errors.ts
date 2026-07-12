@@ -14,3 +14,7 @@ export function isUniqueViolation(error: unknown): boolean {
 export function isForeignKeyViolation(error: unknown): boolean {
   return hasPgCode(error, "23503");
 }
+
+export function isCheckViolation(error: unknown): boolean {
+  return hasPgCode(error, "23514");
+}
