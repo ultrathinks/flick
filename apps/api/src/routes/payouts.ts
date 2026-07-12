@@ -131,7 +131,12 @@ payoutsRoutes.openapi(
   }),
   async (c) => {
     const rows = await getDb()
-      .select({ payout: payouts, balance: users.balance })
+      .select({
+        payout: payouts,
+        balance: users.balance,
+        name: users.name,
+        studentNumber: users.studentNumber,
+      })
       .from(payouts)
       .innerJoin(users, eq(payouts.userId, users.id))
       .orderBy(desc(payouts.createdAt));
@@ -139,6 +144,8 @@ payoutsRoutes.openapi(
       rows.map((row) => ({
         id: row.payout.id,
         userId: row.payout.userId,
+        name: row.name,
+        studentNumber: row.studentNumber,
         availableAmount: payableBalance(row.balance),
         accountHolder: row.payout.accountHolder,
         bankName: row.payout.bankName,
