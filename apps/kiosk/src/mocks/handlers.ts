@@ -70,11 +70,6 @@ export const handlers = [
   http.get("/v1/kiosks/me", () => HttpResponse.json({ kiosk, booth })),
 
   http.post(
-    "/v1/kiosks/me/heartbeat",
-    () => new HttpResponse(null, { status: 204 }),
-  ),
-
-  http.post(
     "/v1/kiosks/me/unpair",
     () => new HttpResponse(null, { status: 204 }),
   ),

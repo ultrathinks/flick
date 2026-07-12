@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { getKioskProducts } from "@/entities/product/api/products";
-import { ApiError } from "@/shared/api/client";
+import { isAuthExpired, isKioskRevoked } from "@/shared/api";
 import type { Product } from "@/shared/api/types";
+import { subscribeProductsChanged } from "@/shared/api/use-kiosk-realtime";
 import { clearKioskData, getKioskSession } from "@/shared/model/storage";
 
 type KioskProductsState = {
@@ -31,7 +32,7 @@ export function useKioskProducts(): KioskProductsState {
     try {
       setProducts(await getKioskProducts(token));
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
+      if (isAuthExpired(error) || isKioskRevoked(error)) {
         clearKioskData();
         navigate("/pairing", { replace: true });
         return;
@@ -44,6 +45,7 @@ export function useKioskProducts(): KioskProductsState {
 
   useEffect(() => {
     load();
+    return subscribeProductsChanged(load);
   }, [load]);
 
   return { products, isLoading, hasError, reload: load };

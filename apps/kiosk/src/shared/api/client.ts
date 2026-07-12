@@ -1,17 +1,5 @@
+import { ApiError, type ApiErrorBody } from "@flick/api-client";
 import { API_BASE_URL } from "@/shared/config/env";
-import type { ApiErrorBody } from "./types";
-
-export class ApiError extends Error {
-  code: string;
-  status: number;
-
-  constructor(status: number, code: string, message: string) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.code = code;
-  }
-}
 
 type RequestOptions = {
   token?: string | null;
@@ -44,9 +32,9 @@ export async function apiRequest<T>(
       data = (await response.json()) as ApiErrorBody;
     } catch {}
     throw new ApiError(
-      response.status,
       data?.error?.code ?? "REQUEST_ERROR",
       data?.error?.message ?? "요청을 처리할 수 없습니다",
+      response.status,
     );
   }
 

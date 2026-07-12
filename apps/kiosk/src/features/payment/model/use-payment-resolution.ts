@@ -25,7 +25,7 @@ function outcomeFromEvent(event: {
   if (type === "payment.completed") {
     return "completed";
   }
-  if (type === "payment.expired" || type === "payment.canceled") {
+  if (type === "payment.canceled") {
     return "canceled";
   }
   return toOutcome(event.event);

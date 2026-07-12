@@ -6,12 +6,10 @@ import { useKioskProducts } from "@/features/catalog/model/use-kiosk-products";
 import { useCheckout } from "@/features/checkout/model/use-checkout";
 import { unpairKiosk } from "@/features/kiosk-pairing/api/pair-kiosk";
 import type { Product } from "@/shared/api/types";
-import { useKioskRealtime } from "@/shared/api/use-kiosk-realtime";
 import {
   clearKioskData,
   getKioskSession,
   getPaymentSnapshot,
-  setAlert,
   takeAlert,
 } from "@/shared/model/storage";
 import { useIdleTimeout } from "@/shared/model/use-idle-timeout";
@@ -48,15 +46,6 @@ export function ProductsPage() {
   const cart = useCart({ products, onStockLimited: toast.error });
   useIdleTimeout(IDLE_RESET_MS, cart.clear);
   const { checkout, isCheckingOut } = useCheckout({ onError: toast.error });
-
-  useKioskRealtime(getKioskSession().token, {
-    onProductUpdated: reload,
-    onRevoked: () => {
-      clearKioskData();
-      setAlert("키오스크 연결이 해제되었습니다.");
-      navigate("/pairing", { replace: true });
-    },
-  });
 
   const handleAddProduct = useCallback(
     (product: Product, optionValueIds: string[]) => {
