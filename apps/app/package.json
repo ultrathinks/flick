@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@b1nd/aid-kit": "^1.0.9",
+    "@flick/api-client": "workspace:*",
     "@flick/contract": "workspace:*",
     "@flick/ui": "workspace:*",
     "@tanstack/react-query": "^5.62.7",

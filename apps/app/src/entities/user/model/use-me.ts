@@ -7,5 +7,6 @@ export function useMe() {
   return useQuery({
     queryKey: meQueryKey,
     queryFn: fetchMe,
+    refetchInterval: 30_000,
   });
 }
