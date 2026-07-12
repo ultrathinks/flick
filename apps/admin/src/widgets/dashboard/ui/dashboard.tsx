@@ -1,12 +1,26 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useStats } from "@/entities/stats";
+import { useAdminEvents } from "@/shared/api/use-admin-events.ts";
 import { Card, formatWon, SectionHeader, Skeleton } from "@/shared/ui";
 
 import { DashboardStats } from "./dashboard-stats.tsx";
 
 export function Dashboard() {
   const stats = useStats();
+  const queryClient = useQueryClient();
+
+  useAdminEvents({
+    onEvent: (event) => {
+      if (event.type === "stats.changed") {
+        queryClient.invalidateQueries({ queryKey: ["stats"] });
+      }
+    },
+    onReconnect: () => {
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
 
   if (stats.isPending) {
     return (

@@ -6,5 +6,6 @@ export function useReport() {
   return useQuery<Report>({
     queryKey: ["report"],
     queryFn: () => request(reportSchema, "report"),
+    refetchInterval: 30_000,
   });
 }

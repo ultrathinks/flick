@@ -14,6 +14,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@flick/api-client": "workspace:*",
     "@flick/contract": "workspace:*",
     "@flick/ui": "workspace:*",
     "@opentelemetry/api": "^1.9.1",

@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
   type AdminPayout,
@@ -9,6 +10,7 @@ import {
   resolveBank,
   usePayouts,
 } from "@/entities/payout";
+import { useAdminEvents } from "@/shared/api/use-admin-events.ts";
 import { formatWon, Input, Stat } from "@/shared/ui";
 import { type Column, DataTable } from "@/widgets/data-table";
 
@@ -53,6 +55,18 @@ const columns: Column<AdminPayout>[] = [
 export function PayoutBoard() {
   const [query, setQuery] = useState("");
   const payouts = usePayouts();
+  const queryClient = useQueryClient();
+
+  useAdminEvents({
+    onEvent: (event) => {
+      if (event.type === "payout.changed") {
+        queryClient.invalidateQueries({ queryKey: ["payouts"] });
+      }
+    },
+    onReconnect: () => {
+      queryClient.invalidateQueries({ queryKey: ["payouts"] });
+    },
+  });
 
   const rows = useMemo(() => {
     const all = [...(payouts.data ?? [])].sort(

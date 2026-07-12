@@ -1,5 +1,6 @@
 "use client";
 
+import { MAX_CHARGE_AMOUNT } from "@flick/contract";
 import { useState } from "react";
 import {
   type ChargeTransaction,
@@ -8,7 +9,14 @@ import {
   resolveUserCode,
 } from "@/features/charge";
 import { ApiError } from "@/shared/api";
-import { Button, Card, formatWon, Input, useToast } from "@/shared/ui";
+import {
+  Button,
+  Card,
+  formatWon,
+  Input,
+  useConfirm,
+  useToast,
+} from "@/shared/ui";
 import { QrScanner } from "./qr-scanner.tsx";
 
 type Stage =
@@ -17,6 +25,7 @@ type Stage =
   | { name: "done"; user: ResolvedUser; result: ChargeTransaction };
 
 const QUICK_AMOUNTS = [5000, 10000, 30000, 50000];
+const LARGE_CHARGE_THRESHOLD = 50000;
 
 export function ChargePanel() {
   const [stage, setStage] = useState<Stage>({ name: "scan" });
@@ -25,6 +34,17 @@ export function ChargePanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
+  const confirm = useConfirm();
+
+  function setAmountCapped(next: string) {
+    const digits = next.replace(/\D/g, "");
+    if (digits === "") {
+      setAmount("");
+      return;
+    }
+    const clamped = Math.min(Number(digits), MAX_CHARGE_AMOUNT);
+    setAmount(String(clamped));
+  }
 
   async function resolve(code: string) {
     if (busy) {
@@ -55,6 +75,22 @@ export function ChargePanel() {
     if (!Number.isInteger(value) || value <= 0) {
       setError("올바른 금액을 입력해 주세요.");
       return;
+    }
+    if (value > MAX_CHARGE_AMOUNT) {
+      setError(`한 번에 ${formatWon(MAX_CHARGE_AMOUNT)}까지 충전할 수 있어요.`);
+      return;
+    }
+    if (value >= LARGE_CHARGE_THRESHOLD) {
+      const ok = await confirm({
+        title: `${formatWon(value)}을 충전할까요?`,
+        description: `${stage.user.name} 님(학번 ${
+          stage.user.studentNumber ?? "미등록"
+        })에게 충전해요. 큰 금액이니 대상자가 맞는지 확인해 주세요.`,
+        confirmLabel: "충전",
+      });
+      if (!ok) {
+        return;
+      }
     }
     setBusy(true);
     setError(null);
@@ -129,8 +165,9 @@ export function ChargePanel() {
               type="number"
               inputMode="numeric"
               placeholder="0"
+              max={MAX_CHARGE_AMOUNT}
               value={amount}
-              onChange={(event) => setAmount(event.target.value)}
+              onChange={(event) => setAmountCapped(event.target.value)}
               error={error ?? undefined}
             />
             <div className="mt-2 grid grid-cols-2 gap-2">

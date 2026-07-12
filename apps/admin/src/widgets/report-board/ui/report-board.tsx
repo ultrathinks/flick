@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import {
   type BoothRanking,
@@ -7,6 +8,7 @@ import {
   type Report,
   useReport,
 } from "@/entities/report";
+import { useAdminEvents } from "@/shared/api/use-admin-events.ts";
 import { cn } from "@/shared/lib/cn.ts";
 import { formatWon, QueryState, SectionHeader, Stat } from "@/shared/ui";
 import { type Column, DataTable } from "@/widgets/data-table";
@@ -137,6 +139,18 @@ function Summary({ summary }: { summary: Report["summary"] }) {
 
 export function ReportBoard() {
   const report = useReport();
+  const queryClient = useQueryClient();
+
+  useAdminEvents({
+    onEvent: (event) => {
+      if (event.type === "stats.changed") {
+        queryClient.invalidateQueries({ queryKey: ["report"] });
+      }
+    },
+    onReconnect: () => {
+      queryClient.invalidateQueries({ queryKey: ["report"] });
+    },
+  });
 
   return (
     <div className="flex flex-col gap-6">

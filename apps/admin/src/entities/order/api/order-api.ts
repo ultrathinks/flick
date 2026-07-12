@@ -7,5 +7,6 @@ export function useOrders(filters: { status?: OrderStatus; boothId?: string }) {
     path: "orders",
     itemSchema: adminOrderSchema,
     searchParams: { status: filters.status, boothId: filters.boothId },
+    refetchInterval: 30_000,
   });
 }

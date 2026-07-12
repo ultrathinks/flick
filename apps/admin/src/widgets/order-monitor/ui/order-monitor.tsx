@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
   type AdminOrder,
@@ -7,6 +8,7 @@ import {
   orderStatuses,
   useOrders,
 } from "@/entities/order";
+import { useAdminEvents } from "@/shared/api/use-admin-events.ts";
 import { Badge, formatWon, Select } from "@/shared/ui";
 import { type Column, DataTable } from "@/widgets/data-table";
 import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "../model/labels.ts";
@@ -48,6 +50,18 @@ const columns: Column<AdminOrder>[] = [
 export function OrderMonitor() {
   const [status, setStatus] = useState<OrderStatus | "">("");
   const orders = useOrders({ status: status || undefined });
+  const queryClient = useQueryClient();
+
+  useAdminEvents({
+    onEvent: (event) => {
+      if (event.type === "order.updated") {
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+      }
+    },
+    onReconnect: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
 
   const rows = useMemo(
     () => orders.data?.pages.flatMap((page) => page.items) ?? [],
