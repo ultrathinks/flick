@@ -1,3 +1,4 @@
+import type { BoothEvent } from "@flick/contract";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
@@ -30,9 +31,9 @@ import {
   PaymentExpiredError,
   PaymentNotPendingError,
 } from "../lib/errors.ts";
-import { publishBoothEvent } from "../lib/events.ts";
+import { publishBoothEvent, subscribeBoothEvents } from "../lib/events.ts";
 import { hashSecret } from "../lib/security.ts";
-import { boothEventStream } from "../lib/sse.ts";
+import { channelEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   createPaymentSchema,
@@ -284,8 +285,7 @@ ordersRoutes.openapi(
     });
     await publishBoothEvent(kiosk.boothId, {
       type: "order.created",
-      orderId: order.id,
-      kioskId: kiosk.id,
+      data: { orderId: order.id, kioskId: kiosk.id },
     });
     return c.json(order, 201);
   },
@@ -379,15 +379,12 @@ ordersRoutes.openapi(
     });
     await publishBoothEvent(kiosk.boothId, {
       type: "order.updated",
-      orderId,
-      kioskId: kiosk.id,
+      data: { orderId, kioskId: kiosk.id, status: "canceled" },
     });
     if (result.payment) {
       await publishBoothEvent(kiosk.boothId, {
         type: "payment.canceled",
-        paymentId: result.payment.id,
-        orderId,
-        kioskId: kiosk.id,
+        data: { paymentId: result.payment.id, orderId, kioskId: kiosk.id },
       });
     }
     return c.json(result.order, 200);
@@ -636,20 +633,25 @@ paymentCodesRoutes.openapi(
     });
     await publishBoothEvent(result.order.boothId, {
       type: "payment.completed",
-      paymentId: result.payment.id,
-      orderId: result.order.id,
-      kioskId: result.order.kioskId,
+      data: {
+        paymentId: result.payment.id,
+        orderId: result.order.id,
+        kioskId: result.order.kioskId,
+      },
     });
     await publishBoothEvent(result.order.boothId, {
       type: "order.updated",
-      orderId: result.order.id,
-      kioskId: result.order.kioskId,
+      data: {
+        orderId: result.order.id,
+        kioskId: result.order.kioskId,
+        status: "paid",
+      },
     });
     if (!result.replayed) {
       for (const productId of new Set(result.productIds)) {
         await publishBoothEvent(result.order.boothId, {
           type: "product.updated",
-          productId,
+          data: { productId },
         });
       }
     }
@@ -707,13 +709,13 @@ paymentsRoutes.get("/:id/events", requireKiosk, async (c) => {
     throw new NotFoundError("payment not found");
   }
 
-  return boothEventStream(c, {
-    boothId: kiosk.boothId,
+  return channelEventStream<BoothEvent>(c, {
+    subscribe: (handler) => subscribeBoothEvents(kiosk.boothId, handler),
     filter: (event) =>
       (event.type === "payment.completed" ||
         event.type === "payment.canceled" ||
         event.type === "payment.expired") &&
-      event.paymentId === paymentId,
+      event.data.paymentId === paymentId,
     shouldClose: () => true,
   });
 });

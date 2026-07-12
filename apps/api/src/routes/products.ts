@@ -78,7 +78,7 @@ productsRoutes.openapi(
     });
     await publishBoothEvent(updated.boothId, {
       type: "product.updated",
-      productId: updated.id,
+      data: { productId: updated.id },
     });
     return c.json(updated, 200);
   },
@@ -119,7 +119,7 @@ productsRoutes.openapi(
       .where(eq(products.id, productId));
     await publishBoothEvent(product.product.boothId, {
       type: "product.updated",
-      productId,
+      data: { productId },
     });
     return c.body(null, 204);
   },

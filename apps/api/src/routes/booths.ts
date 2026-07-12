@@ -1,3 +1,4 @@
+import type { BoothEvent } from "@flick/contract";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { and, asc, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 import {
@@ -20,13 +21,13 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "../lib/errors.ts";
-import { publishBoothEvent } from "../lib/events.ts";
+import { publishBoothEvent, subscribeBoothEvents } from "../lib/events.ts";
 import {
   loadProductOptions,
   optionsInputSchema,
   replaceProductOptions,
 } from "../lib/product-options.ts";
-import { boothEventStream } from "../lib/sse.ts";
+import { channelEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   boothKiosksSchema,
@@ -87,7 +88,9 @@ boothsRoutes.get("/:id/events", requireAuth, async (c) => {
   if (!owns && !user.isAdmin) {
     throw new ForbiddenError();
   }
-  return boothEventStream(c, { boothId });
+  return channelEventStream<BoothEvent>(c, {
+    subscribe: (handler) => subscribeBoothEvents(boothId, handler),
+  });
 });
 
 boothsRoutes.openapi(
@@ -476,7 +479,7 @@ boothsRoutes.openapi(
     });
     await publishBoothEvent(boothId, {
       type: "product.updated",
-      productId: created.id,
+      data: { productId: created.id },
     });
     return c.json(created, 201);
   },

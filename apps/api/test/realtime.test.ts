@@ -71,7 +71,7 @@ describe("event bus", () => {
     await new Promise((r) => setTimeout(r, 150));
     await publishBoothEvent("booth-x", {
       type: "product.updated",
-      productId: "p1",
+      data: { productId: "p1" },
     });
     await waitFor(() => (received.length > 0 ? received : undefined));
     unsub();
@@ -85,7 +85,7 @@ describe("event bus", () => {
     });
     await publishBoothEvent("booth-b", {
       type: "product.updated",
-      productId: "p1",
+      data: { productId: "p1" },
     });
     await new Promise((r) => setTimeout(r, 200));
     unsub();
@@ -143,7 +143,7 @@ describe("kiosk presence", () => {
     const received: boolean[] = [];
     const unsub = subscribeBoothEvents(boothId, (event) => {
       if (event.type === "kiosk.presence") {
-        received.push(event.online);
+        received.push(event.data.online);
       }
     });
     await new Promise((r) => setTimeout(r, 150));

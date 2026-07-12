@@ -1,3 +1,4 @@
+import type { BoothEvent } from "@flick/contract";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
 import {
@@ -21,9 +22,9 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "../lib/errors.ts";
-import { publishBoothEvent } from "../lib/events.ts";
+import { publishBoothEvent, subscribeBoothEvents } from "../lib/events.ts";
 import { generateSecret, hashSecret } from "../lib/security.ts";
-import { boothEventStream } from "../lib/sse.ts";
+import { channelEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   boothSchema,
@@ -244,12 +245,11 @@ kiosksRoutes.openapi(
     }
     await publishBoothEvent(updated.boothId, {
       type: "kiosk.revoked",
-      kioskId: updated.id,
+      data: { kioskId: updated.id },
     });
     await publishBoothEvent(updated.boothId, {
       type: "kiosk.presence",
-      kioskId: updated.id,
-      online: false,
+      data: { kioskId: updated.id, online: false },
     });
     return c.json(serializeKiosk(updated), 200);
   },
@@ -275,8 +275,7 @@ kiosksRoutes.openapi(
       .where(eq(kiosks.id, kiosk.id));
     await publishBoothEvent(kiosk.boothId, {
       type: "kiosk.presence",
-      kioskId: kiosk.id,
-      online: true,
+      data: { kioskId: kiosk.id, online: true },
     });
     return c.body(null, 204);
   },
@@ -284,8 +283,8 @@ kiosksRoutes.openapi(
 
 kiosksRoutes.get("/me/events", requireKiosk, (c) => {
   const kiosk = c.get("kiosk");
-  return boothEventStream(c, {
-    boothId: kiosk.boothId,
+  return channelEventStream<BoothEvent>(c, {
+    subscribe: (handler) => subscribeBoothEvents(kiosk.boothId, handler),
     filter: (event) => {
       switch (event.type) {
         case "product.updated":
@@ -295,16 +294,16 @@ kiosksRoutes.get("/me/events", requireKiosk, (c) => {
         case "payment.expired":
         case "order.created":
         case "order.updated":
-          return event.kioskId === kiosk.id;
+          return event.data.kioskId === kiosk.id;
         case "kiosk.presence":
         case "kiosk.revoked":
-          return event.kioskId === kiosk.id;
+          return event.data.kioskId === kiosk.id;
         default:
           return false;
       }
     },
     shouldClose: (event) =>
-      event.type === "kiosk.revoked" && event.kioskId === kiosk.id,
+      event.type === "kiosk.revoked" && event.data.kioskId === kiosk.id,
   });
 });
 
@@ -328,8 +327,7 @@ kiosksRoutes.openapi(
       .where(eq(kiosks.id, kiosk.id));
     await publishBoothEvent(kiosk.boothId, {
       type: "kiosk.presence",
-      kioskId: kiosk.id,
-      online: false,
+      data: { kioskId: kiosk.id, online: false },
     });
     return c.body(null, 204);
   },

@@ -1,20 +1,21 @@
+import type { ChannelEvent } from "@flick/contract";
 import type { Context } from "hono";
-import { type BoothEvent, subscribeBoothEvents } from "./events.ts";
 
 const HEARTBEAT_MS = 20_000;
 const MAX_LIFETIME_MS = 30 * 60 * 1000;
+const LIFETIME_JITTER_MS = 5 * 60 * 1000;
 
-type BoothStreamOptions = {
-  boothId: string;
-  filter?: (event: BoothEvent) => boolean;
+type ChannelStreamOptions<E extends ChannelEvent> = {
+  subscribe: (handler: (event: E) => void) => () => void;
+  filter?: (event: E) => boolean;
   onOpen?: () => void | Promise<void>;
   onClose?: () => void | Promise<void>;
-  shouldClose?: (event: BoothEvent) => boolean;
+  shouldClose?: (event: E) => boolean;
 };
 
-export function boothEventStream(
+export function channelEventStream<E extends ChannelEvent>(
   c: Context,
-  options: BoothStreamOptions,
+  options: ChannelStreamOptions<E>,
 ): Response {
   const encoder = new TextEncoder();
 
@@ -61,18 +62,21 @@ export function boothEventStream(
       enqueue("retry: 3000\n\n");
       enqueue(": connected\n\n");
 
-      unsubscribe = subscribeBoothEvents(options.boothId, (event) => {
+      unsubscribe = options.subscribe((event) => {
         if (options.filter && !options.filter(event)) {
           return;
         }
-        enqueue(`data: ${JSON.stringify(event)}\n\n`);
+        enqueue(`id: ${event.id}\ndata: ${JSON.stringify(event)}\n\n`);
         if (options.shouldClose?.(event)) {
           close();
         }
       });
 
       heartbeat = setInterval(() => enqueue(": ping\n\n"), HEARTBEAT_MS);
-      maxLifetime = setTimeout(close, MAX_LIFETIME_MS);
+      maxLifetime = setTimeout(
+        close,
+        MAX_LIFETIME_MS + Math.floor(Math.random() * LIFETIME_JITTER_MS),
+      );
 
       c.req.raw.signal.addEventListener("abort", close);
       void options.onOpen?.();

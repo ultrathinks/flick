@@ -1,38 +1,34 @@
+import { randomUUID } from "node:crypto";
+import type {
+  AdminEvent,
+  BoothEvent,
+  ChannelEvent,
+  UserEvent,
+} from "@flick/contract";
 import { Redis } from "ioredis";
 import { loadConfig } from "../config.ts";
 import { logger } from "./logger.ts";
 
-export type BoothEvent =
-  | { type: "order.created"; orderId: string; kioskId: string | null }
-  | { type: "order.updated"; orderId: string; kioskId: string | null }
-  | {
-      type: "payment.completed";
-      paymentId: string;
-      orderId: string;
-      kioskId: string | null;
-    }
-  | {
-      type: "payment.canceled";
-      paymentId: string;
-      orderId: string;
-      kioskId: string | null;
-    }
-  | {
-      type: "payment.expired";
-      paymentId: string;
-      orderId: string;
-      kioskId: string | null;
-    }
-  | { type: "product.updated"; productId: string }
-  | { type: "kiosk.presence"; kioskId: string; online: boolean }
-  | { type: "kiosk.revoked"; kioskId: string };
+type EventInput<E> = E extends { type: infer T; data: infer D }
+  ? { type: T; data: D }
+  : never;
 
-type Handler = (event: BoothEvent) => void;
+export type BoothEventInput = EventInput<BoothEvent>;
+export type UserEventInput = EventInput<UserEvent>;
+export type AdminEventInput = EventInput<AdminEvent>;
 
-const CHANNEL_PREFIX = "booth:";
+type Handler = (event: ChannelEvent) => void;
 
-function channelFor(boothId: string): string {
-  return `${CHANNEL_PREFIX}${boothId}`;
+const BOOTH_PREFIX = "booth:";
+const USER_PREFIX = "user:";
+const ADMIN_CHANNEL = "admin";
+
+function boothChannel(boothId: string): string {
+  return `${BOOTH_PREFIX}${boothId}`;
+}
+
+function userChannel(userId: string): string {
+  return `${USER_PREFIX}${userId}`;
 }
 
 let publisher: Redis | null | undefined;
@@ -63,9 +59,9 @@ function getSubscriber(): Redis {
       if (!set || set.size === 0) {
         return;
       }
-      let event: BoothEvent;
+      let event: ChannelEvent;
       try {
-        event = JSON.parse(payload) as BoothEvent;
+        event = JSON.parse(payload) as ChannelEvent;
       } catch {
         return;
       }
@@ -73,7 +69,7 @@ function getSubscriber(): Redis {
         try {
           handler(event);
         } catch (err) {
-          logger.error({ err }, "booth event handler failed");
+          logger.error({ err }, "channel event handler failed");
         }
       }
     });
@@ -82,22 +78,29 @@ function getSubscriber(): Redis {
   return subscriber;
 }
 
-export async function publishBoothEvent(
-  boothId: string,
-  event: BoothEvent,
+async function publish(
+  channel: string,
+  input: { type: string; data: unknown },
 ): Promise<void> {
+  const event = {
+    v: 1 as const,
+    id: randomUUID(),
+    ts: new Date().toISOString(),
+    type: input.type,
+    data: input.data,
+  };
   try {
-    await getPublisher().publish(channelFor(boothId), JSON.stringify(event));
+    await getPublisher().publish(channel, JSON.stringify(event));
   } catch (err) {
-    logger.error({ err }, "failed to publish booth event");
+    logger.error({ err, channel }, "failed to publish event");
   }
 }
 
-export function subscribeBoothEvents(
-  boothId: string,
-  handler: Handler,
+function subscribe<E extends ChannelEvent>(
+  channel: string,
+  handler: (event: E) => void,
 ): () => void {
-  const channel = channelFor(boothId);
+  const typedHandler = handler as Handler;
   let set = handlers.get(channel);
   if (!set) {
     set = new Set();
@@ -105,30 +108,68 @@ export function subscribeBoothEvents(
     getSubscriber()
       .subscribe(channel)
       .catch((err) => {
-        logger.error({ err }, "failed to subscribe to booth channel");
+        logger.error({ err, channel }, "failed to subscribe to channel");
         const current = handlers.get(channel);
         if (current && current.size === 0) {
           handlers.delete(channel);
         }
       });
   }
-  set.add(handler);
+  set.add(typedHandler);
 
   return () => {
     const current = handlers.get(channel);
     if (!current) {
       return;
     }
-    current.delete(handler);
+    current.delete(typedHandler);
     if (current.size === 0) {
       handlers.delete(channel);
       getSubscriber()
         .unsubscribe(channel)
         .catch((err) => {
-          logger.error({ err }, "failed to unsubscribe from booth channel");
+          logger.error({ err, channel }, "failed to unsubscribe from channel");
         });
     }
   };
+}
+
+export function publishBoothEvent(
+  boothId: string,
+  input: BoothEventInput,
+): Promise<void> {
+  return publish(boothChannel(boothId), input);
+}
+
+export function publishUserEvent(
+  userId: string,
+  input: UserEventInput,
+): Promise<void> {
+  return publish(userChannel(userId), input);
+}
+
+export function publishAdminEvent(input: AdminEventInput): Promise<void> {
+  return publish(ADMIN_CHANNEL, input);
+}
+
+export function subscribeBoothEvents(
+  boothId: string,
+  handler: (event: BoothEvent) => void,
+): () => void {
+  return subscribe(boothChannel(boothId), handler);
+}
+
+export function subscribeUserEvents(
+  userId: string,
+  handler: (event: UserEvent) => void,
+): () => void {
+  return subscribe(userChannel(userId), handler);
+}
+
+export function subscribeAdminEvents(
+  handler: (event: AdminEvent) => void,
+): () => void {
+  return subscribe(ADMIN_CHANNEL, handler);
 }
 
 export async function closeEvents(): Promise<void> {
