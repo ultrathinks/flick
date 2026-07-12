@@ -17,7 +17,6 @@ import {
   getPosDauthConfig,
 } from "../config.ts";
 import { UnauthorizedError } from "../lib/errors.ts";
-import { rateLimit } from "../lib/rate-limit.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import { sessionSchema } from "../openapi/schemas.ts";
 
@@ -42,14 +41,12 @@ authRoutes.openapi(
     method: "post",
     path: "/app",
     tags: ["auth"],
-    middleware: [rateLimit(20, "auth:app")] as const,
     request: {
       body: { content: { "application/json": { schema: appSchema } } },
     },
     responses: {
       200: jsonContent(sessionSchema, "Issued session"),
       401: errorResponse("Unauthorized"),
-      429: errorResponse("Too many requests"),
     },
   }),
   async (c) => {
@@ -62,17 +59,12 @@ authRoutes.openapi(
   },
 );
 
-function pkceRoute(
-  path: string,
-  rateLimitKey: string,
-  config: () => DauthConfig,
-) {
+function pkceRoute(path: string, config: () => DauthConfig) {
   return authRoutes.openapi(
     createRoute({
       method: "post",
       path,
       tags: ["auth"],
-      middleware: [rateLimit(20, rateLimitKey)] as const,
       request: {
         body: { content: { "application/json": { schema: dauthSchema } } },
       },
@@ -80,7 +72,6 @@ function pkceRoute(
         200: jsonContent(sessionSchema, "Issued session"),
         400: errorResponse("Bad request"),
         401: errorResponse("Unauthorized"),
-        429: errorResponse("Too many requests"),
       },
     }),
     async (c) => {
@@ -97,22 +88,20 @@ function pkceRoute(
   );
 }
 
-pkceRoute("/pos", "auth:pos", getPosDauthConfig);
-pkceRoute("/admin", "auth:admin", getAdminDauthConfig);
+pkceRoute("/pos", getPosDauthConfig);
+pkceRoute("/admin", getAdminDauthConfig);
 
 authRoutes.openapi(
   createRoute({
     method: "post",
     path: "/refresh",
     tags: ["auth"],
-    middleware: [rateLimit(30, "auth:refresh")] as const,
     request: {
       body: { content: { "application/json": { schema: refreshSchema } } },
     },
     responses: {
       200: jsonContent(sessionSchema, "Rotated session"),
       401: errorResponse("Unauthorized"),
-      429: errorResponse("Too many requests"),
     },
   }),
   async (c) => {

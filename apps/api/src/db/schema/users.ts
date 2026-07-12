@@ -1,7 +1,8 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  check,
   index,
   pgTable,
   text,
@@ -35,6 +36,7 @@ export const users = pgTable(
       table.createdAt.desc(),
       table.id.desc(),
     ),
+    check("users_balance_non_negative", sql`${table.balance} >= 0`),
   ],
 );
 

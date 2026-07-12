@@ -17,14 +17,13 @@ import {
   users,
 } from "../db/schema/index.ts";
 import { MAX_TRANSACTION_AMOUNT } from "../lib/constants.ts";
-import { isUniqueViolation } from "../lib/db-errors.ts";
+import { isForeignKeyViolation, isUniqueViolation } from "../lib/db-errors.ts";
 import {
   BadRequestError,
   ConflictError,
   ForbiddenError,
   NotFoundError,
 } from "../lib/errors.ts";
-import { rateLimit } from "../lib/rate-limit.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   refundSchema,
@@ -52,7 +51,7 @@ moneyRoutes.openapi(
     path: "/user-codes/resolve",
     tags: ["money"],
     security: [{ Bearer: [] }],
-    middleware: [requireAdmin, rateLimit(60, "user-codes:resolve")] as const,
+    middleware: [requireAdmin] as const,
     request: {
       body: { content: { "application/json": { schema: resolveSchema } } },
     },
@@ -61,7 +60,6 @@ moneyRoutes.openapi(
       401: errorResponse("Unauthorized"),
       403: errorResponse("Forbidden"),
       404: errorResponse("Not found"),
-      429: errorResponse("Too many requests"),
     },
   }),
   async (c) => {
@@ -107,71 +105,58 @@ moneyRoutes.openapi(
   async (c) => {
     const admin = c.get("user");
     const body = c.req.valid("json");
-    const result = await getDb().transaction(async (tx) => {
-      const [existing] = await tx
-        .select()
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.adminId, admin.id),
-            eq(transactions.idempotencyKey, body.idempotencyKey),
-          ),
-        )
-        .limit(1);
-      if (existing) {
-        return existing;
-      }
-      const [user] = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, body.userId));
-      if (!user) {
+    try {
+      const result = await getDb().transaction(async (tx) => {
+        const [inserted] = await tx
+          .insert(transactions)
+          .values({
+            userId: body.userId,
+            amount: body.amount,
+            type: "charge",
+            adminId: admin.id,
+            idempotencyKey: body.idempotencyKey,
+          })
+          .onConflictDoNothing()
+          .returning();
+        if (!inserted) {
+          const [existing] = await tx
+            .select()
+            .from(transactions)
+            .where(
+              and(
+                eq(transactions.adminId, admin.id),
+                eq(transactions.idempotencyKey, body.idempotencyKey),
+              ),
+            )
+            .limit(1);
+          if (!existing) {
+            throw new Error("charge conflict without an existing transaction");
+          }
+          return existing;
+        }
+        await tx
+          .update(users)
+          .set({
+            balance: sql<number>`${users.balance} + ${body.amount}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, body.userId));
+        await tx.insert(auditLogs).values({
+          actorId: admin.id,
+          action: "charge.create",
+          targetType: "user",
+          targetId: body.userId,
+          metadata: { amount: body.amount },
+        });
+        return inserted;
+      });
+      return c.json(serializeTransaction(result), 201);
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
         throw new NotFoundError("user not found");
       }
-      const [transaction] = await tx
-        .insert(transactions)
-        .values({
-          userId: body.userId,
-          amount: body.amount,
-          type: "charge",
-          adminId: admin.id,
-          idempotencyKey: body.idempotencyKey,
-        })
-        .onConflictDoNothing()
-        .returning();
-      if (!transaction) {
-        const [raced] = await tx
-          .select()
-          .from(transactions)
-          .where(
-            and(
-              eq(transactions.adminId, admin.id),
-              eq(transactions.idempotencyKey, body.idempotencyKey),
-            ),
-          )
-          .limit(1);
-        if (raced) {
-          return raced;
-        }
-        throw new Error("failed to create charge");
-      }
-      await tx
-        .update(users)
-        .set({
-          balance: sql<number>`${users.balance} + ${body.amount}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, body.userId));
-      await tx.insert(auditLogs).values({
-        actorId: admin.id,
-        action: "charge.create",
-        targetType: "user",
-        targetId: body.userId,
-        metadata: { amount: body.amount },
-      });
-      return transaction;
-    });
-    return c.json(serializeTransaction(result), 201);
+      throw error;
+    }
   },
 );
 
