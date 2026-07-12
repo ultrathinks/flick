@@ -8,7 +8,7 @@ export const CARD_THEMES: [CardTheme, ...CardTheme[]] = [
     label: "블랙",
     background:
       "linear-gradient(135deg, #3a3a3a 0%, #202020 55%, #131313 100%)",
-    image: "1.png",
+    image: "1.avif",
     textColor: "light",
     watermark: { variant: "deboss-dark" },
   },
@@ -17,7 +17,7 @@ export const CARD_THEMES: [CardTheme, ...CardTheme[]] = [
     label: "티타늄",
     background:
       "linear-gradient(135deg, #4a515a 0%, #363b42 55%, #24272d 100%)",
-    image: "2.png",
+    image: "2.avif",
     textColor: "light",
     watermark: { variant: "emboss-light" },
   },
@@ -26,7 +26,7 @@ export const CARD_THEMES: [CardTheme, ...CardTheme[]] = [
     label: "테디",
     background:
       "linear-gradient(135deg, #fce3c4 0%, #f8d4a8 55%, #f2c489 100%)",
-    image: "3.png",
+    image: "3.avif",
     textColor: "dark",
     watermark: { variant: "soft-pastel" },
   },
