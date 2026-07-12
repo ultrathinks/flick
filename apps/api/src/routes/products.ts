@@ -17,7 +17,6 @@ import { productWithOptionsSchema } from "../openapi/schemas.ts";
 const productPatchSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional(),
   price: z.number().int().positive().max(MAX_PRODUCT_PRICE).optional(),
   stock: z.number().int().min(0).nullable().optional(),
   status: z.enum(["available", "soldout", "hidden"]).optional(),

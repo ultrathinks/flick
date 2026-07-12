@@ -4,20 +4,13 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import sharp from "sharp";
 import { getS3Config } from "../config.ts";
 
-const PRESIGN_TTL_SECONDS = 300;
-
-const EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-};
-
-export const ALLOWED_UPLOAD_CONTENT_TYPES = Object.keys(
-  EXTENSION_BY_CONTENT_TYPE,
-);
+const MAX_IMAGE_DIMENSION = 1024;
+const WEBP_QUALITY = 80;
+const LIMIT_INPUT_PIXELS = 24_000_000;
+const IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 let client: S3Client | null = null;
 
@@ -37,32 +30,52 @@ function getClient(): S3Client {
   return client;
 }
 
-export function isAllowedContentType(contentType: string): boolean {
-  return contentType in EXTENSION_BY_CONTENT_TYPE;
+export function isSupportedImage(input: Buffer): boolean {
+  const isPng =
+    input[0] === 0x89 &&
+    input[1] === 0x50 &&
+    input[2] === 0x4e &&
+    input[3] === 0x47;
+  const isJpeg = input[0] === 0xff && input[1] === 0xd8 && input[2] === 0xff;
+  const isWebp =
+    input[0] === 0x52 &&
+    input[1] === 0x49 &&
+    input[2] === 0x46 &&
+    input[3] === 0x46 &&
+    input[8] === 0x57 &&
+    input[9] === 0x45 &&
+    input[10] === 0x42 &&
+    input[11] === 0x50;
+  return isPng || isJpeg || isWebp;
 }
 
-export async function presignUpload(params: {
+export async function processAndUploadImage(params: {
   kind: "booth" | "product";
   targetId: string;
-  contentType: string;
-}): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
+  input: Buffer;
+}): Promise<string> {
   const config = getS3Config();
-  const extension = EXTENSION_BY_CONTENT_TYPE[params.contentType];
-  if (!extension) {
-    throw new Error(`unsupported content type: ${params.contentType}`);
-  }
-  const key = `${params.kind}/${params.targetId}/${randomUUID()}.${extension}`;
-  const uploadUrl = await getSignedUrl(
-    getClient(),
+  const processed = await sharp(params.input, {
+    limitInputPixels: LIMIT_INPUT_PIXELS,
+  })
+    .rotate()
+    .resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, {
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: WEBP_QUALITY })
+    .toBuffer();
+  const key = `${params.kind}/${params.targetId}/${randomUUID()}.webp`;
+  await getClient().send(
     new PutObjectCommand({
       Bucket: config.bucket,
       Key: key,
-      ContentType: params.contentType,
+      Body: processed,
+      ContentType: "image/webp",
+      CacheControl: IMAGE_CACHE_CONTROL,
     }),
-    { expiresIn: PRESIGN_TTL_SECONDS },
   );
-  const publicUrl = `${config.publicBaseUrl.replace(/\/$/, "")}/${key}`;
-  return { uploadUrl, publicUrl, key };
+  return `${config.publicBaseUrl.replace(/\/$/, "")}/${key}`;
 }
 
 export async function checkStorage(): Promise<void> {

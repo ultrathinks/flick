@@ -45,13 +45,11 @@ import { createKioskPairing } from "./kiosks.ts";
 const boothBodySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional(),
 });
 
 const productBodySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional(),
   price: z.number().int().positive().max(MAX_PRODUCT_PRICE),
   stock: z.number().int().min(0).nullable().optional(),
   status: z.enum(["available", "soldout", "hidden"]).optional(),
