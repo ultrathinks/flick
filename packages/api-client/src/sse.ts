@@ -7,9 +7,13 @@ export interface SseEvent {
   data: unknown;
 }
 
+export type SseHeaders =
+  | Record<string, string>
+  | (() => Record<string, string> | undefined);
+
 export interface OpenSseOptions {
   url: string;
-  headers?: Record<string, string>;
+  headers?: SseHeaders;
   onEvent: (event: SseEvent) => void;
   onOpen?: () => void;
   onStatus?: (status: SseStatus) => void;
@@ -135,7 +139,12 @@ export function openSse(options: OpenSseOptions): SseHandle {
     }
     setStatus("connecting");
     try {
-      const response = await fetch(url, { headers, signal: controller.signal });
+      const resolvedHeaders =
+        typeof headers === "function" ? headers() : headers;
+      const response = await fetch(url, {
+        headers: resolvedHeaders,
+        signal: controller.signal,
+      });
       if (!response.ok || !response.body) {
         if (await isRevoked(response)) {
           return;
