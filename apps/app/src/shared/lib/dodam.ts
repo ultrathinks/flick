@@ -1,6 +1,6 @@
 const TOKEN_QUERY_KEYS = ["token", "accessToken", "dodamToken"] as const;
 
-export function readDodamTokenFromUrl(): string | null {
+function readTokenFromUrl(): string | null {
   const params = new URLSearchParams(window.location.search);
   for (const key of TOKEN_QUERY_KEYS) {
     const value = params.get(key);
@@ -11,7 +11,7 @@ export function readDodamTokenFromUrl(): string | null {
   return null;
 }
 
-export function clearDodamTokenFromUrl(): void {
+function stripTokenFromUrl(): void {
   const url = new URL(window.location.href);
   let changed = false;
   for (const key of TOKEN_QUERY_KEYS) {
@@ -23,4 +23,20 @@ export function clearDodamTokenFromUrl(): void {
   if (changed) {
     window.history.replaceState(null, "", url.toString());
   }
+}
+
+let capturedToken: string | null | undefined;
+
+export function takeDodamTokenFromUrl(): string | null {
+  if (capturedToken === undefined) {
+    capturedToken = readTokenFromUrl();
+    if (capturedToken) {
+      stripTokenFromUrl();
+    }
+  }
+  return capturedToken;
+}
+
+export function forgetDodamToken(): void {
+  capturedToken = null;
 }

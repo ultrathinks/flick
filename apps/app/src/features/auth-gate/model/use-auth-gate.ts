@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   exchangeDodamToken,
@@ -5,54 +6,69 @@ import {
   subscribeSessionCleared,
   writeTokens,
 } from "@/entities/session";
-import { clearDodamTokenFromUrl, readDodamTokenFromUrl } from "@/shared/lib";
+import { fetchMe, meQueryKey } from "@/entities/user";
+import { forgetDodamToken, takeDodamTokenFromUrl } from "@/shared/lib";
 
 type Status = "checking" | "authenticated" | "unauthenticated" | "error";
 
 export function useAuthGate() {
-  const [status, setStatus] = useState<Status>(() =>
-    readTokens() ? "authenticated" : "checking",
-  );
-  const exchanging = useRef(false);
+  const queryClient = useQueryClient();
+  const [status, setStatus] = useState<Status>("checking");
+  const statusRef = useRef(status);
+  statusRef.current = status;
+  const resolving = useRef(false);
 
-  const exchange = useCallback(async (dodamToken: string) => {
-    if (exchanging.current) {
+  const resolve = useCallback(async () => {
+    if (resolving.current) {
       return;
     }
-    exchanging.current = true;
+    resolving.current = true;
+    setStatus("checking");
     try {
-      const session = await exchangeDodamToken(dodamToken);
-      writeTokens(session);
-      clearDodamTokenFromUrl();
-      setStatus("authenticated");
-    } catch {
-      setStatus("error");
+      const dodamToken = takeDodamTokenFromUrl();
+
+      if (readTokens()) {
+        const me = await fetchMe().catch(() => null);
+        if (me) {
+          queryClient.setQueryData(meQueryKey, me);
+          setStatus("authenticated");
+          return;
+        }
+      }
+
+      if (dodamToken) {
+        const session = await exchangeDodamToken(dodamToken).catch(() => null);
+        if (session) {
+          writeTokens(session);
+          forgetDodamToken();
+          setStatus("authenticated");
+        } else {
+          setStatus("error");
+        }
+        return;
+      }
+
+      setStatus(readTokens() ? "error" : "unauthenticated");
     } finally {
-      exchanging.current = false;
+      resolving.current = false;
     }
-  }, []);
+  }, [queryClient]);
+
+  useEffect(() => {
+    void resolve();
+  }, [resolve]);
 
   useEffect(() => {
     return subscribeSessionCleared(() => {
-      setStatus("unauthenticated");
+      if (statusRef.current === "authenticated") {
+        setStatus("unauthenticated");
+      }
     });
   }, []);
 
-  useEffect(() => {
-    if (status !== "checking") {
-      return;
-    }
-    const urlToken = readDodamTokenFromUrl();
-    if (urlToken) {
-      void exchange(urlToken);
-      return;
-    }
-    setStatus(readTokens() ? "authenticated" : "unauthenticated");
-  }, [status, exchange]);
-
   const retry = useCallback(() => {
-    setStatus("checking");
-  }, []);
+    void resolve();
+  }, [resolve]);
 
   return { status, retry };
 }
