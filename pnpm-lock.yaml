@@ -333,6 +333,9 @@ importers:
 
   apps/pos:
     dependencies:
+      '@flick/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@flick/contract':
         specifier: workspace:*
         version: link:../../packages/contract
@@ -8376,9 +8379,7 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.85.3': {}
 

@@ -1,3 +1,6 @@
+import { createRequest } from "@flick/api-client";
+import { api } from "./client.ts";
+
+export { ApiError, type ApiErrorBody } from "@flick/api-client";
 export { api } from "./client.ts";
-export { ApiError, type ApiErrorBody } from "./errors.ts";
-export { request, requestVoid } from "./request.ts";
+export const { request, requestVoid } = createRequest(api);

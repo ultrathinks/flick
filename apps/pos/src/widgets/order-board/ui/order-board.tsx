@@ -1,9 +1,9 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreditCard, Receipt, Wallet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { Booth } from "@/entities/booth";
+import { type Booth, fetchBoothSales } from "@/entities/booth";
 import { type Order, type OrderStatus, useBoothOrders } from "@/entities/order";
 import { useRefund } from "@/features/refund";
 import { useBoothEvents } from "@/shared/api/use-booth-events.ts";
@@ -73,6 +73,11 @@ function OrderCard({
 
 export function OrderBoard({ booth }: { booth: Booth }) {
   const orders = useBoothOrders(booth.id);
+  const sales = useQuery({
+    queryKey: ["booth-sales", booth.id],
+    queryFn: () => fetchBoothSales(booth.id),
+    refetchInterval: 30_000,
+  });
   const refund = useRefund(booth.id);
   const confirm = useConfirm();
   const toast = useToast();
@@ -85,20 +90,29 @@ export function OrderBoard({ booth }: { booth: Booth }) {
         event.type === "order.created" ||
         event.type === "order.updated" ||
         event.type === "payment.completed" ||
-        event.type === "payment.canceled" ||
-        event.type === "payment.expired"
+        event.type === "payment.canceled"
       ) {
         queryClient.invalidateQueries({ queryKey: ["orders", booth.id] });
+        queryClient.invalidateQueries({ queryKey: ["booth-sales", booth.id] });
+      }
+      if (event.type === "order.created") {
+        toast.success(
+          `새 주문: ${event.data.items
+            .map((i) => `${i.name} ${i.quantity}`)
+            .join(", ")}`,
+        );
       }
     },
     onReconnect: () => {
       queryClient.invalidateQueries({ queryKey: ["orders", booth.id] });
+      queryClient.invalidateQueries({ queryKey: ["booth-sales", booth.id] });
     },
   });
 
   useEffect(() => {
     const timer = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["orders", booth.id] });
+      queryClient.invalidateQueries({ queryKey: ["booth-sales", booth.id] });
     }, 30_000);
     return () => clearInterval(timer);
   }, [booth.id, queryClient]);
@@ -117,12 +131,11 @@ export function OrderBoard({ booth }: { booth: Booth }) {
     });
   }
 
-  const summary = useMemo(() => {
-    const rows = orders.data ?? [];
-    const paid = rows.filter((o) => o.status === "paid");
-    const revenue = paid.reduce((sum, o) => sum + o.totalAmount, 0);
-    return { total: rows.length, paidCount: paid.length, revenue };
-  }, [orders.data]);
+  const summary = {
+    total: orders.data?.length ?? 0,
+    paidCount: sales.data?.paidCount ?? 0,
+    revenue: sales.data?.paidRevenue ?? 0,
+  };
 
   const filtered = useMemo(() => {
     const rows = orders.data ?? [];

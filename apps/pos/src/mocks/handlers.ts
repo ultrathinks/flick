@@ -174,7 +174,20 @@ export function createHandlers(base: string) {
       });
     }),
 
-    http.get(url("booths/:boothId/orders"), () => HttpResponse.json(orders)),
+    http.get(url("booths/:boothId/orders"), () =>
+      HttpResponse.json({ items: orders, nextCursor: null }),
+    ),
+
+    http.get(url("booths/:boothId/sales"), () => {
+      const paid = orders.filter((o) => o.status === "paid");
+      const refunded = orders.filter((o) => o.status === "refunded");
+      return HttpResponse.json({
+        paidCount: paid.length,
+        paidRevenue: paid.reduce((sum, o) => sum + o.totalAmount, 0),
+        refundedCount: refunded.length,
+        refundedRevenue: refunded.reduce((sum, o) => sum + o.totalAmount, 0),
+      });
+    }),
 
     http.post(url("uploads/presign"), () =>
       HttpResponse.json({

@@ -200,7 +200,11 @@ export function KioskManager({
 
   useBoothEvents(booth.id, {
     onEvent: (event) => {
-      if (event.type === "kiosk.presence" || event.type === "kiosk.revoked") {
+      if (
+        event.type === "kiosk.presence" ||
+        event.type === "kiosk.revoked" ||
+        event.type === "kiosk.paired"
+      ) {
         queryClient.invalidateQueries({ queryKey: ["kiosks", booth.id] });
       }
     },
