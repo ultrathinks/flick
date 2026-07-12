@@ -1,5 +1,7 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool, types } from "pg";
+import { loadConfig } from "../config.ts";
+import { logger } from "../lib/logger.ts";
 import * as schema from "./schema/index.ts";
 
 types.setTypeParser(types.builtins.INT8, (value) => Number(value));
@@ -10,13 +12,12 @@ let db: NodePgDatabase<typeof schema> | undefined;
 
 function getPool(): Pool {
   if (!pool) {
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) {
-      throw new Error("DATABASE_URL is not set");
-    }
-    pool = new Pool({ connectionString });
+    pool = new Pool({
+      connectionString: loadConfig().DATABASE_URL,
+      options: "-c default_transaction_isolation=read\\ committed",
+    });
     pool.on("error", (err) => {
-      console.error("pg pool error on idle client", err);
+      logger.error({ err }, "pg pool error on idle client");
     });
   }
   return pool;

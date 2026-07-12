@@ -11,6 +11,7 @@ import {
 } from "../config.ts";
 import type { NewUser } from "../db/schema/index.ts";
 import { AppError } from "../lib/errors.ts";
+import { logger } from "../lib/logger.ts";
 
 const DODAM_REQUEST_TIMEOUT_MS = 10_000;
 
@@ -67,7 +68,7 @@ async function dodamFetch(
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    console.error(`[dodam] ${context} request_failed reason=${reason}`);
+    logger.error({ context, reason }, "dodam request failed");
     throw new DodamError(`Dodam ${context} request failed`);
   }
 }
@@ -80,7 +81,10 @@ async function ensureOk(
     return response;
   }
   const body = await response.text().catch(() => "");
-  console.error(`[dodam] ${context} status=${response.status} body=${body}`);
+  logger.error(
+    { context, status: response.status, body },
+    "dodam non-ok response",
+  );
   throw new DodamError(
     `Dodam ${context} failed`,
     response.status === 401 ? 401 : 400,
@@ -95,8 +99,9 @@ async function parseJson<T>(
   const json: unknown = await response.json().catch(() => null);
   const result = schema.safeParse(json);
   if (!result.success) {
-    console.error(
-      `[dodam] ${context} invalid_response issues=${JSON.stringify(result.error.issues)}`,
+    logger.error(
+      { context, issues: result.error.issues },
+      "dodam invalid response",
     );
     throw new DodamError(`Dodam ${context} returned an unexpected response`);
   }

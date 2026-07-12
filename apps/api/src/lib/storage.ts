@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  HeadBucketCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getS3Config } from "../config.ts";
 
@@ -59,4 +63,9 @@ export async function presignUpload(params: {
   );
   const publicUrl = `${config.publicBaseUrl.replace(/\/$/, "")}/${key}`;
   return { uploadUrl, publicUrl, key };
+}
+
+export async function checkStorage(): Promise<void> {
+  const config = getS3Config();
+  await getClient().send(new HeadBucketCommand({ Bucket: config.bucket }));
 }
