@@ -1,4 +1,5 @@
 const configDefaults: Record<string, string> = {
+  REDIS_URL: "redis://localhost:6379",
   CORS_ORIGIN: "http://localhost:3001,http://localhost:3002",
   DAUTH_CLIENT_ID: "test-app-client",
   DAUTH_CLIENT_SECRET: "test-app-secret",

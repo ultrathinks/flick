@@ -49,18 +49,14 @@ export async function runPreflight(): Promise<void> {
     await getDb().execute(sql`select 1`);
   });
 
-  await withRetry("storage", async () => {
-    await checkStorage();
+  await withRetry("redis", async () => {
+    await pingRedis(config.REDIS_URL);
   });
 
-  if (config.REDIS_URL) {
-    try {
-      await pingRedis(config.REDIS_URL);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      logger.warn(`preflight: redis ping failed (non-fatal): ${reason}`);
-    }
-  } else {
-    logger.warn("preflight: REDIS_URL not set — realtime events disabled");
+  try {
+    await checkStorage();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    logger.warn(`preflight: storage check failed (non-fatal): ${reason}`);
   }
 }
