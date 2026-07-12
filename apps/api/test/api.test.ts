@@ -1144,3 +1144,78 @@ describe("response field exposure", () => {
     }
   });
 });
+
+describe("booth sales aggregate (POS)", () => {
+  it("sums paid and refunded revenue server-side", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 10000 });
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 10 });
+
+    const a = await createOrderWithPayment(boothId, kioskId, productId, {
+      price: 1000,
+    });
+    const b = await createOrderWithPayment(boothId, kioskId, productId, {
+      price: 1000,
+    });
+    for (const order of [a, b]) {
+      await app.request(`/v1/payment-codes/${order.code}/confirm`, {
+        method: "POST",
+        headers: authHeaders(buyer.accessToken),
+      });
+    }
+    await app.request("/v1/refunds", {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ orderId: b.orderId }),
+    });
+
+    const res = await app.request(`/v1/booths/${boothId}/sales`, {
+      headers: authHeaders(owner.accessToken),
+    });
+    expect(res.status).toBe(200);
+    const sales = (await res.json()) as {
+      paidCount: number;
+      paidRevenue: number;
+      refundedCount: number;
+      refundedRevenue: number;
+    };
+    expect(sales.paidCount).toBe(1);
+    expect(sales.paidRevenue).toBe(1000);
+    expect(sales.refundedCount).toBe(1);
+    expect(sales.refundedRevenue).toBe(1000);
+  });
+
+  it("paginates booth orders with a cursor", async () => {
+    const owner = await createUser();
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 500, stock: 100 });
+    for (let i = 0; i < 3; i += 1) {
+      await createOrderWithPayment(boothId, kioskId, productId, { price: 500 });
+    }
+
+    const first = await app.request(`/v1/booths/${boothId}/orders?limit=2`, {
+      headers: authHeaders(owner.accessToken),
+    });
+    expect(first.status).toBe(200);
+    const firstBody = (await first.json()) as {
+      items: unknown[];
+      nextCursor: string | null;
+    };
+    expect(firstBody.items).toHaveLength(2);
+    expect(firstBody.nextCursor).not.toBeNull();
+
+    const second = await app.request(
+      `/v1/booths/${boothId}/orders?limit=2&cursor=${encodeURIComponent(
+        firstBody.nextCursor ?? "",
+      )}`,
+      { headers: authHeaders(owner.accessToken) },
+    );
+    const secondBody = (await second.json()) as {
+      items: unknown[];
+      nextCursor: string | null;
+    };
+    expect(secondBody.items).toHaveLength(1);
+    expect(secondBody.nextCursor).toBeNull();
+  });
+});
