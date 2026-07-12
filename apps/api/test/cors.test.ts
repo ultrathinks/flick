@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.ts";
-import { closeRedis } from "../src/lib/redis.ts";
+import { closeEvents } from "../src/lib/events.ts";
 import {
   createBoothWithKiosk,
   createOrderWithPayment,
@@ -16,7 +16,6 @@ beforeAll(() => {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL must be set for integration tests");
   }
-  process.env.CORS_ORIGIN = `${ALLOWED_ORIGIN},http://localhost:3002`;
 });
 
 beforeEach(async () => {
@@ -24,7 +23,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await closeRedis();
+  await closeEvents();
 });
 
 describe("cors", () => {

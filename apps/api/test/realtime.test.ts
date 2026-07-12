@@ -5,7 +5,6 @@ import {
   publishBoothEvent,
   subscribeBoothEvents,
 } from "../src/lib/events.ts";
-import { closeRedis } from "../src/lib/redis.ts";
 import {
   authHeaders,
   createBoothWithKiosk,
@@ -60,7 +59,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await closeEvents();
-  await closeRedis();
+  await closeEvents();
 });
 
 describe("event bus", () => {
