@@ -15,6 +15,9 @@ function getPool(): Pool {
     pool = new Pool({
       connectionString: loadConfig().DATABASE_URL,
       options: "-c default_transaction_isolation=read\\ committed",
+      max: 20,
+      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 10000,
     });
     pool.on("error", (err) => {
       logger.error({ err }, "pg pool error on idle client");
