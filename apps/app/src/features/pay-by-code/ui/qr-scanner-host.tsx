@@ -1,6 +1,10 @@
 import { AnimatePresence } from "framer-motion";
+import { lazy, Suspense } from "react";
 import { usePayByCode } from "../model/use-pay-by-code.tsx";
-import { QrScanner } from "./qr-scanner.tsx";
+
+const QrScanner = lazy(() =>
+  import("./qr-scanner.tsx").then((module) => ({ default: module.QrScanner })),
+);
 
 export const QrScannerHost = () => {
   const { scannerOpen, submitCode, closeScanner } = usePayByCode();
@@ -8,7 +12,9 @@ export const QrScannerHost = () => {
   return (
     <AnimatePresence>
       {scannerOpen && (
-        <QrScanner onDetect={submitCode} onClose={closeScanner} />
+        <Suspense fallback={null}>
+          <QrScanner onDetect={submitCode} onClose={closeScanner} />
+        </Suspense>
       )}
     </AnimatePresence>
   );
