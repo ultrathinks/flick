@@ -291,7 +291,6 @@ kiosksRoutes.get("/me/events", requireKiosk, (c) => {
           return true;
         case "payment.completed":
         case "payment.canceled":
-        case "payment.expired":
         case "order.created":
         case "order.updated":
           return event.data.kioskId === kiosk.id;

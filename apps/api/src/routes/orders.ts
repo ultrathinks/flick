@@ -721,31 +721,31 @@ paymentCodesRoutes.openapi(
         }
         throw error;
       });
-    await publishBoothEvent(result.order.boothId, {
-      type: "payment.completed",
-      data: {
-        paymentId: result.payment.id,
-        orderId: result.order.id,
-        kioskId: result.order.kioskId,
-      },
-    });
-    await publishBoothEvent(result.order.boothId, {
-      type: "order.updated",
-      data: {
-        orderId: result.order.id,
-        kioskId: result.order.kioskId,
-        status: "paid",
-      },
-    });
-    await publishAdminEvent({
-      type: "order.updated",
-      data: {
-        orderId: result.order.id,
-        boothId: result.order.boothId,
-        status: "paid",
-      },
-    });
     if (!result.replayed) {
+      await publishBoothEvent(result.order.boothId, {
+        type: "payment.completed",
+        data: {
+          paymentId: result.payment.id,
+          orderId: result.order.id,
+          kioskId: result.order.kioskId,
+        },
+      });
+      await publishBoothEvent(result.order.boothId, {
+        type: "order.updated",
+        data: {
+          orderId: result.order.id,
+          kioskId: result.order.kioskId,
+          status: "paid",
+        },
+      });
+      await publishAdminEvent({
+        type: "order.updated",
+        data: {
+          orderId: result.order.id,
+          boothId: result.order.boothId,
+          status: "paid",
+        },
+      });
       for (const productId of new Set(result.productIds)) {
         await publishBoothEvent(result.order.boothId, {
           type: "product.updated",
@@ -824,8 +824,7 @@ paymentsRoutes.get("/:id/events", requireKiosk, async (c) => {
     subscribe: (handler) => subscribeBoothEvents(kiosk.boothId, handler),
     filter: (event) =>
       (event.type === "payment.completed" ||
-        event.type === "payment.canceled" ||
-        event.type === "payment.expired") &&
+        event.type === "payment.canceled") &&
       event.data.paymentId === paymentId,
     shouldClose: () => true,
   });

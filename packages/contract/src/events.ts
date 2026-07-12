@@ -22,7 +22,7 @@ export type BoothEvent =
       { orderId: string; kioskId: string | null; status: OrderStatus }
     >
   | EventEnvelope<
-      "payment.completed" | "payment.canceled" | "payment.expired",
+      "payment.completed" | "payment.canceled",
       {
         paymentId: string;
         orderId: string;
