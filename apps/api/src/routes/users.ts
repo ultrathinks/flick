@@ -1,8 +1,11 @@
+import type { UserEvent } from "@flick/contract";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { desc, eq } from "drizzle-orm";
 import { type AuthVariables, requireAuth } from "../auth/middleware.ts";
 import { getDb } from "../db/index.ts";
 import { transactions } from "../db/schema/index.ts";
+import { subscribeUserEvents } from "../lib/events.ts";
+import { channelEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   meSchema,
@@ -82,3 +85,10 @@ usersRoutes.openapi(
     return c.json({ code: c.get("user").code }, 200);
   },
 );
+
+usersRoutes.get("/me/events", requireAuth, (c) => {
+  const user = c.get("user");
+  return channelEventStream<UserEvent>(c, {
+    subscribe: (handler) => subscribeUserEvents(user.id, handler),
+  });
+});

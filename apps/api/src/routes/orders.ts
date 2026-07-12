@@ -31,7 +31,12 @@ import {
   PaymentExpiredError,
   PaymentNotPendingError,
 } from "../lib/errors.ts";
-import { publishBoothEvent, subscribeBoothEvents } from "../lib/events.ts";
+import {
+  publishAdminEvent,
+  publishBoothEvent,
+  publishUserEvent,
+  subscribeBoothEvents,
+} from "../lib/events.ts";
 import { hashSecret } from "../lib/security.ts";
 import { channelEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
@@ -545,6 +550,8 @@ paymentCodesRoutes.openapi(
           order: row.order,
           payment: row.payment,
           productIds: [],
+          transactionId: null,
+          balance: null,
           replayed: true,
         };
       }
@@ -605,13 +612,14 @@ paymentCodesRoutes.openapi(
       if (!transaction) {
         throw new Error("failed to create transaction");
       }
-      await tx
+      const [updatedBuyer] = await tx
         .update(users)
         .set({
           balance: sql<number>`${users.balance} - ${row.order.totalAmount}`,
           updatedAt: now,
         })
-        .where(eq(users.id, user.id));
+        .where(eq(users.id, user.id))
+        .returning({ balance: users.balance });
       const [order] = await tx
         .update(orders)
         .set({ status: "paid", buyerId: user.id, paidAt: now })
@@ -628,6 +636,8 @@ paymentCodesRoutes.openapi(
         order,
         payment: row.payment,
         productIds: items.map((item) => item.productId),
+        transactionId: transaction.id,
+        balance: updatedBuyer?.balance ?? null,
         replayed: false,
       };
     });
@@ -647,6 +657,14 @@ paymentCodesRoutes.openapi(
         status: "paid",
       },
     });
+    await publishAdminEvent({
+      type: "order.updated",
+      data: {
+        orderId: result.order.id,
+        boothId: result.order.boothId,
+        status: "paid",
+      },
+    });
     if (!result.replayed) {
       for (const productId of new Set(result.productIds)) {
         await publishBoothEvent(result.order.boothId, {
@@ -654,6 +672,19 @@ paymentCodesRoutes.openapi(
           data: { productId },
         });
       }
+      if (result.balance !== null) {
+        await publishUserEvent(user.id, {
+          type: "balance.changed",
+          data: { balance: result.balance },
+        });
+      }
+      if (result.transactionId !== null) {
+        await publishUserEvent(user.id, {
+          type: "transaction.created",
+          data: { transactionId: result.transactionId },
+        });
+      }
+      await publishAdminEvent({ type: "stats.changed", data: {} });
     }
     return c.json(result.order, 200);
   },

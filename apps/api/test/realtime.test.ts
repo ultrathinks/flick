@@ -222,3 +222,69 @@ describe("booth kiosks list", () => {
     expect(body.devices.map((d) => d.id)).not.toContain(kioskId);
   });
 });
+
+describe("user SSE stream", () => {
+  it("pushes balance.changed when an admin charges the user", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const target = await createUser({ balance: 0 });
+
+    const streamRes = await app.request("/v1/users/me/events", {
+      headers: authHeaders(target.accessToken),
+    });
+    expect(streamRes.status).toBe(200);
+    expect(streamRes.headers.get("content-type")).toContain(
+      "text/event-stream",
+    );
+    const eventPromise = readFirstEvent(streamRes);
+    await new Promise((r) => setTimeout(r, 100));
+
+    const chargeRes = await app.request("/v1/charges", {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+      body: JSON.stringify({
+        userId: target.id,
+        amount: 5000,
+        idempotencyKey: "sse-charge",
+      }),
+    });
+    expect(chargeRes.status).toBe(201);
+
+    const payload = await eventPromise;
+    expect(payload).toContain("balance.changed");
+  });
+});
+
+describe("admin SSE stream", () => {
+  it("pushes stats.changed to admins on money movement", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const target = await createUser({ balance: 0 });
+
+    const streamRes = await app.request("/v1/admin/events", {
+      headers: authHeaders(admin.accessToken),
+    });
+    expect(streamRes.status).toBe(200);
+    const eventPromise = readFirstEvent(streamRes);
+    await new Promise((r) => setTimeout(r, 100));
+
+    await app.request("/v1/charges", {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+      body: JSON.stringify({
+        userId: target.id,
+        amount: 5000,
+        idempotencyKey: "sse-stats",
+      }),
+    });
+
+    const payload = await eventPromise;
+    expect(payload).toContain("stats.changed");
+  });
+
+  it("rejects non-admins", async () => {
+    const user = await createUser();
+    const res = await app.request("/v1/admin/events", {
+      headers: authHeaders(user.accessToken),
+    });
+    expect(res.status).toBe(403);
+  });
+});
