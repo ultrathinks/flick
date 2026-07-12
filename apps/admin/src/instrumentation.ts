@@ -1,10 +1,16 @@
+import { registerOTel } from "@vercel/otel";
+
 export async function register(): Promise<void> {
-  if (process.env.NEXT_PUBLIC_MOCK !== "1") {
-    return;
-  }
   if (process.env.NEXT_RUNTIME !== "nodejs") {
     return;
   }
-  const { server } = await import("@/mocks/node.ts");
-  server.listen({ onUnhandledRequest: "bypass" });
+
+  if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
+    registerOTel({ serviceName: "flick-admin" });
+  }
+
+  if (process.env.NEXT_PUBLIC_MOCK === "1") {
+    const { server } = await import("@/mocks/node.ts");
+    server.listen({ onUnhandledRequest: "bypass" });
+  }
 }
