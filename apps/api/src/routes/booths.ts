@@ -21,7 +21,11 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "../lib/errors.ts";
-import { publishBoothEvent, subscribeBoothEvents } from "../lib/events.ts";
+import {
+  publishAdminEvent,
+  publishBoothEvent,
+  subscribeBoothEvents,
+} from "../lib/events.ts";
 import {
   loadProductOptions,
   optionsInputSchema,
@@ -147,6 +151,10 @@ boothsRoutes.openapi(
     if (!row) {
       throw new Error("failed to create booth");
     }
+    await publishAdminEvent({
+      type: "booth.created",
+      data: { boothId: row.id },
+    });
     return c.json(serializeBooth(row), 201);
   },
 );
@@ -321,6 +329,11 @@ boothsRoutes.openapi(
       targetType: "booth",
       targetId: boothId,
     });
+    await publishBoothEvent(boothId, {
+      type: "booth.approved",
+      data: { boothId },
+    });
+    await publishAdminEvent({ type: "booth.approved", data: { boothId } });
     return c.json(row, 200);
   },
 );
@@ -357,6 +370,11 @@ boothsRoutes.openapi(
       targetType: "booth",
       targetId: boothId,
     });
+    await publishBoothEvent(boothId, {
+      type: "booth.rejected",
+      data: { boothId },
+    });
+    await publishAdminEvent({ type: "booth.rejected", data: { boothId } });
     return c.json(serializeBooth(row), 200);
   },
 );

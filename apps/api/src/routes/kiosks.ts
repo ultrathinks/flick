@@ -91,9 +91,16 @@ kiosksRoutes.openapi(
       if (!kiosk) {
         throw new Error("failed to create kiosk");
       }
-      return kiosk;
+      return { kiosk, boothId: pairing.boothId, pairingId: pairing.id };
     });
-    return c.json({ kiosk: serializeKiosk(result), deviceToken: token }, 201);
+    await publishBoothEvent(result.boothId, {
+      type: "kiosk.paired",
+      data: { kioskId: result.kiosk.id, pairingId: result.pairingId },
+    });
+    return c.json(
+      { kiosk: serializeKiosk(result.kiosk), deviceToken: token },
+      201,
+    );
   },
 );
 
