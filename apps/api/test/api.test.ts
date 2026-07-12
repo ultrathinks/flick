@@ -300,6 +300,79 @@ describe("payment confirm", () => {
     });
     expect(res.status).toBe(409);
   });
+
+  it("cancels the order and reports out of stock when stock runs out", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 10000 });
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 1 });
+    const first = await createOrderWithPayment(boothId, kioskId, productId);
+    const second = await createOrderWithPayment(boothId, kioskId, productId);
+
+    const firstRes = await app.request(
+      `/v1/payment-codes/${first.code}/confirm`,
+      { method: "POST", headers: authHeaders(buyer.accessToken) },
+    );
+    expect(firstRes.status).toBe(200);
+
+    const secondRes = await app.request(
+      `/v1/payment-codes/${second.code}/confirm`,
+      { method: "POST", headers: authHeaders(buyer.accessToken) },
+    );
+    expect(secondRes.status).toBe(400);
+
+    const [order] = await getDb()
+      .select()
+      .from(orders)
+      .where(eq(orders.id, second.orderId));
+    expect(order?.status).toBe("canceled");
+    expect(await balanceOf(buyer.id)).toBe(9000);
+
+    const [product] = await getDb()
+      .select()
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(product?.stock).toBe(0);
+    expect(product?.status).toBe("soldout");
+    expect(product?.autoSoldout).toBe(true);
+  });
+
+  it("restores an auto-soldout product to available on refund", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 5000 });
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 1 });
+    const { orderId, code } = await createOrderWithPayment(
+      boothId,
+      kioskId,
+      productId,
+    );
+    await app.request(`/v1/payment-codes/${code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+    const [soldout] = await getDb()
+      .select()
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(soldout?.status).toBe("soldout");
+    expect(soldout?.autoSoldout).toBe(true);
+
+    const refundRes = await app.request("/v1/refunds", {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ orderId }),
+    });
+    expect(refundRes.status).toBe(201);
+
+    const [restored] = await getDb()
+      .select()
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(restored?.stock).toBe(1);
+    expect(restored?.status).toBe("available");
+    expect(restored?.autoSoldout).toBe(false);
+  });
 });
 
 describe("refund", () => {

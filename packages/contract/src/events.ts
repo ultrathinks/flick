@@ -9,7 +9,14 @@ export interface EventEnvelope<T extends string, D> {
 }
 
 export type BoothEvent =
-  | EventEnvelope<"order.created", { orderId: string; kioskId: string | null }>
+  | EventEnvelope<
+      "order.created",
+      {
+        orderId: string;
+        kioskId: string | null;
+        items: Array<{ name: string; quantity: number }>;
+      }
+    >
   | EventEnvelope<
       "order.updated",
       { orderId: string; kioskId: string | null; status: OrderStatus }

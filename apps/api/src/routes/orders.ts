@@ -84,6 +84,57 @@ async function attachOptions<T extends { id: string }>(items: T[]) {
   }));
 }
 
+async function cancelPendingOnOutOfStock(codeHash: string): Promise<void> {
+  const canceled = await getDb().transaction(async (tx) => {
+    const [row] = await tx
+      .select({ payment: payments, order: orders })
+      .from(payments)
+      .innerJoin(orders, eq(payments.orderId, orders.id))
+      .where(eq(payments.codeHash, codeHash))
+      .for("update", { of: orders })
+      .limit(1);
+    if (row?.order.status !== "pending") {
+      return null;
+    }
+    await tx
+      .update(orders)
+      .set({ status: "canceled", canceledAt: new Date() })
+      .where(eq(orders.id, row.order.id));
+    await tx
+      .update(payments)
+      .set({ status: "canceled" })
+      .where(
+        and(eq(payments.orderId, row.order.id), eq(payments.status, "pending")),
+      );
+    return {
+      boothId: row.order.boothId,
+      kioskId: row.order.kioskId,
+      orderId: row.order.id,
+      paymentId: row.payment.id,
+    };
+  });
+  if (!canceled) {
+    return;
+  }
+  await publishBoothEvent(canceled.boothId, {
+    type: "payment.canceled",
+    data: {
+      paymentId: canceled.paymentId,
+      orderId: canceled.orderId,
+      kioskId: canceled.kioskId,
+      reason: "out_of_stock",
+    },
+  });
+  await publishBoothEvent(canceled.boothId, {
+    type: "order.updated",
+    data: {
+      orderId: canceled.orderId,
+      kioskId: canceled.kioskId,
+      status: "canceled",
+    },
+  });
+}
+
 export const ordersRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
 
 ordersRoutes.openapi(
@@ -290,7 +341,18 @@ ordersRoutes.openapi(
     });
     await publishBoothEvent(kiosk.boothId, {
       type: "order.created",
-      data: { orderId: order.id, kioskId: kiosk.id },
+      data: {
+        orderId: order.id,
+        kioskId: kiosk.id,
+        items: items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+        })),
+      },
+    });
+    await publishAdminEvent({
+      type: "order.updated",
+      data: { orderId: order.id, boothId: kiosk.boothId, status: "pending" },
     });
     return c.json(order, 201);
   },
@@ -531,116 +593,134 @@ paymentCodesRoutes.openapi(
     const user = c.get("user");
     const codeHash = hashSecret(c.req.valid("param").code);
     const now = new Date();
-    const result = await getDb().transaction(async (tx) => {
-      const [row] = await tx
-        .select({ payment: payments, order: orders })
-        .from(payments)
-        .innerJoin(orders, eq(payments.orderId, orders.id))
-        .where(eq(payments.codeHash, codeHash))
-        .for("update", { of: payments })
-        .limit(1);
-      if (!row) {
-        throw new NotFoundError("payment not found");
-      }
-      if (
-        row.payment.status === "completed" &&
-        row.payment.confirmedBy === user.id
-      ) {
-        return {
-          order: row.order,
-          payment: row.payment,
-          productIds: [],
-          transactionId: null,
-          balance: null,
-          replayed: true,
-        };
-      }
-      if (row.payment.expiresAt <= now) {
-        throw new PaymentExpiredError();
-      }
-      if (row.payment.status !== "pending" || row.order.status !== "pending") {
-        throw new PaymentNotPendingError();
-      }
-      const items = await tx
-        .select()
-        .from(orderItems)
-        .where(eq(orderItems.orderId, row.order.id));
-      const itemTotal = items.reduce((sum, item) => sum + item.totalAmount, 0);
-      if (itemTotal !== row.order.totalAmount) {
-        throw new BadRequestError("invalid order total");
-      }
-      const [freshUser] = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, user.id))
-        .for("update");
-      if (!freshUser || freshUser.balance < row.order.totalAmount) {
-        throw new InsufficientBalanceError();
-      }
-      for (const item of items) {
-        const [updatedProduct] = await tx
-          .update(products)
-          .set({ stock: sql<number>`${products.stock} - ${item.quantity}` })
-          .where(
-            and(
-              eq(products.id, item.productId),
-              sql`${products.stock} is not null`,
-              sql`${products.stock} >= ${item.quantity}`,
-            ),
-          )
-          .returning();
-        if (!updatedProduct) {
-          const [current] = await tx
-            .select({ stock: products.stock })
-            .from(products)
-            .where(eq(products.id, item.productId));
-          if (current?.stock != null) {
-            throw new OutOfStockError();
+    const result = await getDb()
+      .transaction(async (tx) => {
+        const [row] = await tx
+          .select({ payment: payments, order: orders })
+          .from(payments)
+          .innerJoin(orders, eq(payments.orderId, orders.id))
+          .where(eq(payments.codeHash, codeHash))
+          .for("update", { of: payments })
+          .limit(1);
+        if (!row) {
+          throw new NotFoundError("payment not found");
+        }
+        if (
+          row.payment.status === "completed" &&
+          row.payment.confirmedBy === user.id
+        ) {
+          return {
+            order: row.order,
+            payment: row.payment,
+            productIds: [],
+            transactionId: null,
+            balance: null,
+            replayed: true,
+          };
+        }
+        if (row.payment.expiresAt <= now) {
+          throw new PaymentExpiredError();
+        }
+        if (
+          row.payment.status !== "pending" ||
+          row.order.status !== "pending"
+        ) {
+          throw new PaymentNotPendingError();
+        }
+        const items = await tx
+          .select()
+          .from(orderItems)
+          .where(eq(orderItems.orderId, row.order.id));
+        const itemTotal = items.reduce(
+          (sum, item) => sum + item.totalAmount,
+          0,
+        );
+        if (itemTotal !== row.order.totalAmount) {
+          throw new BadRequestError("invalid order total");
+        }
+        const [freshUser] = await tx
+          .select()
+          .from(users)
+          .where(eq(users.id, user.id))
+          .for("update");
+        if (!freshUser || freshUser.balance < row.order.totalAmount) {
+          throw new InsufficientBalanceError();
+        }
+        for (const item of items) {
+          const [updatedProduct] = await tx
+            .update(products)
+            .set({
+              stock: sql<number>`${products.stock} - ${item.quantity}`,
+              status: sql`case when ${products.stock} - ${item.quantity} = 0 then 'soldout'::product_status else ${products.status} end`,
+              autoSoldout: sql`case when ${products.stock} - ${item.quantity} = 0 then true else ${products.autoSoldout} end`,
+              updatedAt: now,
+            })
+            .where(
+              and(
+                eq(products.id, item.productId),
+                sql`${products.stock} is not null`,
+                sql`${products.stock} >= ${item.quantity}`,
+              ),
+            )
+            .returning();
+          if (!updatedProduct) {
+            const [current] = await tx
+              .select({ stock: products.stock })
+              .from(products)
+              .where(eq(products.id, item.productId));
+            if (current?.stock != null) {
+              throw new OutOfStockError();
+            }
           }
         }
-      }
-      const [transaction] = await tx
-        .insert(transactions)
-        .values({
-          userId: user.id,
-          amount: -row.order.totalAmount,
-          type: "purchase",
-          orderId: row.order.id,
-          paymentId: row.payment.id,
-        })
-        .returning();
-      if (!transaction) {
-        throw new Error("failed to create transaction");
-      }
-      const [updatedBuyer] = await tx
-        .update(users)
-        .set({
-          balance: sql<number>`${users.balance} - ${row.order.totalAmount}`,
-          updatedAt: now,
-        })
-        .where(eq(users.id, user.id))
-        .returning({ balance: users.balance });
-      const [order] = await tx
-        .update(orders)
-        .set({ status: "paid", buyerId: user.id, paidAt: now })
-        .where(and(eq(orders.id, row.order.id), eq(orders.status, "pending")))
-        .returning();
-      if (!order) {
-        throw new PaymentNotPendingError();
-      }
-      await tx
-        .update(payments)
-        .set({ status: "completed", completedAt: now, confirmedBy: user.id })
-        .where(eq(payments.id, row.payment.id));
-      return {
-        order,
-        payment: row.payment,
-        productIds: items.map((item) => item.productId),
-        transactionId: transaction.id,
-        balance: updatedBuyer?.balance ?? null,
-        replayed: false,
-      };
-    });
+        const [transaction] = await tx
+          .insert(transactions)
+          .values({
+            userId: user.id,
+            amount: -row.order.totalAmount,
+            type: "purchase",
+            orderId: row.order.id,
+            paymentId: row.payment.id,
+          })
+          .returning();
+        if (!transaction) {
+          throw new Error("failed to create transaction");
+        }
+        const [updatedBuyer] = await tx
+          .update(users)
+          .set({
+            balance: sql<number>`${users.balance} - ${row.order.totalAmount}`,
+            updatedAt: now,
+          })
+          .where(eq(users.id, user.id))
+          .returning({ balance: users.balance });
+        const [order] = await tx
+          .update(orders)
+          .set({ status: "paid", buyerId: user.id, paidAt: now })
+          .where(and(eq(orders.id, row.order.id), eq(orders.status, "pending")))
+          .returning();
+        if (!order) {
+          throw new PaymentNotPendingError();
+        }
+        await tx
+          .update(payments)
+          .set({ status: "completed", completedAt: now, confirmedBy: user.id })
+          .where(eq(payments.id, row.payment.id));
+        return {
+          order,
+          payment: row.payment,
+          productIds: items.map((item) => item.productId),
+          transactionId: transaction.id,
+          balance: updatedBuyer?.balance ?? null,
+          replayed: false,
+        };
+      })
+      .catch(async (error) => {
+        if (error instanceof OutOfStockError) {
+          await cancelPendingOnOutOfStock(codeHash);
+        }
+        throw error;
+      });
     await publishBoothEvent(result.order.boothId, {
       type: "payment.completed",
       data: {

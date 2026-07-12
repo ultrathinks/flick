@@ -395,7 +395,12 @@ moneyRoutes.openapi(
         for (const item of refundedItems) {
           await tx
             .update(products)
-            .set({ stock: sql<number>`${products.stock} + ${item.quantity}` })
+            .set({
+              stock: sql<number>`${products.stock} + ${item.quantity}`,
+              status: sql`case when ${products.autoSoldout} then 'available'::product_status else ${products.status} end`,
+              autoSoldout: sql`case when ${products.autoSoldout} then false else ${products.autoSoldout} end`,
+              updatedAt: new Date(),
+            })
             .where(
               and(
                 eq(products.id, item.productId),
