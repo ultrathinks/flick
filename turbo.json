@@ -3,7 +3,15 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**"],
+      "passThroughEnv": [
+        "BASE_API_URL",
+        "BASE_INTERNAL_API_URL",
+        "BASE_URL",
+        "DAUTH_AUTHORIZE_URL",
+        "DAUTH_CLIENT_ID",
+        "DAUTH_REDIRECT_URI"
+      ]
     },
     "dev": {
       "cache": false,

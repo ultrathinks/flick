@@ -36,6 +36,11 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/flick_test
       REDIS_URL: redis://localhost:6379
+      BASE_API_URL: http://localhost:3000
+      BASE_URL: http://localhost:3002
+      DAUTH_AUTHORIZE_URL: http://localhost:3020/oauth/authorize
+      DAUTH_CLIENT_ID: ci
+      DAUTH_REDIRECT_URI: http://localhost:3002/api/auth/callback
 
     steps:
       - uses: actions/checkout@v4
