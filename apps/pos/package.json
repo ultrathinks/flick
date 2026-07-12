@@ -14,6 +14,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@flick/contract": "workspace:*",
     "@flick/ui": "workspace:*",
     "@opentelemetry/api": "^1.9.1",
     "@tanstack/react-query": "^5.62.7",

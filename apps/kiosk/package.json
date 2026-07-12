@@ -12,6 +12,7 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "@flick/contract": "workspace:*",
     "@flick/ui": "workspace:*",
     "framer-motion": "^12.41.0",
     "lucide-react": "^1.22.0",
