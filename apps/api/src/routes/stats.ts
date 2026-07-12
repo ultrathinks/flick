@@ -1,7 +1,7 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { type AuthVariables, requireAdmin } from "../auth/middleware.ts";
-import { getDb } from "../db/index.ts";
+import { getReadDb } from "../db/index.ts";
 import {
   booths,
   orderItems,
@@ -30,7 +30,7 @@ statsRoutes.openapi(
     },
   }),
   async (c) => {
-    const db = getDb();
+    const db = getReadDb();
     const totals = await db
       .select({
         type: transactions.type,
@@ -68,7 +68,7 @@ statsRoutes.openapi(
     },
   }),
   async (c) => {
-    const db = getDb();
+    const db = getReadDb();
 
     const [totalChargedRow] = await db
       .select({
