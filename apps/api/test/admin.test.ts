@@ -333,8 +333,8 @@ async function balanceOf(userId: string): Promise<number> {
   return row?.balance ?? 0;
 }
 
-describe("GET /v1/stats (booth sales exclude refunds)", () => {
-  it("counts paid orders and drops refunded ones from booth sales", async () => {
+describe("GET /v1/stats (booth sales count gross confirmed orders)", () => {
+  it("counts both paid and refunded orders as gross booth sales", async () => {
     const admin = await createUser({ isAdmin: true });
     const owner = await createUser();
     const buyer = await createUser({ balance: 10000 });
@@ -370,6 +370,6 @@ describe("GET /v1/stats (booth sales exclude refunds)", () => {
       boothSales: Array<{ boothId: string; amount: number }>;
     };
     const sale = body.boothSales.find((row) => row.boothId === boothId);
-    expect(sale?.amount).toBe(1000);
+    expect(sale?.amount).toBe(2000);
   });
 });
