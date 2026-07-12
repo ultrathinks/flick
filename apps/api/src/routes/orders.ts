@@ -30,7 +30,6 @@ import {
   PaymentNotPendingError,
 } from "../lib/errors.ts";
 import { publishBoothEvent } from "../lib/events.ts";
-import { rateLimit } from "../lib/rate-limit.ts";
 import { hashSecret } from "../lib/security.ts";
 import { boothEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
@@ -466,13 +465,12 @@ paymentCodesRoutes.openapi(
     path: "/{code}",
     tags: ["payment-codes"],
     security: [{ Bearer: [] }],
-    middleware: [requireAuth, rateLimit(60, "payment-codes:get")] as const,
+    middleware: [requireAuth] as const,
     request: { params: z.object({ code: z.string() }) },
     responses: {
       200: jsonContent(paymentCodeViewSchema, "Payment code view"),
       401: errorResponse("Unauthorized"),
       404: errorResponse("Not found"),
-      429: errorResponse("Too many requests"),
     },
   }),
   async (c) => {
@@ -515,14 +513,13 @@ paymentCodesRoutes.openapi(
     path: "/{code}/confirm",
     tags: ["payment-codes"],
     security: [{ Bearer: [] }],
-    middleware: [requireAuth, rateLimit(30, "payment-codes:confirm")] as const,
+    middleware: [requireAuth] as const,
     request: { params: z.object({ code: z.string() }) },
     responses: {
       200: jsonContent(orderSchema, "Confirmed order"),
       400: errorResponse("Bad request"),
       401: errorResponse("Unauthorized"),
       404: errorResponse("Not found"),
-      429: errorResponse("Too many requests"),
     },
   }),
   async (c) => {

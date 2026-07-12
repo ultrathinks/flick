@@ -1,0 +1,18 @@
+services:
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    container_name: flick-lgtm
+    ports:
+      - "3300:3000"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - lgtm-grafana:/data/grafana
+      - lgtm-prometheus:/data/prometheus
+      - lgtm-loki:/data/loki
+    restart: unless-stopped
+
+volumes:
+  lgtm-grafana:
+  lgtm-prometheus:
+  lgtm-loki:

@@ -1,6 +1,7 @@
 import {
   ClipboardList,
   CreditCard,
+  FileText,
   type LucideIcon,
   ReceiptText,
   ScrollText,
@@ -62,6 +63,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Users,
     section: "환급·돈",
     match: startsWith("/users"),
+  },
+  {
+    label: "리포트",
+    href: "/report",
+    icon: FileText,
+    section: "환급·돈",
+    match: startsWith("/report"),
   },
   {
     label: "감사 로그",

@@ -22,7 +22,6 @@ import {
   NotFoundError,
 } from "../lib/errors.ts";
 import { publishBoothEvent } from "../lib/events.ts";
-import { rateLimit } from "../lib/rate-limit.ts";
 import { generateSecret, hashSecret } from "../lib/security.ts";
 import { boothEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
@@ -48,7 +47,6 @@ kiosksRoutes.openapi(
     method: "post",
     path: "/pair",
     tags: ["kiosks"],
-    middleware: [rateLimit(20, "kiosks:pair")] as const,
     request: {
       body: { content: { "application/json": { schema: pairSchema } } },
     },
@@ -58,7 +56,6 @@ kiosksRoutes.openapi(
         "Paired kiosk",
       ),
       400: errorResponse("Bad request"),
-      429: errorResponse("Too many requests"),
     },
   }),
   async (c) => {

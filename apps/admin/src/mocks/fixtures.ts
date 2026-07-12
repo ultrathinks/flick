@@ -3,6 +3,7 @@ import type { auditLogSchema } from "@/entities/audit";
 import type { boothSchema } from "@/entities/booth";
 import type { adminOrderSchema } from "@/entities/order/model/types.ts";
 import type { adminPayoutSchema } from "@/entities/payout";
+import type { Report } from "@/entities/report";
 import type { Stats } from "@/entities/stats";
 import type { adminUserSchema } from "@/entities/user";
 import type {
@@ -118,6 +119,8 @@ export const payouts: AdminPayout[] = [
   {
     id: "payout-1",
     userId: "user-1",
+    name: "김학생",
+    studentNumber: "2101",
     availableAmount: 128000,
     accountHolder: "김학생",
     bankName: "토스뱅크",
@@ -127,6 +130,8 @@ export const payouts: AdminPayout[] = [
   {
     id: "payout-2",
     userId: "user-2",
+    name: "이학생",
+    studentNumber: "2102",
     availableAmount: 34000,
     accountHolder: "이영희",
     bankName: "카카오뱅크",
@@ -136,6 +141,8 @@ export const payouts: AdminPayout[] = [
   {
     id: "payout-3",
     userId: "user-3",
+    name: "박민수",
+    studentNumber: "2103",
     availableAmount: 9000,
     accountHolder: "박민수",
     bankName: "국민은행",
@@ -145,6 +152,8 @@ export const payouts: AdminPayout[] = [
   {
     id: "payout-4",
     userId: "user-4",
+    name: "최지우",
+    studentNumber: "2104",
     availableAmount: 51000,
     accountHolder: "최지우",
     bankName: "신한은행",
@@ -154,6 +163,8 @@ export const payouts: AdminPayout[] = [
   {
     id: "payout-5",
     userId: "user-5",
+    name: "정하늘",
+    studentNumber: "2105",
     availableAmount: 7000,
     accountHolder: "정하늘",
     bankName: "농협은행",
@@ -193,6 +204,55 @@ export const stats: Stats = {
   boothSales: [
     { boothId: "booth-2", name: "음료 부스", amount: 220000 },
     { boothId: "booth-1", name: "떡볶이 부스", amount: 100000 },
+  ],
+};
+
+export const report: Report = {
+  summary: {
+    totalCharged: 500000,
+    totalRevenue: 320000,
+    netDonation: 316000,
+    userCount: 5,
+    orderCount: 42,
+    refundableTotal: 229000,
+    unregisteredCount: 1,
+    unregisteredTotal: 42000,
+    reconciliation: 0,
+  },
+  boothRanking: [
+    { name: "음료 부스", revenue: 220000 },
+    { name: "떡볶이 부스", revenue: 100000 },
+  ],
+  menuSales: [
+    {
+      boothName: "떡볶이 부스",
+      menuName: "떡볶이",
+      quantity: 40,
+      revenue: 100000,
+    },
+    {
+      boothName: "음료 부스",
+      menuName: "레몬 에이드",
+      quantity: 88,
+      revenue: 220000,
+    },
+  ],
+  unregistered: [{ name: "이학생", studentNumber: "2102", amount: 42000 }],
+  ledger: [
+    {
+      createdAt: new Date("2026-07-07T11:03:00+09:00"),
+      userName: "김학생",
+      studentNumber: "2101",
+      type: "purchase",
+      amount: -3500,
+    },
+    {
+      createdAt: new Date("2026-07-08T10:00:00+09:00"),
+      userName: "김학생",
+      studentNumber: "2101",
+      type: "charge",
+      amount: 50000,
+    },
   ],
 };
 

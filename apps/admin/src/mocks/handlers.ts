@@ -6,6 +6,7 @@ import {
   me,
   orders,
   payouts,
+  report,
   resolvedUser,
   stats,
   users,
@@ -26,6 +27,8 @@ export function createHandlers(base: string) {
     http.get(url("users/me"), () => HttpResponse.json(me)),
 
     http.get(url("stats"), () => HttpResponse.json(stats)),
+
+    http.get(url("report"), () => HttpResponse.json(report)),
 
     http.get(url("booths"), () => HttpResponse.json(booths)),
     http.post(url("booths/:boothId/approve"), ({ params }) => {

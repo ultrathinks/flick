@@ -1,5 +1,6 @@
 import { Redis } from "ioredis";
-import { isProduction } from "../config.ts";
+import { loadConfig } from "../config.ts";
+import { logger } from "./logger.ts";
 
 export type BoothEvent =
   | { type: "order.created"; orderId: string; kioskId: string | null }
@@ -40,7 +41,7 @@ let subscriber: Redis | null | undefined;
 const handlers = new Map<string, Set<Handler>>();
 
 function redisUrl(): string {
-  const url = process.env.REDIS_URL;
+  const url = loadConfig().REDIS_URL;
   if (!url) {
     throw new Error("REDIS_URL is required for the realtime event bus");
   }
@@ -72,7 +73,7 @@ function getSubscriber(): Redis {
         try {
           handler(event);
         } catch (err) {
-          console.error("booth event handler failed", err);
+          logger.error({ err }, "booth event handler failed");
         }
       }
     });
@@ -88,9 +89,7 @@ export async function publishBoothEvent(
   try {
     await getPublisher().publish(channelFor(boothId), JSON.stringify(event));
   } catch (err) {
-    if (isProduction()) {
-      console.error("failed to publish booth event", err);
-    }
+    logger.error({ err }, "failed to publish booth event");
   }
 }
 
@@ -106,7 +105,7 @@ export function subscribeBoothEvents(
     getSubscriber()
       .subscribe(channel)
       .catch((err) => {
-        console.error("failed to subscribe to booth channel", err);
+        logger.error({ err }, "failed to subscribe to booth channel");
         const current = handlers.get(channel);
         if (current && current.size === 0) {
           handlers.delete(channel);
@@ -126,7 +125,7 @@ export function subscribeBoothEvents(
       getSubscriber()
         .unsubscribe(channel)
         .catch((err) => {
-          console.error("failed to unsubscribe from booth channel", err);
+          logger.error({ err }, "failed to unsubscribe from booth channel");
         });
     }
   };

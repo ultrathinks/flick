@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { type Hook, OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import { cors } from "hono/cors";
@@ -5,6 +6,7 @@ import { HTTPException } from "hono/http-exception";
 import { secureHeaders } from "hono/secure-headers";
 import { getCorsOrigins, isProduction } from "./config.ts";
 import { AppError, ValidationError } from "./lib/errors.ts";
+import { logger } from "./lib/logger.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { boothsRoutes } from "./routes/booths.ts";
@@ -35,7 +37,16 @@ const defaultHook: Hook<unknown, any, any, unknown> = (result) => {
   }
 };
 
-export const app = new OpenAPIHono({ defaultHook });
+export const app = new OpenAPIHono<{ Variables: { requestId: string } }>({
+  defaultHook,
+});
+
+app.use("*", async (c, next) => {
+  const requestId = c.req.header("x-request-id") ?? randomUUID();
+  c.set("requestId", requestId);
+  c.header("x-request-id", requestId);
+  await next();
+});
 
 app.use("*", secureHeaders());
 
@@ -62,9 +73,19 @@ app.onError((err, c) => {
       err.status,
     );
   }
-  console.error(err);
+  const requestId = c.get("requestId");
+  logger.error(
+    { err, requestId, method: c.req.method, path: c.req.path },
+    "unhandled request error",
+  );
   return c.json(
-    { error: { code: "INTERNAL", message: "Internal server error" } },
+    {
+      error: {
+        code: "INTERNAL",
+        message: "Internal server error",
+        requestId,
+      },
+    },
     500,
   );
 });

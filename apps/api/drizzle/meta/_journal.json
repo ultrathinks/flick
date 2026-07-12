@@ -71,6 +71,13 @@
       "when": 1783604454237,
       "tag": "0009_late_ironclad",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783817259948,
+      "tag": "0010_striped_gertrude_yorkes",
+      "breakpoints": true
     }
   ]
 }
