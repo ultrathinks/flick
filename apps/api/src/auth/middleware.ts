@@ -1,9 +1,13 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { Context, Next } from "hono";
 import { getDb } from "../db/index.ts";
 import type { Kiosk, User } from "../db/schema/index.ts";
 import { kiosks } from "../db/schema/index.ts";
-import { ForbiddenError, UnauthorizedError } from "../lib/errors.ts";
+import {
+  ForbiddenError,
+  KioskRevokedError,
+  UnauthorizedError,
+} from "../lib/errors.ts";
 import { hashSecret } from "../lib/security.ts";
 import { verifyAccessToken } from "./session.ts";
 
@@ -60,12 +64,13 @@ export async function requireKiosk(
   const [row] = await getDb()
     .select()
     .from(kiosks)
-    .where(
-      and(eq(kiosks.tokenHash, hashSecret(token)), isNull(kiosks.revokedAt)),
-    )
+    .where(eq(kiosks.tokenHash, hashSecret(token)))
     .limit(1);
   if (!row) {
     throw new UnauthorizedError();
+  }
+  if (row.revokedAt) {
+    throw new KioskRevokedError();
   }
   c.set("kiosk", row);
   await next();
