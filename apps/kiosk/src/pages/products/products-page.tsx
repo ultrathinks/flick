@@ -14,6 +14,7 @@ import {
   setAlert,
   takeAlert,
 } from "@/shared/model/storage";
+import { useIdleTimeout } from "@/shared/model/use-idle-timeout";
 import { useToast } from "@/shared/ui";
 import { ProductsCatalog } from "@/widgets/products/ui/products-catalog";
 
@@ -25,6 +26,8 @@ function hasActivePayment() {
       Date.parse(snapshot.expiresAt) > Date.now(),
   );
 }
+
+const IDLE_RESET_MS = 2 * 60 * 1000;
 
 export function ProductsPage() {
   const navigate = useNavigate();
@@ -43,6 +46,7 @@ export function ProductsPage() {
 
   const { products, isLoading, hasError, reload } = useKioskProducts();
   const cart = useCart({ products, onStockLimited: toast.error });
+  useIdleTimeout(IDLE_RESET_MS, cart.clear);
   const { checkout, isCheckingOut } = useCheckout({ onError: toast.error });
 
   useKioskRealtime(getKioskSession().token, {
