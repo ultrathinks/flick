@@ -10,7 +10,15 @@
       "persistent": true
     },
     "test": {
-      "outputs": []
+      "outputs": [],
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "REDIS_URL",
+        "CORS_ORIGIN",
+        "NODE_ENV",
+        "DAUTH_*",
+        "S3_*"
+      ]
     }
   }
 }
