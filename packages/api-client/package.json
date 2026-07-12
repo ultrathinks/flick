@@ -1,0 +1,22 @@
+{
+  "name": "@flick/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check"
+  },
+  "dependencies": {
+    "@flick/contract": "workspace:*",
+    "ky": "^1.14.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@flick/typescript-config": "workspace:*",
+    "typescript": "~6.0.3"
+  }
+}
