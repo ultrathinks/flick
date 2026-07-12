@@ -23,25 +23,24 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/flick_test
-      CORS_ORIGIN: http://localhost:3000
+      REDIS_URL: redis://localhost:6379
+      BASE_API_URL: http://localhost:3000
+      BASE_URL: http://localhost:3002
+      DAUTH_AUTHORIZE_URL: http://localhost:3020/oauth/authorize
       DAUTH_CLIENT_ID: ci
-      DAUTH_CLIENT_SECRET: ci
-      DAUTH_REDIRECT_URI: http://localhost:3000/auth/callback
-      DAUTH_POS_CLIENT_ID: ci
-      DAUTH_POS_CLIENT_SECRET: ci
-      DAUTH_POS_REDIRECT_URI: http://localhost:3002/auth/callback
-      DAUTH_ADMIN_CLIENT_ID: ci
-      DAUTH_ADMIN_CLIENT_SECRET: ci
-      DAUTH_ADMIN_REDIRECT_URI: http://localhost:3001/auth/callback
-      S3_ENDPOINT: http://localhost:9000
-      S3_REGION: us-east-1
-      S3_BUCKET: ci
-      S3_ACCESS_KEY: ci
-      S3_SECRET_KEY: ci
-      S3_PUBLIC_BASE_URL: http://localhost:9000/ci
+      DAUTH_REDIRECT_URI: http://localhost:3002/api/auth/callback
 
     steps:
       - uses: actions/checkout@v4

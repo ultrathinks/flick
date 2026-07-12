@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.ts";
 import { getDb } from "../src/db/index.ts";
 import { orders, transactions, users } from "../src/db/schema/index.ts";
-import { closeRedis } from "../src/lib/redis.ts";
+import { closeEvents } from "../src/lib/events.ts";
 import {
   authHeaders,
   createBoothWithKiosk,
@@ -24,7 +24,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await closeRedis();
+  await closeEvents();
 });
 
 describe("GET /v1/users (admin search)", () => {

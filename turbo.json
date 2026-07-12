@@ -3,14 +3,30 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**"],
+      "passThroughEnv": [
+        "BASE_API_URL",
+        "BASE_INTERNAL_API_URL",
+        "BASE_URL",
+        "DAUTH_AUTHORIZE_URL",
+        "DAUTH_CLIENT_ID",
+        "DAUTH_REDIRECT_URI"
+      ]
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
     "test": {
-      "outputs": []
+      "outputs": [],
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "REDIS_URL",
+        "CORS_ORIGIN",
+        "NODE_ENV",
+        "DAUTH_*",
+        "S3_*"
+      ]
     }
   }
 }
