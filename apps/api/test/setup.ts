@@ -1,5 +1,5 @@
 const configDefaults: Record<string, string> = {
-  CORS_ORIGIN: "http://localhost:3000",
+  CORS_ORIGIN: "http://localhost:3001,http://localhost:3002",
   DAUTH_CLIENT_ID: "test-app-client",
   DAUTH_CLIENT_SECRET: "test-app-secret",
   DAUTH_REDIRECT_URI: "http://localhost:3000/auth/callback",
