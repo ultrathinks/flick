@@ -1,6 +1,7 @@
 import { MAX_CHARGE_AMOUNT } from "@flick/contract";
 import { CheckCircle2, ChevronLeft } from "lucide-react";
 import { useState } from "react";
+import brandMark from "@/shared/assets/brand-mark.png";
 import {
   type ChargeTransaction,
   createCharge,
@@ -136,7 +137,7 @@ export const ChargeFlow = ({ topInset, bottomInset }: ChargeFlowProps) => {
           className="flex items-center gap-2 px-5 pb-2"
           style={{ paddingTop: topInset + 20 }}
         >
-          <BrandMark className="size-7" />
+          <BrandMark src={brandMark} className="size-7" />
           <h1 className="text-title font-bold text-foreground">충전</h1>
         </header>
 
