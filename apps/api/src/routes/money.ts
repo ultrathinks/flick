@@ -16,7 +16,7 @@ import {
   transactions,
   users,
 } from "../db/schema/index.ts";
-import { MAX_TRANSACTION_AMOUNT } from "../lib/constants.ts";
+import { MAX_CHARGE_AMOUNT, MAX_TRANSACTION_AMOUNT } from "../lib/constants.ts";
 import {
   isCheckViolation,
   isForeignKeyViolation,
@@ -44,7 +44,7 @@ import { serializeTransaction } from "../openapi/serializers.ts";
 const resolveSchema = z.object({ code: z.string().min(1) });
 const chargeSchema = z.object({
   userId: z.string().uuid(),
-  amount: z.number().int().positive().max(MAX_TRANSACTION_AMOUNT),
+  amount: z.number().int().positive().max(MAX_CHARGE_AMOUNT),
   idempotencyKey: z.string().min(1),
 });
 const adjustmentSchema = z.object({
