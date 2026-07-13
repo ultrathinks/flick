@@ -73,7 +73,7 @@ export const booths = pgTable(
       .defaultNow(),
   },
   (table) => [
-    index("booths_owner_id_idx").on(table.ownerId),
+    uniqueIndex("booths_owner_id_idx").on(table.ownerId),
     index("booths_status_idx").on(table.status),
   ],
 );
