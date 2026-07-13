@@ -162,7 +162,7 @@ export function ProductForm({
   };
 
   return (
-    <div className="mx-auto w-full max-w-4xl pb-24">
+    <div className="mx-auto w-full max-w-4xl">
       <Link
         href="/"
         className="-mx-2 mb-3 inline-flex items-center gap-1 rounded-card-sm px-2 py-2 text-body text-foreground-subtle outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand/40"
@@ -259,26 +259,35 @@ export function ProductForm({
         </section>
       </div>
 
-      {isEdit && (
-        <div className="mt-8 border-t border-border pt-5">
+      <div className="mt-8 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center">
+        {isEdit && (
           <Button
             variant="ghost"
-            className="text-danger"
+            className="text-danger sm:mr-auto"
             disabled={pending}
             onClick={handleDelete}
           >
             <Trash2 className="size-4" />
             메뉴 삭제
           </Button>
-        </div>
-      )}
-
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface px-4 py-3 lg:px-10">
-        <div className="mx-auto flex w-full max-w-4xl justify-end gap-2">
-          <Button variant="neutral" onClick={back} disabled={pending}>
+        )}
+        <div className="flex gap-2 sm:ml-auto">
+          <Button
+            variant="neutral"
+            block
+            onClick={back}
+            disabled={pending}
+            className="sm:w-auto"
+          >
             취소
           </Button>
-          <Button loading={pending} disabled={!valid} onClick={handleSubmit}>
+          <Button
+            block
+            loading={pending}
+            disabled={!valid}
+            onClick={handleSubmit}
+            className="sm:w-auto"
+          >
             {isEdit ? "저장" : "등록"}
           </Button>
         </div>
