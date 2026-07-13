@@ -1,7 +1,8 @@
 import { useRouter } from "@b1nd/aid-kit/navigation";
 import { useSafeArea } from "@b1nd/aid-kit/safe-area-provider";
 import { CreditCard, Landmark, MoreHorizontal } from "lucide-react";
-import { Menu, MenuItem } from "@/shared/ui";
+import brandMark from "@/shared/assets/brand-mark.png";
+import { BrandMark, Menu, MenuItem } from "@/shared/ui";
 
 export const HomeHeader = () => {
   const { top } = useSafeArea();
@@ -13,8 +14,11 @@ export const HomeHeader = () => {
       style={{ paddingTop: top }}
     >
       <div className="mx-auto flex h-14 w-full max-w-md items-center justify-between px-5">
-        <span className="text-subtitle font-extrabold tracking-tight text-foreground">
-          Flick
+        <span className="flex items-center gap-2">
+          <BrandMark src={brandMark} className="size-7" />
+          <span className="text-subtitle font-extrabold tracking-tight text-foreground">
+            Flick
+          </span>
         </span>
         <Menu
           trigger={({ toggle, triggerProps }) => (
