@@ -26,7 +26,12 @@ export const api: KyInstance = ky.create({
     ],
     afterResponse: [
       async (request, _options, response, state) => {
-        if (response.status !== 401 || !authHooks || state.retryCount > 0) {
+        if (
+          response.status !== 401 ||
+          !authHooks ||
+          state.retryCount > 0 ||
+          request.url.includes("/auth/")
+        ) {
           return response;
         }
         const token = await authHooks.refresh();

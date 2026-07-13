@@ -1,13 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  exchangeDodamToken,
-  readTokens,
-  subscribeSessionCleared,
-  writeTokens,
-} from "@/entities/session";
+import { subscribeSessionCleared } from "@/entities/session";
 import { fetchMe, meQueryKey } from "@/entities/user";
-import { forgetDodamToken, takeDodamTokenFromUrl } from "@/shared/lib";
+import { readDodamToken } from "@/shared/lib/dodam.ts";
 
 type Status = "checking" | "authenticated" | "unauthenticated" | "error";
 
@@ -25,30 +20,13 @@ export function useAuthGate() {
     resolving.current = true;
     setStatus("checking");
     try {
-      const dodamToken = takeDodamTokenFromUrl();
-
-      if (readTokens()) {
-        const me = await fetchMe().catch(() => null);
-        if (me) {
-          queryClient.setQueryData(meQueryKey, me);
-          setStatus("authenticated");
-          return;
-        }
-      }
-
-      if (dodamToken) {
-        const session = await exchangeDodamToken(dodamToken).catch(() => null);
-        if (session) {
-          writeTokens(session);
-          forgetDodamToken();
-          setStatus("authenticated");
-        } else {
-          setStatus("error");
-        }
+      const me = await fetchMe().catch(() => null);
+      if (me) {
+        queryClient.setQueryData(meQueryKey, me);
+        setStatus("authenticated");
         return;
       }
-
-      setStatus(readTokens() ? "error" : "unauthenticated");
+      setStatus(readDodamToken() ? "error" : "unauthenticated");
     } finally {
       resolving.current = false;
     }

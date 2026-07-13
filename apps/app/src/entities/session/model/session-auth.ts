@@ -1,5 +1,6 @@
 import { setAuthHooks } from "@/shared/api";
-import { refreshSession } from "../api/session-api.ts";
+import { forgetDodamToken, readDodamToken } from "@/shared/lib/dodam.ts";
+import { exchangeDodamToken, refreshSession } from "../api/session-api.ts";
 import {
   clearTokens,
   readAccessToken,
@@ -9,7 +10,7 @@ import {
 
 let refreshInFlight: Promise<string | null> | null = null;
 
-async function runRefresh(): Promise<string | null> {
+async function rotateRefreshToken(): Promise<string | null> {
   const refreshToken = readRefreshToken();
   if (!refreshToken) {
     return null;
@@ -19,9 +20,36 @@ async function runRefresh(): Promise<string | null> {
     writeTokens(session);
     return session.accessToken;
   } catch {
-    clearTokens();
     return null;
   }
+}
+
+async function reissueFromDodam(): Promise<string | null> {
+  const dodamToken = readDodamToken();
+  if (!dodamToken) {
+    return null;
+  }
+  try {
+    const session = await exchangeDodamToken(dodamToken);
+    writeTokens(session);
+    return session.accessToken;
+  } catch {
+    forgetDodamToken();
+    return null;
+  }
+}
+
+async function runRefresh(): Promise<string | null> {
+  const rotated = await rotateRefreshToken();
+  if (rotated) {
+    return rotated;
+  }
+  const reissued = await reissueFromDodam();
+  if (reissued) {
+    return reissued;
+  }
+  clearTokens();
+  return null;
 }
 
 function refreshAccessToken(): Promise<string | null> {
