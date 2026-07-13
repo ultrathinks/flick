@@ -30,7 +30,7 @@ jobs:
       - name: Build app
         env:
           VITE_API_URL: https://flickdevapi.dgsw.kr/v1
-        run: pnpm --filter app build
+        run: pnpm turbo run build --filter=app
 
       - name: Zip dist
         working-directory: apps/app/dist
