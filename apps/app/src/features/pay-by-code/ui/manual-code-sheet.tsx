@@ -1,3 +1,4 @@
+import { useSafeArea } from "@b1nd/aid-kit/safe-area-provider";
 import { motion } from "framer-motion";
 import { X as XIcon } from "lucide-react";
 import { useState } from "react";
@@ -12,6 +13,7 @@ export const ManualCodeSheet = ({
   onSubmit,
   onClose,
 }: ManualCodeSheetProps) => {
+  const { top, bottom } = useSafeArea();
   const [code, setCode] = useState("");
 
   const submit = () => {
@@ -28,7 +30,10 @@ export const ManualCodeSheet = ({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <header className="flex items-center justify-between px-5 py-4">
+      <header
+        className="flex items-center justify-between px-5 py-4"
+        style={{ paddingTop: top + 16 }}
+      >
         <span className="text-heading font-semibold text-foreground">
           결제 코드 입력
         </span>
@@ -42,7 +47,10 @@ export const ManualCodeSheet = ({
         </button>
       </header>
 
-      <div className="flex flex-1 flex-col justify-center gap-6 px-6 pb-16">
+      <div
+        className="flex flex-1 flex-col justify-center gap-6 px-6"
+        style={{ paddingBottom: bottom + 24 }}
+      >
         <div className="space-y-2 text-center">
           <p className="text-title font-bold text-foreground">
             결제 코드를 입력해 주세요
