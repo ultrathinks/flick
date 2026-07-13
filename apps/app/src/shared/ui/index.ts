@@ -23,4 +23,5 @@ export {
   useConfirm,
   useToast,
 } from "@flick/ui";
+export { ErrorBoundary } from "./error-boundary.tsx";
 export { Screen } from "./screen.tsx";
