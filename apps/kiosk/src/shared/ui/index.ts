@@ -1,4 +1,5 @@
 export {
+  BrandMark,
   Button,
   CodeDisplay,
   CopyButton,

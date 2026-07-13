@@ -1,4 +1,4 @@
-import { Store } from "lucide-react";
+import { BrandMark } from "@flick/ui";
 
 type BrandHeaderProps = {
   onLogoClick?: () => void;
@@ -8,9 +8,7 @@ type BrandHeaderProps = {
 export function BrandHeader({ onLogoClick, right }: BrandHeaderProps) {
   const brand = (
     <>
-      <span className="flex size-11 items-center justify-center rounded-card-sm bg-brand text-brand-foreground">
-        <Store className="size-6" strokeWidth={2} />
-      </span>
+      <BrandMark className="size-11" />
       <span className="text-title font-bold tracking-tight text-foreground">
         Flick
       </span>

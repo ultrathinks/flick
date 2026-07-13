@@ -1,6 +1,5 @@
-import { Store } from "lucide-react";
 import type { FormEvent } from "react";
-import { Button, Input } from "@/shared/ui";
+import { BrandMark, Button, Input } from "@/shared/ui";
 
 type PairingFormProps = {
   code: string;
@@ -21,9 +20,7 @@ export function PairingForm({
     <main className="flex min-h-dvh flex-col items-center justify-center bg-bg px-6">
       <form className="w-full max-w-md" onSubmit={onSubmit}>
         <div className="mb-10 flex flex-col items-center text-center">
-          <span className="flex size-16 items-center justify-center rounded-card bg-brand text-brand-foreground">
-            <Store className="size-8" strokeWidth={2} />
-          </span>
+          <BrandMark className="size-16" />
           <h1 className="mt-6 text-display font-bold text-foreground">
             키오스크 연결
           </h1>
