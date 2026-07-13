@@ -1,7 +1,6 @@
 import { MAX_CHARGE_AMOUNT } from "@flick/contract";
 import { CheckCircle2, ChevronLeft } from "lucide-react";
 import { useState } from "react";
-import brandMark from "@/shared/assets/brand-mark.png";
 import {
   type ChargeTransaction,
   createCharge,
@@ -10,6 +9,7 @@ import {
 } from "@/features/charge";
 import { QrScanner } from "@/features/qr-scan";
 import { ApiError } from "@/shared/api";
+import brandMark from "@/shared/assets/brand-mark.png";
 import { useHaptic } from "@/shared/lib";
 import {
   Avatar,
