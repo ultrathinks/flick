@@ -1,5 +1,6 @@
 export { Avatar } from "./components/avatar";
 export { Badge } from "./components/badge";
+export { BrandMark } from "./components/brand-mark";
 export { Button } from "./components/button";
 export { Card } from "./components/card";
 export { Checkbox } from "./components/checkbox";
