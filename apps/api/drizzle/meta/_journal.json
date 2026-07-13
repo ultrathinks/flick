@@ -92,6 +92,13 @@
       "when": 1783951145149,
       "tag": "0012_booths_owner_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1783955014906,
+      "tag": "0013_drop_refunds",
+      "breakpoints": true
     }
   ]
 }

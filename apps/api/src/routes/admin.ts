@@ -115,9 +115,7 @@ adminRoutes.openapi(
     middleware: [requireAdmin] as const,
     request: {
       query: z.object({
-        status: z
-          .enum(["pending", "paid", "canceled", "expired", "refunded"])
-          .optional(),
+        status: z.enum(["pending", "paid", "canceled", "expired"]).optional(),
         boothId: z.string().uuid().optional(),
         ...paginationQuery,
       }),
@@ -155,7 +153,6 @@ adminRoutes.openapi(
         status: orders.status,
         paidAt: orders.paidAt,
         canceledAt: orders.canceledAt,
-        refundedAt: orders.refundedAt,
         createdAt: orders.createdAt,
         boothName: booths.name,
         buyerName: users.name,

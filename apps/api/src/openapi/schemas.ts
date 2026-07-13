@@ -12,7 +12,6 @@ import {
   productOptionGroups,
   productOptionValues,
   products,
-  refunds,
   transactions,
 } from "../db/schema/index.ts";
 import {
@@ -83,10 +82,6 @@ export const paymentSchema = z
   .object(createSelectSchema(payments).omit(PAYMENT_PUBLIC_OMIT).shape)
   .openapi("Payment");
 
-export const refundSchema = z
-  .object(createSelectSchema(refunds).shape)
-  .openapi("Refund");
-
 export const payoutSchema = z
   .object(createSelectSchema(payouts).shape)
   .openapi("Payout");
@@ -141,7 +136,7 @@ export const reportSchema = z
     summary: z.object({
       totalCharged: z.number(),
       totalRevenue: z.number(),
-      netDonation: z.number(),
+      totalDonation: z.number(),
       userCount: z.number(),
       orderCount: z.number(),
       refundableTotal: z.number(),
@@ -327,7 +322,5 @@ export const boothSalesSchema = z
   .object({
     paidCount: z.number(),
     paidRevenue: z.number(),
-    refundedCount: z.number(),
-    refundedRevenue: z.number(),
   })
   .openapi("BoothSales");

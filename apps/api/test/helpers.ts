@@ -19,7 +19,7 @@ let seq = 0;
 
 export async function resetDb(): Promise<void> {
   await getDb().execute(
-    sql`truncate audit_logs, payouts, refunds, transactions, payments, order_item_options, order_items, orders, product_option_values, product_option_groups, products, kiosks, kiosk_pairings, sessions, users restart identity cascade`,
+    sql`truncate audit_logs, payouts, transactions, payments, order_item_options, order_items, orders, product_option_values, product_option_groups, products, kiosks, kiosk_pairings, sessions, users restart identity cascade`,
   );
 }
 

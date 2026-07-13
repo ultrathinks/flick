@@ -33,7 +33,6 @@ export const orderStatus = pgEnum("order_status", [
   "paid",
   "canceled",
   "expired",
-  "refunded",
 ]);
 
 export const paymentStatus = pgEnum("payment_status", [
@@ -47,7 +46,6 @@ export const transactionType = pgEnum("transaction_type", [
   "grant",
   "charge",
   "purchase",
-  "refund",
   "adjustment",
 ]);
 
@@ -206,7 +204,6 @@ export const orders = pgTable(
     status: orderStatus("status").notNull().default("pending"),
     paidAt: timestamp("paid_at", { withTimezone: true }),
     canceledAt: timestamp("canceled_at", { withTimezone: true }),
-    refundedAt: timestamp("refunded_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -314,7 +311,6 @@ export const transactions = pgTable(
     paymentId: uuid("payment_id").references(() => payments.id),
     adminId: uuid("admin_id").references(() => users.id),
     idempotencyKey: text("idempotency_key"),
-    refundedTransactionId: uuid("refunded_transaction_id"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -326,9 +322,6 @@ export const transactions = pgTable(
     uniqueIndex("transactions_admin_idempotency_idx")
       .on(table.adminId, table.idempotencyKey)
       .where(sql`${table.idempotencyKey} is not null`),
-    uniqueIndex("transactions_refunded_transaction_idx")
-      .on(table.refundedTransactionId)
-      .where(sql`${table.refundedTransactionId} is not null`),
     uniqueIndex("transactions_one_grant_per_user_idx")
       .on(table.userId)
       .where(sql`${table.type} = 'grant'`),
@@ -337,28 +330,6 @@ export const transactions = pgTable(
       .where(sql`${table.type} = 'purchase'`),
   ],
 );
-
-export const refunds = pgTable("refunds", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  orderId: uuid("order_id")
-    .notNull()
-    .unique()
-    .references(() => orders.id),
-  paymentTransactionId: uuid("payment_transaction_id")
-    .notNull()
-    .references(() => transactions.id),
-  refundTransactionId: uuid("refund_transaction_id")
-    .notNull()
-    .references(() => transactions.id),
-  amount: bigint("amount", { mode: "number" }).notNull(),
-  reason: text("reason"),
-  adminId: uuid("admin_id")
-    .notNull()
-    .references(() => users.id),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
 
 export const payouts = pgTable(
   "payouts",

@@ -410,7 +410,6 @@ boothsRoutes.openapi(
         status: orders.status,
         paidAt: orders.paidAt,
         canceledAt: orders.canceledAt,
-        refundedAt: orders.refundedAt,
         createdAt: orders.createdAt,
         createdAtMicros: createdAtMicrosColumn(orders.createdAt),
       })
@@ -454,8 +453,6 @@ boothsRoutes.openapi(
       .select({
         paidCount: sql<number>`count(*) filter (where ${orders.status} = 'paid')`,
         paidRevenue: sql<number>`coalesce(sum(${orders.totalAmount}) filter (where ${orders.status} = 'paid'), 0)`,
-        refundedCount: sql<number>`count(*) filter (where ${orders.status} = 'refunded')`,
-        refundedRevenue: sql<number>`coalesce(sum(${orders.totalAmount}) filter (where ${orders.status} = 'refunded'), 0)`,
       })
       .from(orders)
       .where(eq(orders.boothId, boothId));
@@ -463,8 +460,6 @@ boothsRoutes.openapi(
       {
         paidCount: Number(row?.paidCount ?? 0),
         paidRevenue: Number(row?.paidRevenue ?? 0),
-        refundedCount: Number(row?.refundedCount ?? 0),
-        refundedRevenue: Number(row?.refundedRevenue ?? 0),
       },
       200,
     );
