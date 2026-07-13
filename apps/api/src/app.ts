@@ -9,7 +9,7 @@ import { AppError, ValidationError } from "./lib/errors.ts";
 import { logger } from "./lib/logger.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
-import { boothsRoutes } from "./routes/booths.ts";
+import { boothsRoutes, myBoothRoutes } from "./routes/booths.ts";
 import { kiosksRoutes } from "./routes/kiosks.ts";
 import { moneyRoutes } from "./routes/money.ts";
 import {
@@ -97,6 +97,7 @@ const v1 = new OpenAPIHono({ defaultHook });
 v1.route("/auth", authRoutes);
 v1.route("/users", usersRoutes);
 v1.route("/booths", boothsRoutes);
+v1.route("/", myBoothRoutes);
 v1.route("/products", productsRoutes);
 v1.route("/uploads", uploadsRoutes);
 v1.route("/kiosks", kiosksRoutes);

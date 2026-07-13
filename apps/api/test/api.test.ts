@@ -1219,3 +1219,126 @@ describe("booth sales aggregate (POS)", () => {
     expect(secondBody.nextCursor).toBeNull();
   });
 });
+
+describe("GET /v1/booths (admin only)", () => {
+  it("returns all non-archived booths for an admin", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const owner = await createUser();
+    await getDb()
+      .insert(booths)
+      .values([
+        { ownerId: owner.id, name: "A", status: "approved" },
+        { ownerId: admin.id, name: "B", status: "pending" },
+      ]);
+    const res = await app.request("/v1/booths", {
+      headers: authHeaders(admin.accessToken),
+    });
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as unknown[];
+    expect(list).toHaveLength(2);
+  });
+
+  it("forbids non-admin callers", async () => {
+    const owner = await createUser();
+    await getDb()
+      .insert(booths)
+      .values({ ownerId: owner.id, name: "A", status: "approved" });
+    const res = await app.request("/v1/booths", {
+      headers: authHeaders(owner.accessToken),
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("/v1/users/me/booth (my booth)", () => {
+  it("returns 404 when the caller has no booth", async () => {
+    const user = await createUser();
+    const res = await app.request("/v1/users/me/booth", {
+      headers: authHeaders(user.accessToken),
+    });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("creates the caller's booth as pending and returns it", async () => {
+    const user = await createUser();
+    const created = await app.request("/v1/users/me/booth", {
+      method: "POST",
+      headers: authHeaders(user.accessToken),
+      body: JSON.stringify({ name: "My Booth", description: "hi" }),
+    });
+    expect(created.status).toBe(201);
+    const createdBody = (await created.json()) as Record<string, unknown>;
+    expect(createdBody.name).toBe("My Booth");
+    expect(createdBody.status).toBe("pending");
+    expect(createdBody).not.toHaveProperty("approvedBy");
+
+    const res = await app.request("/v1/users/me/booth", {
+      headers: authHeaders(user.accessToken),
+    });
+    expect(res.status).toBe(200);
+    const fetched = (await res.json()) as Record<string, unknown>;
+    expect(fetched.id).toBe(createdBody.id);
+  });
+
+  it("returns only the caller's own booth, never another owner's", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const owner = await createUser();
+    const [otherBooth] = await getDb()
+      .insert(booths)
+      .values({ ownerId: owner.id, name: "Other", status: "approved" })
+      .returning();
+    const [ownBooth] = await getDb()
+      .insert(booths)
+      .values({ ownerId: admin.id, name: "Mine", status: "approved" })
+      .returning();
+    const res = await app.request("/v1/users/me/booth", {
+      headers: authHeaders(admin.accessToken),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { id: string };
+    expect(body.id).toBe(ownBooth?.id);
+    expect(body.id).not.toBe(otherBooth?.id);
+  });
+
+  it("rejects a second booth with 409", async () => {
+    const user = await createUser();
+    await getDb()
+      .insert(booths)
+      .values({ ownerId: user.id, name: "First", status: "pending" });
+    const res = await app.request("/v1/users/me/booth", {
+      method: "POST",
+      headers: authHeaders(user.accessToken),
+      body: JSON.stringify({ name: "Second" }),
+    });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("CONFLICT");
+  });
+
+  it("updates the caller's booth", async () => {
+    const user = await createUser();
+    await getDb()
+      .insert(booths)
+      .values({ ownerId: user.id, name: "Old", status: "pending" });
+    const res = await app.request("/v1/users/me/booth", {
+      method: "PATCH",
+      headers: authHeaders(user.accessToken),
+      body: JSON.stringify({ name: "New" }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { name: string };
+    expect(body.name).toBe("New");
+  });
+
+  it("returns 404 on update when the caller has no booth", async () => {
+    const user = await createUser();
+    const res = await app.request("/v1/users/me/booth", {
+      method: "PATCH",
+      headers: authHeaders(user.accessToken),
+      body: JSON.stringify({ name: "New" }),
+    });
+    expect(res.status).toBe(404);
+  });
+});

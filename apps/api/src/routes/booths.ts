@@ -28,6 +28,7 @@ import {
 import { MAX_PRODUCT_PRICE } from "../lib/constants.ts";
 import {
   BadRequestError,
+  ConflictError,
   ForbiddenError,
   NotFoundError,
 } from "../lib/errors.ts";
@@ -121,59 +122,20 @@ boothsRoutes.openapi(
     path: "/",
     tags: ["booths"],
     security: [{ Bearer: [] }],
-    middleware: [requireAuth] as const,
+    middleware: [requireAdmin] as const,
     responses: {
       200: jsonContent(z.array(boothSchema), "Booths"),
       401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
     },
   }),
   async (c) => {
-    const user = c.get("user");
-    const rows = user.isAdmin
-      ? await getDb()
-          .select()
-          .from(booths)
-          .where(isNull(booths.archivedAt))
-          .orderBy(desc(booths.createdAt))
-      : await getDb()
-          .select()
-          .from(booths)
-          .where(and(eq(booths.ownerId, user.id), isNull(booths.archivedAt)))
-          .orderBy(desc(booths.createdAt));
+    const rows = await getDb()
+      .select()
+      .from(booths)
+      .where(isNull(booths.archivedAt))
+      .orderBy(desc(booths.createdAt));
     return c.json(rows.map(serializeBooth), 200);
-  },
-);
-
-boothsRoutes.openapi(
-  createRoute({
-    method: "post",
-    path: "/",
-    tags: ["booths"],
-    security: [{ Bearer: [] }],
-    middleware: [requireAuth] as const,
-    request: {
-      body: { content: { "application/json": { schema: boothBodySchema } } },
-    },
-    responses: {
-      201: jsonContent(boothSchema, "Created booth"),
-      401: errorResponse("Unauthorized"),
-    },
-  }),
-  async (c) => {
-    const user = c.get("user");
-    const body = c.req.valid("json");
-    const [row] = await getDb()
-      .insert(booths)
-      .values({ ...body, ownerId: user.id, status: "pending" })
-      .returning();
-    if (!row) {
-      throw new Error("failed to create booth");
-    }
-    await publishAdminEvent({
-      type: "booth.created",
-      data: { boothId: row.id },
-    });
-    return c.json(serializeBooth(row), 201);
   },
 );
 
@@ -271,47 +233,6 @@ boothsRoutes.openapi(
       { pairing: serializeKioskPairing(result.pairing), code: result.code },
       201,
     );
-  },
-);
-
-boothsRoutes.openapi(
-  createRoute({
-    method: "patch",
-    path: "/{id}",
-    tags: ["booths"],
-    security: [{ Bearer: [] }],
-    middleware: [requireAuth] as const,
-    request: {
-      params: idParam,
-      body: {
-        content: {
-          "application/json": { schema: boothBodySchema.partial() },
-        },
-      },
-    },
-    responses: {
-      200: jsonContent(boothSchema, "Updated booth"),
-      401: errorResponse("Unauthorized"),
-      403: errorResponse("Forbidden"),
-      404: errorResponse("Not found"),
-    },
-  }),
-  async (c) => {
-    const user = c.get("user");
-    const boothId = c.req.valid("param").id;
-    const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
-    if (!owns && !user.isAdmin) {
-      throw new ForbiddenError();
-    }
-    const [row] = await getDb()
-      .update(booths)
-      .set({ ...c.req.valid("json"), updatedAt: new Date() })
-      .where(eq(booths.id, boothId))
-      .returning();
-    if (!row) {
-      throw new NotFoundError("booth not found");
-    }
-    return c.json(serializeBooth(row), 200);
   },
 );
 
@@ -594,5 +515,115 @@ boothsRoutes.openapi(
       data: { productId: created.id },
     });
     return c.json(created, 201);
+  },
+);
+
+export const myBoothRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
+
+async function findMyBooth(userId: string) {
+  const [row] = await getDb()
+    .select()
+    .from(booths)
+    .where(and(eq(booths.ownerId, userId), isNull(booths.archivedAt)))
+    .limit(1);
+  return row ?? null;
+}
+
+myBoothRoutes.openapi(
+  createRoute({
+    method: "get",
+    path: "/users/me/booth",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    responses: {
+      200: jsonContent(boothSchema, "My booth"),
+      401: errorResponse("Unauthorized"),
+      404: errorResponse("Not found"),
+    },
+  }),
+  async (c) => {
+    const user = c.get("user");
+    const row = await findMyBooth(user.id);
+    if (!row) {
+      throw new NotFoundError("booth not found");
+    }
+    return c.json(serializeBooth(row), 200);
+  },
+);
+
+myBoothRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/users/me/booth",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    request: {
+      body: { content: { "application/json": { schema: boothBodySchema } } },
+    },
+    responses: {
+      201: jsonContent(boothSchema, "Created booth"),
+      401: errorResponse("Unauthorized"),
+      409: errorResponse("Conflict"),
+    },
+  }),
+  async (c) => {
+    const user = c.get("user");
+    const body = c.req.valid("json");
+    const existing = await findMyBooth(user.id);
+    if (existing) {
+      throw new ConflictError("booth already exists");
+    }
+    const [row] = await getDb()
+      .insert(booths)
+      .values({ ...body, ownerId: user.id, status: "pending" })
+      .returning();
+    if (!row) {
+      throw new Error("failed to create booth");
+    }
+    await publishAdminEvent({
+      type: "booth.created",
+      data: { boothId: row.id },
+    });
+    return c.json(serializeBooth(row), 201);
+  },
+);
+
+myBoothRoutes.openapi(
+  createRoute({
+    method: "patch",
+    path: "/users/me/booth",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
+    request: {
+      body: {
+        content: {
+          "application/json": { schema: boothBodySchema.partial() },
+        },
+      },
+    },
+    responses: {
+      200: jsonContent(boothSchema, "Updated booth"),
+      401: errorResponse("Unauthorized"),
+      404: errorResponse("Not found"),
+    },
+  }),
+  async (c) => {
+    const user = c.get("user");
+    const existing = await findMyBooth(user.id);
+    if (!existing) {
+      throw new NotFoundError("booth not found");
+    }
+    const [row] = await getDb()
+      .update(booths)
+      .set({ ...c.req.valid("json"), updatedAt: new Date() })
+      .where(eq(booths.id, existing.id))
+      .returning();
+    if (!row) {
+      throw new NotFoundError("booth not found");
+    }
+    return c.json(serializeBooth(row), 200);
   },
 );
