@@ -16,7 +16,6 @@
   ],
   "scripts": {
     "build": "tsc",
-    "prepare": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "biome check"
   },
