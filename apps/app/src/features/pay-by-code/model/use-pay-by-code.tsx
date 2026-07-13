@@ -11,13 +11,11 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useToast } from "@/shared/ui";
 
-function parseScanText(data: unknown): string | null {
-  if (typeof data !== "object" || data === null) {
-    return null;
-  }
-  const text = Reflect.get(data, "text");
-  return typeof text === "string" && text.length > 0 ? text : null;
+interface QrScanResponse {
+  error?: string;
+  data?: { value?: unknown };
 }
 
 function hasNativeBridge(): boolean {
@@ -45,6 +43,7 @@ const PayByCodeContext = createContext<PayByCodeValue | null>(null);
 
 export function PayByCodeProvider({ children }: { children: ReactNode }) {
   const { send } = useBridgeProvider();
+  const toast = useToast();
   const [scannerOpen, setScannerOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [activeCode, setActiveCode] = useState<string | null>(null);
@@ -56,10 +55,13 @@ export function PayByCodeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  useBridgeResponse(Actions.QR_SCAN, async (data) => {
-    const text = parseScanText(data);
-    if (text) {
-      openPayment(text);
+  useBridgeResponse(Actions.QR_SCAN, async (response) => {
+    const result = response as QrScanResponse | null;
+    const value = result?.data?.value;
+    if (typeof value === "string" && value.length > 0) {
+      openPayment(value);
+    } else if (result?.error !== "CANCELLED") {
+      toast.error("QR을 인식하지 못했어요. 다시 시도해 주세요.");
     }
     return {};
   });

@@ -10,7 +10,7 @@ type MockResponder = (request: BridgeRequest) => object;
 const responders: Record<string, MockResponder> = {
   HAPTIC: () => ({}),
   NAVIGATION_POP: () => ({}),
-  QR_SCAN: () => ({ text: "482913" }),
+  QR_SCAN: () => ({ value: "482913" }),
 };
 
 function dispatchResponse(request: BridgeRequest, data: object): void {
@@ -19,7 +19,8 @@ function dispatchResponse(request: BridgeRequest, data: object): void {
     type: request.type,
     timestamp: Date.now(),
     success: true,
-    ...data,
+    data,
+    error: undefined,
   };
   window.dispatchEvent(
     new MessageEvent("message", { data: JSON.stringify(response) }),

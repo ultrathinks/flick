@@ -18,7 +18,8 @@ function dispatchResponse(request: BridgeRequest, data: object): void {
     type: request.type,
     timestamp: Date.now(),
     success: true,
-    ...data,
+    data,
+    error: undefined,
   };
   window.dispatchEvent(
     new MessageEvent("message", { data: JSON.stringify(response) }),

@@ -4,21 +4,11 @@ import {
   useBridgeResponse,
 } from "@b1nd/aid-kit/bridge-kit/web";
 import { useCallback } from "react";
+import { useToast } from "@/shared/ui";
 
-function extractQrText(data: unknown): string | null {
-  if (typeof data === "string") {
-    return data.trim() || null;
-  }
-  if (typeof data !== "object" || data === null) {
-    return null;
-  }
-  for (const key of ["text", "data", "value", "result", "code"]) {
-    const value = Reflect.get(data, key);
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-  return null;
+interface QrScanResponse {
+  error?: string;
+  data?: { value?: unknown };
 }
 
 export function hasNativeQrScan(): boolean {
@@ -27,11 +17,15 @@ export function hasNativeQrScan(): boolean {
 
 export function useQrScan(onDetect: (code: string) => void) {
   const { send } = useBridgeProvider();
+  const toast = useToast();
 
-  useBridgeResponse(Actions.QR_SCAN, async (data) => {
-    const code = extractQrText(data);
-    if (code) {
-      onDetect(code);
+  useBridgeResponse(Actions.QR_SCAN, async (response) => {
+    const result = response as QrScanResponse | null;
+    const value = result?.data?.value;
+    if (typeof value === "string" && value.length > 0) {
+      onDetect(value);
+    } else if (result?.error !== "CANCELLED") {
+      toast.error("QR을 인식하지 못했어요. 다시 시도해 주세요.");
     }
     return {};
   });
