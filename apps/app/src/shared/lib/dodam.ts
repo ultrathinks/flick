@@ -1,4 +1,13 @@
 const TOKEN_QUERY_KEYS = ["token", "accessToken", "dodamToken"] as const;
+const DODAM_TOKEN_KEY = "flick:app:dodam-token";
+
+function read(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
 
 function readTokenFromUrl(): string | null {
   const params = new URLSearchParams(window.location.search);
@@ -25,18 +34,31 @@ function stripTokenFromUrl(): void {
   }
 }
 
-let capturedToken: string | null | undefined;
+let captured = false;
 
-export function takeDodamTokenFromUrl(): string | null {
-  if (capturedToken === undefined) {
-    capturedToken = readTokenFromUrl();
-    if (capturedToken) {
-      stripTokenFromUrl();
-    }
+function captureTokenFromUrl(): void {
+  if (captured) {
+    return;
   }
-  return capturedToken;
+  captured = true;
+  const token = readTokenFromUrl();
+  if (!token) {
+    return;
+  }
+  try {
+    window.localStorage.setItem(DODAM_TOKEN_KEY, token);
+  } catch {}
+  stripTokenFromUrl();
+}
+
+export function readDodamToken(): string | null {
+  captureTokenFromUrl();
+  return read(DODAM_TOKEN_KEY);
 }
 
 export function forgetDodamToken(): void {
-  capturedToken = null;
+  captured = true;
+  try {
+    window.localStorage.removeItem(DODAM_TOKEN_KEY);
+  } catch {}
 }

@@ -9,6 +9,7 @@ import {
 } from "@/features/pay-by-code";
 import { UserEventsHost } from "@/features/user-events";
 import { installBridgeMock } from "@/shared/lib";
+import { ErrorBoundary } from "@/shared/ui";
 import { resetRouterStack } from "./lib/reset-router-stack.ts";
 import { Providers } from "./providers";
 import { routes } from "./routes";
@@ -19,18 +20,20 @@ resetRouterStack();
 
 export const App = () => (
   <Providers>
-    <AuthGate>
-      <UserEventsHost />
-      <PayByCodeProvider>
-        <div className="relative flex h-dvh flex-col overflow-hidden">
-          <div className="relative flex-1 overflow-hidden">
-            <Router routes={routes} />
+    <ErrorBoundary>
+      <AuthGate>
+        <UserEventsHost />
+        <PayByCodeProvider>
+          <div className="relative flex h-dvh flex-col overflow-hidden">
+            <div className="relative flex-1 overflow-hidden">
+              <Router routes={routes} />
+            </div>
           </div>
-        </div>
-        <QrScannerHost />
-        <ManualCodeHost />
-        <PaymentSheetHost />
-      </PayByCodeProvider>
-    </AuthGate>
+          <QrScannerHost />
+          <ManualCodeHost />
+          <PaymentSheetHost />
+        </PayByCodeProvider>
+      </AuthGate>
+    </ErrorBoundary>
   </Providers>
 );
