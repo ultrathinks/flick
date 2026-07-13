@@ -95,14 +95,14 @@ function Summary({ summary }: { summary: Report["summary"] }) {
           hint="실제 현금 유입"
         />
         <Stat
-          label="기부 재원"
+          label="구매 총액"
           value={formatWon(summary.totalRevenue)}
-          hint="구매 총액"
+          hint="부스 총거래액"
         />
         <Stat
-          label="순기부액"
-          value={formatWon(summary.netDonation)}
-          hint="환불 반영 후"
+          label="기부액"
+          value={formatWon(summary.totalDonation)}
+          hint="기본금 제외 실기부"
         />
         <Stat
           label="주문 수"

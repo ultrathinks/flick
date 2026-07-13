@@ -4,7 +4,6 @@ export const transactionType = z.enum([
   "grant",
   "charge",
   "purchase",
-  "refund",
   "adjustment",
 ]);
 

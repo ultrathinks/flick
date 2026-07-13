@@ -12,9 +12,4 @@ export const statsSchema = z.object({
 });
 
 export type Stats = z.infer<typeof statsSchema>;
-export type TransactionType =
-  | "grant"
-  | "charge"
-  | "purchase"
-  | "refund"
-  | "adjustment";
+export type TransactionType = "grant" | "charge" | "purchase" | "adjustment";

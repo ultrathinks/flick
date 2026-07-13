@@ -151,7 +151,6 @@ export const orders: Order[] = [
     status: "paid",
     paidAt: "2026-07-07T11:03:00+09:00",
     canceledAt: null,
-    refundedAt: null,
     createdAt: "2026-07-07T11:02:00+09:00",
   },
   {
@@ -163,7 +162,6 @@ export const orders: Order[] = [
     status: "pending",
     paidAt: null,
     canceledAt: null,
-    refundedAt: null,
     createdAt: "2026-07-07T11:05:00+09:00",
   },
 ];

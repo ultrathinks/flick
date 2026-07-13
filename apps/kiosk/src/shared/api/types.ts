@@ -55,7 +55,7 @@ export type Order = {
   kioskId: string | null;
   buyerId: string | null;
   totalAmount: number;
-  status: "pending" | "paid" | "canceled" | "refunded";
+  status: "pending" | "paid" | "canceled";
   paidAt: string | null;
   canceledAt: string | null;
   createdAt: string;

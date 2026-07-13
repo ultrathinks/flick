@@ -4,7 +4,6 @@ const labels: Record<TransactionType, string> = {
   grant: "가입 지급",
   charge: "충전",
   purchase: "결제",
-  refund: "환불",
   adjustment: "조정",
 };
 

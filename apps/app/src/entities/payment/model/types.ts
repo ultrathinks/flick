@@ -1,12 +1,6 @@
 import { z } from "zod";
 
-export const orderStatus = z.enum([
-  "pending",
-  "paid",
-  "canceled",
-  "expired",
-  "refunded",
-]);
+export const orderStatus = z.enum(["pending", "paid", "canceled", "expired"]);
 
 export const paymentStatus = z.enum([
   "pending",
@@ -36,7 +30,6 @@ export const orderSchema = z.object({
   status: orderStatus,
   paidAt: z.string().nullable(),
   canceledAt: z.string().nullable(),
-  refundedAt: z.string().nullable(),
   createdAt: z.string(),
 });
 
