@@ -1,4 +1,5 @@
 import { useRouter } from "@b1nd/aid-kit/navigation";
+import { useSafeArea } from "@b1nd/aid-kit/safe-area-provider";
 import { AlertCircleIcon, XIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import {
@@ -20,25 +21,30 @@ const Sheet = ({
 }: {
   onClose: () => void;
   children: ReactNode;
-}) => (
-  <div className="fixed inset-0 z-50 flex flex-col justify-end">
-    <button
-      type="button"
-      aria-label="닫기"
-      tabIndex={-1}
-      className="absolute inset-0 animate-scrim-in bg-scrim"
-      onClick={onClose}
-    />
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="relative z-10 animate-sheet-in rounded-t-sheet bg-surface px-6 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-3 shadow-[var(--shadow-overlay)]"
-    >
-      <div className="mx-auto mb-2 h-1.5 w-9 rounded-full bg-border" />
-      {children}
+}) => {
+  const { bottom } = useSafeArea();
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      <button
+        type="button"
+        aria-label="닫기"
+        tabIndex={-1}
+        className="absolute inset-0 animate-scrim-in bg-scrim"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="relative z-10 animate-sheet-in rounded-t-sheet bg-surface px-6 pt-3 shadow-[var(--shadow-overlay)]"
+        style={{ paddingBottom: bottom + 24 }}
+      >
+        <div className="mx-auto mb-2 h-1.5 w-9 rounded-full bg-border" />
+        {children}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ErrorBody = ({
   info,

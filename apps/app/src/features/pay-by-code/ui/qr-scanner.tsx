@@ -1,3 +1,4 @@
+import { useSafeArea } from "@b1nd/aid-kit/safe-area-provider";
 import { motion } from "framer-motion";
 import { KeyboardIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -12,6 +13,7 @@ interface QrScannerProps {
 }
 
 export const QrScanner = ({ onDetect, onClose }: QrScannerProps) => {
+  const { top, bottom } = useSafeArea();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [mode, setMode] = useState<Mode>("camera");
   const [cameraError, setCameraError] = useState(false);
@@ -55,7 +57,10 @@ export const QrScanner = ({ onDetect, onClose }: QrScannerProps) => {
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
     >
-      <header className="flex items-center justify-between px-5 pt-[env(safe-area-inset-top)]">
+      <header
+        className="flex items-center justify-between px-5"
+        style={{ paddingTop: top }}
+      >
         <div className="flex h-14 items-center">
           <span className="text-heading font-semibold">결제 코드 스캔</span>
         </div>
@@ -123,7 +128,7 @@ export const QrScanner = ({ onDetect, onClose }: QrScannerProps) => {
             </p>
           </div>
 
-          <div className="px-6 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-4">
+          <div className="px-6 pt-4" style={{ paddingBottom: bottom + 24 }}>
             <Button
               block
               size="lg"
