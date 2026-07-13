@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "app-v*"
+      - "app-dev-v*"
 
 permissions:
   contents: write
@@ -24,12 +25,23 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      - name: Resolve environment
+        id: env
+        run: |
+          if [[ "$GITHUB_REF_NAME" == app-dev-v* ]]; then
+            echo "api_url=https://flickdevapi.dgsw.kr/v1" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "api_url=https://flickapi.dgsw.kr/v1" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build app
         env:
-          VITE_API_URL: https://flickapi.dgsw.kr/v1
+          VITE_API_URL: ${{ steps.env.outputs.api_url }}
         run: pnpm turbo run build --filter=app
 
       - name: Zip dist
@@ -39,4 +51,10 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" dist.zip --title "$GITHUB_REF_NAME" --generate-notes
+          PRERELEASE: ${{ steps.env.outputs.prerelease }}
+        run: |
+          flags=(--title "$GITHUB_REF_NAME" --generate-notes)
+          if [[ "$PRERELEASE" == "true" ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "$GITHUB_REF_NAME" dist.zip "${flags[@]}"
