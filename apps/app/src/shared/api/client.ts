@@ -14,7 +14,7 @@ export function setAuthHooks(hooks: AuthHooks): void {
 
 export const api: KyInstance = ky.create({
   prefixUrl: API_BASE_URL,
-  retry: 0,
+  retry: { limit: 1, shouldRetry: () => false },
   hooks: {
     beforeRequest: [
       (request) => {
