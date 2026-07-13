@@ -24,11 +24,11 @@ describe("booth-api", () => {
     await expect(fetchMyBooth()).resolves.toBeNull();
   });
 
-  it("createBooth sends the payload and returns a draft booth", async () => {
+  it("createBooth sends the payload and returns a pending booth", async () => {
     const created = await createBooth({ name: "새 부스" });
 
     expect(created.name).toBe("새 부스");
-    expect(created.status).toBe("draft");
+    expect(created.status).toBe("pending");
   });
 
   it("maps API error bodies to ApiError", async () => {
