@@ -71,7 +71,7 @@ describe("event bus", () => {
     await new Promise((r) => setTimeout(r, 150));
     await publishBoothEvent("booth-x", {
       type: "product.updated",
-      productId: "p1",
+      data: { productId: "p1" },
     });
     await waitFor(() => (received.length > 0 ? received : undefined));
     unsub();
@@ -85,7 +85,7 @@ describe("event bus", () => {
     });
     await publishBoothEvent("booth-b", {
       type: "product.updated",
-      productId: "p1",
+      data: { productId: "p1" },
     });
     await new Promise((r) => setTimeout(r, 200));
     unsub();
@@ -136,27 +136,28 @@ describe("booth SSE stream", () => {
 });
 
 describe("kiosk presence", () => {
-  it("publishes presence and updates last_seen_at on heartbeat", async () => {
+  it("marks online on stream open and offline on close", async () => {
     const owner = await createUser();
-    const { boothId, deviceToken } = await createBoothWithKiosk(owner.id);
+    const { boothId, kioskId, deviceToken } = await createBoothWithKiosk(
+      owner.id,
+    );
 
     const received: boolean[] = [];
     const unsub = subscribeBoothEvents(boothId, (event) => {
-      if (event.type === "kiosk.presence") {
-        received.push(event.online);
+      if (event.type === "kiosk.presence" && event.data.kioskId === kioskId) {
+        received.push(event.data.online);
       }
     });
     await new Promise((r) => setTimeout(r, 150));
 
-    const res = await app.request("/v1/kiosks/me/heartbeat", {
-      method: "POST",
+    const controller = new AbortController();
+    const streamRes = await app.request("/v1/kiosks/me/events", {
       headers: kioskHeaders(deviceToken),
+      signal: controller.signal,
     });
-    expect(res.status).toBe(204);
+    expect(streamRes.status).toBe(200);
 
-    await waitFor(() => (received.length > 0 ? received : undefined));
-    unsub();
-    expect(received).toContain(true);
+    await waitFor(() => (received.includes(true) ? received : undefined));
 
     const meRes = await app.request("/v1/kiosks/me", {
       headers: kioskHeaders(deviceToken),
@@ -165,6 +166,13 @@ describe("kiosk presence", () => {
       kiosk: { lastSeenAt: string | null };
     };
     expect(body.kiosk.lastSeenAt).not.toBeNull();
+
+    controller.abort();
+    await waitFor(() => (received.includes(false) ? received : undefined));
+    unsub();
+
+    expect(received).toContain(true);
+    expect(received).toContain(false);
   });
 });
 
@@ -220,5 +228,71 @@ describe("booth kiosks list", () => {
       devices: Array<{ id: string }>;
     };
     expect(body.devices.map((d) => d.id)).not.toContain(kioskId);
+  });
+});
+
+describe("user SSE stream", () => {
+  it("pushes balance.changed when an admin charges the user", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const target = await createUser({ balance: 0 });
+
+    const streamRes = await app.request("/v1/users/me/events", {
+      headers: authHeaders(target.accessToken),
+    });
+    expect(streamRes.status).toBe(200);
+    expect(streamRes.headers.get("content-type")).toContain(
+      "text/event-stream",
+    );
+    const eventPromise = readFirstEvent(streamRes);
+    await new Promise((r) => setTimeout(r, 100));
+
+    const chargeRes = await app.request("/v1/charges", {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+      body: JSON.stringify({
+        userId: target.id,
+        amount: 5000,
+        idempotencyKey: "sse-charge",
+      }),
+    });
+    expect(chargeRes.status).toBe(201);
+
+    const payload = await eventPromise;
+    expect(payload).toContain("balance.changed");
+  });
+});
+
+describe("admin SSE stream", () => {
+  it("pushes stats.changed to admins on money movement", async () => {
+    const admin = await createUser({ isAdmin: true });
+    const target = await createUser({ balance: 0 });
+
+    const streamRes = await app.request("/v1/admin/events", {
+      headers: authHeaders(admin.accessToken),
+    });
+    expect(streamRes.status).toBe(200);
+    const eventPromise = readFirstEvent(streamRes);
+    await new Promise((r) => setTimeout(r, 100));
+
+    await app.request("/v1/charges", {
+      method: "POST",
+      headers: authHeaders(admin.accessToken),
+      body: JSON.stringify({
+        userId: target.id,
+        amount: 5000,
+        idempotencyKey: "sse-stats",
+      }),
+    });
+
+    const payload = await eventPromise;
+    expect(payload).toContain("stats.changed");
+  });
+
+  it("rejects non-admins", async () => {
+    const user = await createUser();
+    const res = await app.request("/v1/admin/events", {
+      headers: authHeaders(user.accessToken),
+    });
+    expect(res.status).toBe(403);
   });
 });

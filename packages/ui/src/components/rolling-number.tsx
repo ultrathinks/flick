@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "../lib/cn";
 import { formatWon } from "../lib/format";
 
@@ -17,13 +17,18 @@ export function RollingNumber({
   format = formatWon,
   className,
 }: Props) {
-  const [display, setDisplay] = useState(value);
+  const spanRef = useRef<HTMLSpanElement>(null);
   const displayRef = useRef(value);
   const mountedRef = useRef(false);
 
   useEffect(() => {
+    const node = spanRef.current;
+    if (!node) {
+      return;
+    }
     const from = displayRef.current;
     if (from === value) {
+      node.textContent = format(value);
       return;
     }
 
@@ -34,7 +39,7 @@ export function RollingNumber({
     if (!mountedRef.current || reduced) {
       mountedRef.current = true;
       displayRef.current = value;
-      setDisplay(value);
+      node.textContent = format(value);
       return;
     }
 
@@ -48,21 +53,22 @@ export function RollingNumber({
       const eased = 1 - (1 - progress) ** 3;
       const current = Math.round(from + (value - from) * eased);
       displayRef.current = current;
-      setDisplay(current);
+      node.textContent = format(current);
       if (progress < 1) {
         raf = requestAnimationFrame(tick);
       }
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [value, durationMs]);
+  }, [value, durationMs, format]);
 
   return (
     <span
+      ref={spanRef}
       className={cn("whitespace-nowrap tabular-nums", className)}
       aria-label={format(value)}
     >
-      {format(display)}
+      {format(displayRef.current)}
     </span>
   );
 }

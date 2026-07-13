@@ -5,7 +5,7 @@ import {
   createOrder,
   createOrderPayment,
 } from "@/entities/order/api/orders";
-import { ApiError } from "@/shared/api/client";
+import { ApiError, isAuthExpired, isKioskRevoked } from "@/shared/api";
 import {
   clearKioskData,
   getKioskSession,
@@ -67,7 +67,7 @@ export function useCheckout({ onError }: UseCheckoutOptions) {
             await cancelOrder(token, orderId);
           } catch {}
         }
-        if (error instanceof ApiError && error.status === 401) {
+        if (isAuthExpired(error) || isKioskRevoked(error)) {
           clearKioskData();
           navigate("/pairing", { replace: true });
           return;

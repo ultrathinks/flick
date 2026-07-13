@@ -2,7 +2,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { pairKiosk } from "@/features/kiosk-pairing/api/pair-kiosk";
-import { ApiError } from "@/shared/api/client";
+import { ApiError } from "@/shared/api";
 import {
   clearCartItems,
   clearPaymentSnapshot,

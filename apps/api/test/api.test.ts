@@ -244,6 +244,135 @@ describe("payment confirm", () => {
       .where(eq(orders.id, orderId));
     expect(row?.status).toBe("canceled");
   });
+
+  it("returns 409 when canceling an order that is not pending", async () => {
+    const owner = await createUser();
+    const { boothId, kioskId, deviceToken } = await createBoothWithKiosk(
+      owner.id,
+    );
+    const productId = await createProduct(boothId, { price: 1000, stock: 5 });
+    const { orderId } = await createOrderWithPayment(
+      boothId,
+      kioskId,
+      productId,
+    );
+    const first = await app.request(`/v1/orders/${orderId}/cancel`, {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+    });
+    expect(first.status).toBe(200);
+    const second = await app.request(`/v1/orders/${orderId}/cancel`, {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+    });
+    expect(second.status).toBe(409);
+  });
+
+  it("returns 404 when canceling an unknown order", async () => {
+    const owner = await createUser();
+    const { deviceToken } = await createBoothWithKiosk(owner.id);
+    const res = await app.request(
+      "/v1/orders/00000000-0000-0000-0000-000000000000/cancel",
+      { method: "POST", headers: kioskHeaders(deviceToken) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 409 when creating a payment for a non-pending order", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 5000 });
+    const { boothId, kioskId, deviceToken } = await createBoothWithKiosk(
+      owner.id,
+    );
+    const productId = await createProduct(boothId, { price: 1000, stock: 5 });
+    const { orderId, code } = await createOrderWithPayment(
+      boothId,
+      kioskId,
+      productId,
+    );
+    await app.request(`/v1/payment-codes/${code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+    const res = await app.request(`/v1/orders/${orderId}/payments`, {
+      method: "POST",
+      headers: kioskHeaders(deviceToken),
+    });
+    expect(res.status).toBe(409);
+  });
+
+  it("cancels the order and reports out of stock when stock runs out", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 10000 });
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 1 });
+    const first = await createOrderWithPayment(boothId, kioskId, productId);
+    const second = await createOrderWithPayment(boothId, kioskId, productId);
+
+    const firstRes = await app.request(
+      `/v1/payment-codes/${first.code}/confirm`,
+      { method: "POST", headers: authHeaders(buyer.accessToken) },
+    );
+    expect(firstRes.status).toBe(200);
+
+    const secondRes = await app.request(
+      `/v1/payment-codes/${second.code}/confirm`,
+      { method: "POST", headers: authHeaders(buyer.accessToken) },
+    );
+    expect(secondRes.status).toBe(400);
+
+    const [order] = await getDb()
+      .select()
+      .from(orders)
+      .where(eq(orders.id, second.orderId));
+    expect(order?.status).toBe("canceled");
+    expect(await balanceOf(buyer.id)).toBe(9000);
+
+    const [product] = await getDb()
+      .select()
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(product?.stock).toBe(0);
+    expect(product?.status).toBe("soldout");
+    expect(product?.autoSoldout).toBe(true);
+  });
+
+  it("restores an auto-soldout product to available on refund", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 5000 });
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 1 });
+    const { orderId, code } = await createOrderWithPayment(
+      boothId,
+      kioskId,
+      productId,
+    );
+    await app.request(`/v1/payment-codes/${code}/confirm`, {
+      method: "POST",
+      headers: authHeaders(buyer.accessToken),
+    });
+    const [soldout] = await getDb()
+      .select()
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(soldout?.status).toBe("soldout");
+    expect(soldout?.autoSoldout).toBe(true);
+
+    const refundRes = await app.request("/v1/refunds", {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ orderId }),
+    });
+    expect(refundRes.status).toBe(201);
+
+    const [restored] = await getDb()
+      .select()
+      .from(products)
+      .where(eq(products.id, productId));
+    expect(restored?.stock).toBe(1);
+    expect(restored?.status).toBe("available");
+    expect(restored?.autoSoldout).toBe(false);
+  });
 });
 
 describe("refund", () => {
@@ -1013,5 +1142,80 @@ describe("response field exposure", () => {
     for (const row of list) {
       expect(row).not.toHaveProperty("approvedBy");
     }
+  });
+});
+
+describe("booth sales aggregate (POS)", () => {
+  it("sums paid and refunded revenue server-side", async () => {
+    const owner = await createUser();
+    const buyer = await createUser({ balance: 10000 });
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 1000, stock: 10 });
+
+    const a = await createOrderWithPayment(boothId, kioskId, productId, {
+      price: 1000,
+    });
+    const b = await createOrderWithPayment(boothId, kioskId, productId, {
+      price: 1000,
+    });
+    for (const order of [a, b]) {
+      await app.request(`/v1/payment-codes/${order.code}/confirm`, {
+        method: "POST",
+        headers: authHeaders(buyer.accessToken),
+      });
+    }
+    await app.request("/v1/refunds", {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ orderId: b.orderId }),
+    });
+
+    const res = await app.request(`/v1/booths/${boothId}/sales`, {
+      headers: authHeaders(owner.accessToken),
+    });
+    expect(res.status).toBe(200);
+    const sales = (await res.json()) as {
+      paidCount: number;
+      paidRevenue: number;
+      refundedCount: number;
+      refundedRevenue: number;
+    };
+    expect(sales.paidCount).toBe(1);
+    expect(sales.paidRevenue).toBe(1000);
+    expect(sales.refundedCount).toBe(1);
+    expect(sales.refundedRevenue).toBe(1000);
+  });
+
+  it("paginates booth orders with a cursor", async () => {
+    const owner = await createUser();
+    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
+    const productId = await createProduct(boothId, { price: 500, stock: 100 });
+    for (let i = 0; i < 3; i += 1) {
+      await createOrderWithPayment(boothId, kioskId, productId, { price: 500 });
+    }
+
+    const first = await app.request(`/v1/booths/${boothId}/orders?limit=2`, {
+      headers: authHeaders(owner.accessToken),
+    });
+    expect(first.status).toBe(200);
+    const firstBody = (await first.json()) as {
+      items: unknown[];
+      nextCursor: string | null;
+    };
+    expect(firstBody.items).toHaveLength(2);
+    expect(firstBody.nextCursor).not.toBeNull();
+
+    const second = await app.request(
+      `/v1/booths/${boothId}/orders?limit=2&cursor=${encodeURIComponent(
+        firstBody.nextCursor ?? "",
+      )}`,
+      { headers: authHeaders(owner.accessToken) },
+    );
+    const secondBody = (await second.json()) as {
+      items: unknown[];
+      nextCursor: string | null;
+    };
+    expect(secondBody.items).toHaveLength(1);
+    expect(secondBody.nextCursor).toBeNull();
   });
 });

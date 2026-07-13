@@ -9,7 +9,7 @@ if (
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  transpilePackages: ["@flick/ui"],
+  transpilePackages: ["@flick/ui", "@flick/contract", "@flick/api-client"],
   serverExternalPackages: ["msw", "@mswjs/interceptors"],
 };
 

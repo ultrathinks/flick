@@ -98,5 +98,16 @@ export function createHandlers(base: string) {
         createdAt: new Date().toISOString(),
       });
     }),
+
+    http.get(url("admin/events"), () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(": connected\n\n"));
+        },
+      });
+      return new HttpResponse(stream, {
+        headers: { "Content-Type": "text/event-stream" },
+      });
+    }),
   ];
 }

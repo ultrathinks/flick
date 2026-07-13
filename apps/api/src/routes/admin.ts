@@ -1,8 +1,10 @@
+import type { AdminEvent } from "@flick/contract";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { and, desc, eq, ilike, or, type SQL } from "drizzle-orm";
 import { type AuthVariables, requireAdmin } from "../auth/middleware.ts";
 import { getDb } from "../db/index.ts";
 import { auditLogs, booths, orders, users } from "../db/schema/index.ts";
+import { subscribeAdminEvents } from "../lib/events.ts";
 import {
   createdAtMicrosColumn,
   decodeCursor,
@@ -10,6 +12,7 @@ import {
   keysetCondition,
   parseLimit,
 } from "../lib/pagination.ts";
+import { channelEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   adminOrderPageSchema,
@@ -235,3 +238,9 @@ adminRoutes.openapi(
     return c.json({ items, nextCursor: nextCursorFrom(rows, limit) }, 200);
   },
 );
+
+adminRoutes.get("/admin/events", requireAdmin, (c) => {
+  return channelEventStream<AdminEvent>(c, {
+    subscribe: (handler) => subscribeAdminEvents(handler),
+  });
+});

@@ -1,33 +1,22 @@
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { OpenAPIHono, z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { type AuthVariables, requireAuth } from "../auth/middleware.ts";
 import { getDb } from "../db/index.ts";
 import { booths, products } from "../db/schema/index.ts";
+import { MAX_UPLOAD_BYTES } from "../lib/constants.ts";
 import {
   BadRequestError,
   ForbiddenError,
   NotFoundError,
 } from "../lib/errors.ts";
-import {
-  ALLOWED_UPLOAD_CONTENT_TYPES,
-  isAllowedContentType,
-  presignUpload,
-} from "../lib/storage.ts";
-import { errorResponse, jsonContent } from "../openapi/helpers.ts";
+import { isSupportedImage, processAndUploadImage } from "../lib/storage.ts";
 
-const presignBodySchema = z.object({
+const CONTENT_LENGTH_OVERHEAD = 1024 * 1024;
+
+const fieldsSchema = z.object({
   kind: z.enum(["booth", "product"]),
   targetId: z.string().uuid(),
-  contentType: z.enum(ALLOWED_UPLOAD_CONTENT_TYPES as [string, ...string[]]),
 });
-
-const presignResponseSchema = z
-  .object({
-    uploadUrl: z.string(),
-    publicUrl: z.string(),
-    key: z.string(),
-  })
-  .openapi("PresignUpload");
 
 async function assertOwnsTarget(
   kind: "booth" | "product",
@@ -62,36 +51,57 @@ async function assertOwnsTarget(
 
 export const uploadsRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
 
-uploadsRoutes.openapi(
-  createRoute({
-    method: "post",
-    path: "/presign",
-    tags: ["uploads"],
-    security: [{ Bearer: [] }],
-    middleware: [requireAuth] as const,
-    request: {
-      body: { content: { "application/json": { schema: presignBodySchema } } },
-    },
-    responses: {
-      201: jsonContent(presignResponseSchema, "Presigned upload"),
-      400: errorResponse("Bad request"),
-      401: errorResponse("Unauthorized"),
-      403: errorResponse("Forbidden"),
-      404: errorResponse("Not found"),
-    },
-  }),
-  async (c) => {
-    const user = c.get("user");
-    const body = c.req.valid("json");
-    if (!isAllowedContentType(body.contentType)) {
-      throw new BadRequestError("unsupported content type");
-    }
-    await assertOwnsTarget(body.kind, body.targetId, user);
-    const result = await presignUpload({
-      kind: body.kind,
-      targetId: body.targetId,
-      contentType: body.contentType,
-    });
-    return c.json(result, 201);
-  },
-);
+uploadsRoutes.post("/", requireAuth, async (c) => {
+  const user = c.get("user");
+
+  const declaredLength = Number(c.req.header("content-length") ?? "0");
+  if (declaredLength > MAX_UPLOAD_BYTES + CONTENT_LENGTH_OVERHEAD) {
+    throw new BadRequestError("image too large");
+  }
+
+  const form = await c.req.parseBody();
+  const fields = fieldsSchema.safeParse({
+    kind: form.kind,
+    targetId: form.targetId,
+  });
+  if (!fields.success) {
+    throw new BadRequestError("invalid upload fields");
+  }
+
+  const file = form.file;
+  if (!(file instanceof File)) {
+    throw new BadRequestError("file is required");
+  }
+  const input = Buffer.from(await file.arrayBuffer());
+  if (input.byteLength === 0) {
+    throw new BadRequestError("file is empty");
+  }
+  if (input.byteLength > MAX_UPLOAD_BYTES) {
+    throw new BadRequestError("image too large");
+  }
+  if (!isSupportedImage(input)) {
+    throw new BadRequestError("unsupported image format");
+  }
+
+  await assertOwnsTarget(fields.data.kind, fields.data.targetId, user);
+
+  const imageUrl = await processAndUploadImage({
+    kind: fields.data.kind,
+    targetId: fields.data.targetId,
+    input,
+  });
+
+  if (fields.data.kind === "booth") {
+    await getDb()
+      .update(booths)
+      .set({ imageUrl, updatedAt: new Date() })
+      .where(eq(booths.id, fields.data.targetId));
+  } else {
+    await getDb()
+      .update(products)
+      .set({ imageUrl, updatedAt: new Date() })
+      .where(eq(products.id, fields.data.targetId));
+  }
+
+  return c.json({ imageUrl }, 201);
+});

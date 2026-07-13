@@ -17,13 +17,22 @@ import {
   users,
 } from "../db/schema/index.ts";
 import { MAX_TRANSACTION_AMOUNT } from "../lib/constants.ts";
-import { isForeignKeyViolation, isUniqueViolation } from "../lib/db-errors.ts";
+import {
+  isCheckViolation,
+  isForeignKeyViolation,
+  isUniqueViolation,
+} from "../lib/db-errors.ts";
 import {
   BadRequestError,
   ConflictError,
   ForbiddenError,
   NotFoundError,
 } from "../lib/errors.ts";
+import {
+  publishAdminEvent,
+  publishBoothEvent,
+  publishUserEvent,
+} from "../lib/events.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   refundSchema,
@@ -36,6 +45,17 @@ const resolveSchema = z.object({ code: z.string().min(1) });
 const chargeSchema = z.object({
   userId: z.string().uuid(),
   amount: z.number().int().positive().max(MAX_TRANSACTION_AMOUNT),
+  idempotencyKey: z.string().min(1),
+});
+const adjustmentSchema = z.object({
+  userId: z.string().uuid(),
+  amount: z
+    .number()
+    .int()
+    .gte(-MAX_TRANSACTION_AMOUNT)
+    .lte(MAX_TRANSACTION_AMOUNT)
+    .refine((value) => value !== 0, "amount must be non-zero"),
+  reason: z.string().max(200).optional(),
   idempotencyKey: z.string().min(1),
 });
 const refundBodySchema = z.object({
@@ -132,15 +152,16 @@ moneyRoutes.openapi(
           if (!existing) {
             throw new Error("charge conflict without an existing transaction");
           }
-          return existing;
+          return { transaction: existing, balance: null, replayed: true };
         }
-        await tx
+        const [updatedUser] = await tx
           .update(users)
           .set({
             balance: sql<number>`${users.balance} + ${body.amount}`,
             updatedAt: new Date(),
           })
-          .where(eq(users.id, body.userId));
+          .where(eq(users.id, body.userId))
+          .returning({ balance: users.balance });
         await tx.insert(auditLogs).values({
           actorId: admin.id,
           action: "charge.create",
@@ -148,10 +169,122 @@ moneyRoutes.openapi(
           targetId: body.userId,
           metadata: { amount: body.amount },
         });
-        return inserted;
+        return {
+          transaction: inserted,
+          balance: updatedUser?.balance ?? null,
+          replayed: false,
+        };
       });
-      return c.json(serializeTransaction(result), 201);
+      if (!result.replayed && result.balance !== null) {
+        await publishUserEvent(body.userId, {
+          type: "balance.changed",
+          data: { balance: result.balance },
+        });
+        await publishUserEvent(body.userId, {
+          type: "transaction.created",
+          data: { transactionId: result.transaction.id },
+        });
+        await publishAdminEvent({ type: "stats.changed", data: {} });
+      }
+      return c.json(serializeTransaction(result.transaction), 201);
     } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        throw new NotFoundError("user not found");
+      }
+      throw error;
+    }
+  },
+);
+
+moneyRoutes.openapi(
+  createRoute({
+    method: "post",
+    path: "/adjustments",
+    tags: ["money"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAdmin] as const,
+    request: {
+      body: { content: { "application/json": { schema: adjustmentSchema } } },
+    },
+    responses: {
+      201: jsonContent(transactionSchema, "Created adjustment"),
+      400: errorResponse("Bad request"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
+  async (c) => {
+    const admin = c.get("user");
+    const body = c.req.valid("json");
+    try {
+      const result = await getDb().transaction(async (tx) => {
+        const [inserted] = await tx
+          .insert(transactions)
+          .values({
+            userId: body.userId,
+            amount: body.amount,
+            type: "adjustment",
+            adminId: admin.id,
+            idempotencyKey: body.idempotencyKey,
+          })
+          .onConflictDoNothing()
+          .returning();
+        if (!inserted) {
+          const [existing] = await tx
+            .select()
+            .from(transactions)
+            .where(
+              and(
+                eq(transactions.adminId, admin.id),
+                eq(transactions.idempotencyKey, body.idempotencyKey),
+              ),
+            )
+            .limit(1);
+          if (!existing) {
+            throw new Error(
+              "adjustment conflict without an existing transaction",
+            );
+          }
+          return { transaction: existing, balance: null, replayed: true };
+        }
+        const [updatedUser] = await tx
+          .update(users)
+          .set({
+            balance: sql<number>`${users.balance} + ${body.amount}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, body.userId))
+          .returning({ balance: users.balance });
+        await tx.insert(auditLogs).values({
+          actorId: admin.id,
+          action: "adjustment.create",
+          targetType: "user",
+          targetId: body.userId,
+          metadata: { amount: body.amount, reason: body.reason ?? null },
+        });
+        return {
+          transaction: inserted,
+          balance: updatedUser?.balance ?? null,
+          replayed: false,
+        };
+      });
+      if (!result.replayed && result.balance !== null) {
+        await publishUserEvent(body.userId, {
+          type: "balance.changed",
+          data: { balance: result.balance },
+        });
+        await publishUserEvent(body.userId, {
+          type: "transaction.created",
+          data: { transactionId: result.transaction.id },
+        });
+        await publishAdminEvent({ type: "stats.changed", data: {} });
+      }
+      return c.json(serializeTransaction(result.transaction), 201);
+    } catch (error) {
+      if (isCheckViolation(error)) {
+        throw new BadRequestError("adjustment would make balance negative");
+      }
       if (isForeignKeyViolation(error)) {
         throw new NotFoundError("user not found");
       }
@@ -230,13 +363,17 @@ moneyRoutes.openapi(
         if (!refundTransaction) {
           throw new Error("failed to create refund transaction");
         }
-        await tx
+        const [updatedBuyer] = await tx
           .update(users)
           .set({
             balance: sql<number>`${users.balance} + ${order.totalAmount}`,
             updatedAt: new Date(),
           })
-          .where(eq(users.id, order.buyerId));
+          .where(eq(users.id, order.buyerId))
+          .returning({ balance: users.balance });
+        if (!updatedBuyer) {
+          throw new Error("failed to update buyer balance");
+        }
         const [refund] = await tx
           .insert(refunds)
           .values({
@@ -258,7 +395,12 @@ moneyRoutes.openapi(
         for (const item of refundedItems) {
           await tx
             .update(products)
-            .set({ stock: sql<number>`${products.stock} + ${item.quantity}` })
+            .set({
+              stock: sql<number>`${products.stock} + ${item.quantity}`,
+              status: sql`case when ${products.autoSoldout} then 'available'::product_status else ${products.status} end`,
+              autoSoldout: sql`case when ${products.autoSoldout} then false else ${products.autoSoldout} end`,
+              updatedAt: new Date(),
+            })
             .where(
               and(
                 eq(products.id, item.productId),
@@ -280,9 +422,49 @@ moneyRoutes.openapi(
         if (!refund) {
           throw new Error("failed to create refund");
         }
-        return refund;
+        return {
+          refund,
+          refundTransactionId: refundTransaction.id,
+          buyerId: order.buyerId,
+          balance: updatedBuyer.balance,
+          boothId: order.boothId,
+          kioskId: order.kioskId,
+          orderId,
+          productIds: refundedItems.map((item) => item.productId),
+        };
       });
-      return c.json(result, 201);
+      await publishUserEvent(result.buyerId, {
+        type: "balance.changed",
+        data: { balance: result.balance },
+      });
+      await publishUserEvent(result.buyerId, {
+        type: "transaction.created",
+        data: { transactionId: result.refundTransactionId },
+      });
+      await publishAdminEvent({ type: "stats.changed", data: {} });
+      await publishAdminEvent({
+        type: "order.updated",
+        data: {
+          orderId: result.orderId,
+          boothId: result.boothId,
+          status: "refunded",
+        },
+      });
+      await publishBoothEvent(result.boothId, {
+        type: "order.updated",
+        data: {
+          orderId: result.orderId,
+          kioskId: result.kioskId,
+          status: "refunded",
+        },
+      });
+      for (const productId of new Set(result.productIds)) {
+        await publishBoothEvent(result.boothId, {
+          type: "product.updated",
+          data: { productId },
+        });
+      }
+      return c.json(result.refund, 201);
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new ConflictError("order already refunded");

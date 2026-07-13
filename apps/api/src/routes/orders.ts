@@ -1,3 +1,4 @@
+import type { BoothEvent } from "@flick/contract";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
@@ -22,6 +23,7 @@ import { generateDigitCode, generateUniqueCode } from "../lib/codes.ts";
 import { MAX_ORDER_QUANTITY, PAYMENT_TTL_MS } from "../lib/constants.ts";
 import {
   BadRequestError,
+  ConflictError,
   ForbiddenError,
   InsufficientBalanceError,
   NotFoundError,
@@ -29,9 +31,14 @@ import {
   PaymentExpiredError,
   PaymentNotPendingError,
 } from "../lib/errors.ts";
-import { publishBoothEvent } from "../lib/events.ts";
+import {
+  publishAdminEvent,
+  publishBoothEvent,
+  publishUserEvent,
+  subscribeBoothEvents,
+} from "../lib/events.ts";
 import { hashSecret } from "../lib/security.ts";
-import { boothEventStream } from "../lib/sse.ts";
+import { channelEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   createPaymentSchema,
@@ -75,6 +82,57 @@ async function attachOptions<T extends { id: string }>(items: T[]) {
     ...item,
     options: optionsByItem.get(item.id) ?? [],
   }));
+}
+
+async function cancelPendingOnOutOfStock(codeHash: string): Promise<void> {
+  const canceled = await getDb().transaction(async (tx) => {
+    const [row] = await tx
+      .select({ payment: payments, order: orders })
+      .from(payments)
+      .innerJoin(orders, eq(payments.orderId, orders.id))
+      .where(eq(payments.codeHash, codeHash))
+      .for("update", { of: orders })
+      .limit(1);
+    if (row?.order.status !== "pending") {
+      return null;
+    }
+    await tx
+      .update(orders)
+      .set({ status: "canceled", canceledAt: new Date() })
+      .where(eq(orders.id, row.order.id));
+    await tx
+      .update(payments)
+      .set({ status: "canceled" })
+      .where(
+        and(eq(payments.orderId, row.order.id), eq(payments.status, "pending")),
+      );
+    return {
+      boothId: row.order.boothId,
+      kioskId: row.order.kioskId,
+      orderId: row.order.id,
+      paymentId: row.payment.id,
+    };
+  });
+  if (!canceled) {
+    return;
+  }
+  await publishBoothEvent(canceled.boothId, {
+    type: "payment.canceled",
+    data: {
+      paymentId: canceled.paymentId,
+      orderId: canceled.orderId,
+      kioskId: canceled.kioskId,
+      reason: "out_of_stock",
+    },
+  });
+  await publishBoothEvent(canceled.boothId, {
+    type: "order.updated",
+    data: {
+      orderId: canceled.orderId,
+      kioskId: canceled.kioskId,
+      status: "canceled",
+    },
+  });
 }
 
 export const ordersRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
@@ -283,8 +341,18 @@ ordersRoutes.openapi(
     });
     await publishBoothEvent(kiosk.boothId, {
       type: "order.created",
-      orderId: order.id,
-      kioskId: kiosk.id,
+      data: {
+        orderId: order.id,
+        kioskId: kiosk.id,
+        items: items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+        })),
+      },
+    });
+    await publishAdminEvent({
+      type: "order.updated",
+      data: { orderId: order.id, boothId: kiosk.boothId, status: "pending" },
     });
     return c.json(order, 201);
   },
@@ -343,6 +411,7 @@ ordersRoutes.openapi(
       200: jsonContent(orderSchema, "Canceled order"),
       401: errorResponse("Unauthorized"),
       404: errorResponse("Not found"),
+      409: errorResponse("Conflict"),
     },
   }),
   async (c) => {
@@ -355,8 +424,11 @@ ordersRoutes.openapi(
         .from(orders)
         .where(and(eq(orders.id, orderId), eq(orders.kioskId, kiosk.id)))
         .for("update");
-      if (existing?.status !== "pending") {
+      if (!existing) {
         throw new NotFoundError("order not found");
+      }
+      if (existing.status !== "pending") {
+        throw new ConflictError("order is not pending");
       }
       const [updated] = await tx
         .update(orders)
@@ -374,15 +446,12 @@ ordersRoutes.openapi(
     });
     await publishBoothEvent(kiosk.boothId, {
       type: "order.updated",
-      orderId,
-      kioskId: kiosk.id,
+      data: { orderId, kioskId: kiosk.id, status: "canceled" },
     });
     if (result.payment) {
       await publishBoothEvent(kiosk.boothId, {
         type: "payment.canceled",
-        paymentId: result.payment.id,
-        orderId,
-        kioskId: kiosk.id,
+        data: { paymentId: result.payment.id, orderId, kioskId: kiosk.id },
       });
     }
     return c.json(result.order, 200);
@@ -401,6 +470,7 @@ ordersRoutes.openapi(
       201: jsonContent(createPaymentSchema, "Created payment"),
       401: errorResponse("Unauthorized"),
       404: errorResponse("Not found"),
+      409: errorResponse("Conflict"),
     },
   }),
   async (c) => {
@@ -421,16 +491,13 @@ ordersRoutes.openapi(
       const [order] = await tx
         .select()
         .from(orders)
-        .where(
-          and(
-            eq(orders.id, orderId),
-            eq(orders.kioskId, kiosk.id),
-            eq(orders.status, "pending"),
-          ),
-        )
+        .where(and(eq(orders.id, orderId), eq(orders.kioskId, kiosk.id)))
         .limit(1);
       if (!order) {
         throw new NotFoundError("order not found");
+      }
+      if (order.status !== "pending") {
+        throw new ConflictError("order is not pending");
       }
       await tx
         .update(payments)
@@ -526,129 +593,178 @@ paymentCodesRoutes.openapi(
     const user = c.get("user");
     const codeHash = hashSecret(c.req.valid("param").code);
     const now = new Date();
-    const result = await getDb().transaction(async (tx) => {
-      const [row] = await tx
-        .select({ payment: payments, order: orders })
-        .from(payments)
-        .innerJoin(orders, eq(payments.orderId, orders.id))
-        .where(eq(payments.codeHash, codeHash))
-        .for("update", { of: payments })
-        .limit(1);
-      if (!row) {
-        throw new NotFoundError("payment not found");
-      }
-      if (
-        row.payment.status === "completed" &&
-        row.payment.confirmedBy === user.id
-      ) {
-        return {
-          order: row.order,
-          payment: row.payment,
-          productIds: [],
-          replayed: true,
-        };
-      }
-      if (row.payment.expiresAt <= now) {
-        throw new PaymentExpiredError();
-      }
-      if (row.payment.status !== "pending" || row.order.status !== "pending") {
-        throw new PaymentNotPendingError();
-      }
-      const items = await tx
-        .select()
-        .from(orderItems)
-        .where(eq(orderItems.orderId, row.order.id));
-      const itemTotal = items.reduce((sum, item) => sum + item.totalAmount, 0);
-      if (itemTotal !== row.order.totalAmount) {
-        throw new BadRequestError("invalid order total");
-      }
-      const [freshUser] = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, user.id))
-        .for("update");
-      if (!freshUser || freshUser.balance < row.order.totalAmount) {
-        throw new InsufficientBalanceError();
-      }
-      for (const item of items) {
-        const [updatedProduct] = await tx
-          .update(products)
-          .set({ stock: sql<number>`${products.stock} - ${item.quantity}` })
-          .where(
-            and(
-              eq(products.id, item.productId),
-              sql`${products.stock} is not null`,
-              sql`${products.stock} >= ${item.quantity}`,
-            ),
-          )
-          .returning();
-        if (!updatedProduct) {
-          const [current] = await tx
-            .select({ stock: products.stock })
-            .from(products)
-            .where(eq(products.id, item.productId));
-          if (current?.stock != null) {
-            throw new OutOfStockError();
+    const result = await getDb()
+      .transaction(async (tx) => {
+        const [row] = await tx
+          .select({ payment: payments, order: orders })
+          .from(payments)
+          .innerJoin(orders, eq(payments.orderId, orders.id))
+          .where(eq(payments.codeHash, codeHash))
+          .for("update", { of: payments })
+          .limit(1);
+        if (!row) {
+          throw new NotFoundError("payment not found");
+        }
+        if (
+          row.payment.status === "completed" &&
+          row.payment.confirmedBy === user.id
+        ) {
+          return {
+            order: row.order,
+            payment: row.payment,
+            productIds: [],
+            transactionId: null,
+            balance: null,
+            replayed: true,
+          };
+        }
+        if (row.payment.expiresAt <= now) {
+          throw new PaymentExpiredError();
+        }
+        if (
+          row.payment.status !== "pending" ||
+          row.order.status !== "pending"
+        ) {
+          throw new PaymentNotPendingError();
+        }
+        const items = await tx
+          .select()
+          .from(orderItems)
+          .where(eq(orderItems.orderId, row.order.id));
+        const itemTotal = items.reduce(
+          (sum, item) => sum + item.totalAmount,
+          0,
+        );
+        if (itemTotal !== row.order.totalAmount) {
+          throw new BadRequestError("invalid order total");
+        }
+        const [freshUser] = await tx
+          .select()
+          .from(users)
+          .where(eq(users.id, user.id))
+          .for("update");
+        if (!freshUser || freshUser.balance < row.order.totalAmount) {
+          throw new InsufficientBalanceError();
+        }
+        for (const item of items) {
+          const [updatedProduct] = await tx
+            .update(products)
+            .set({
+              stock: sql<number>`${products.stock} - ${item.quantity}`,
+              status: sql`case when ${products.stock} - ${item.quantity} = 0 then 'soldout'::product_status else ${products.status} end`,
+              autoSoldout: sql`case when ${products.stock} - ${item.quantity} = 0 then true else ${products.autoSoldout} end`,
+              updatedAt: now,
+            })
+            .where(
+              and(
+                eq(products.id, item.productId),
+                sql`${products.stock} is not null`,
+                sql`${products.stock} >= ${item.quantity}`,
+              ),
+            )
+            .returning();
+          if (!updatedProduct) {
+            const [current] = await tx
+              .select({ stock: products.stock })
+              .from(products)
+              .where(eq(products.id, item.productId));
+            if (current?.stock != null) {
+              throw new OutOfStockError();
+            }
           }
         }
-      }
-      const [transaction] = await tx
-        .insert(transactions)
-        .values({
-          userId: user.id,
-          amount: -row.order.totalAmount,
-          type: "purchase",
-          orderId: row.order.id,
-          paymentId: row.payment.id,
-        })
-        .returning();
-      if (!transaction) {
-        throw new Error("failed to create transaction");
-      }
-      await tx
-        .update(users)
-        .set({
-          balance: sql<number>`${users.balance} - ${row.order.totalAmount}`,
-          updatedAt: now,
-        })
-        .where(eq(users.id, user.id));
-      const [order] = await tx
-        .update(orders)
-        .set({ status: "paid", buyerId: user.id, paidAt: now })
-        .where(and(eq(orders.id, row.order.id), eq(orders.status, "pending")))
-        .returning();
-      if (!order) {
-        throw new PaymentNotPendingError();
-      }
-      await tx
-        .update(payments)
-        .set({ status: "completed", completedAt: now, confirmedBy: user.id })
-        .where(eq(payments.id, row.payment.id));
-      return {
-        order,
-        payment: row.payment,
-        productIds: items.map((item) => item.productId),
-        replayed: false,
-      };
-    });
-    await publishBoothEvent(result.order.boothId, {
-      type: "payment.completed",
-      paymentId: result.payment.id,
-      orderId: result.order.id,
-      kioskId: result.order.kioskId,
-    });
-    await publishBoothEvent(result.order.boothId, {
-      type: "order.updated",
-      orderId: result.order.id,
-      kioskId: result.order.kioskId,
-    });
+        const [transaction] = await tx
+          .insert(transactions)
+          .values({
+            userId: user.id,
+            amount: -row.order.totalAmount,
+            type: "purchase",
+            orderId: row.order.id,
+            paymentId: row.payment.id,
+          })
+          .returning();
+        if (!transaction) {
+          throw new Error("failed to create transaction");
+        }
+        const [updatedBuyer] = await tx
+          .update(users)
+          .set({
+            balance: sql<number>`${users.balance} - ${row.order.totalAmount}`,
+            updatedAt: now,
+          })
+          .where(eq(users.id, user.id))
+          .returning({ balance: users.balance });
+        const [order] = await tx
+          .update(orders)
+          .set({ status: "paid", buyerId: user.id, paidAt: now })
+          .where(and(eq(orders.id, row.order.id), eq(orders.status, "pending")))
+          .returning();
+        if (!order) {
+          throw new PaymentNotPendingError();
+        }
+        await tx
+          .update(payments)
+          .set({ status: "completed", completedAt: now, confirmedBy: user.id })
+          .where(eq(payments.id, row.payment.id));
+        return {
+          order,
+          payment: row.payment,
+          productIds: items.map((item) => item.productId),
+          transactionId: transaction.id,
+          balance: updatedBuyer?.balance ?? null,
+          replayed: false,
+        };
+      })
+      .catch(async (error) => {
+        if (error instanceof OutOfStockError) {
+          await cancelPendingOnOutOfStock(codeHash);
+        }
+        throw error;
+      });
     if (!result.replayed) {
+      await publishBoothEvent(result.order.boothId, {
+        type: "payment.completed",
+        data: {
+          paymentId: result.payment.id,
+          orderId: result.order.id,
+          kioskId: result.order.kioskId,
+        },
+      });
+      await publishBoothEvent(result.order.boothId, {
+        type: "order.updated",
+        data: {
+          orderId: result.order.id,
+          kioskId: result.order.kioskId,
+          status: "paid",
+        },
+      });
+      await publishAdminEvent({
+        type: "order.updated",
+        data: {
+          orderId: result.order.id,
+          boothId: result.order.boothId,
+          status: "paid",
+        },
+      });
       for (const productId of new Set(result.productIds)) {
         await publishBoothEvent(result.order.boothId, {
           type: "product.updated",
-          productId,
+          data: { productId },
         });
       }
+      if (result.balance !== null) {
+        await publishUserEvent(user.id, {
+          type: "balance.changed",
+          data: { balance: result.balance },
+        });
+      }
+      if (result.transactionId !== null) {
+        await publishUserEvent(user.id, {
+          type: "transaction.created",
+          data: { transactionId: result.transactionId },
+        });
+      }
+      await publishAdminEvent({ type: "stats.changed", data: {} });
     }
     return c.json(result.order, 200);
   },
@@ -704,13 +820,12 @@ paymentsRoutes.get("/:id/events", requireKiosk, async (c) => {
     throw new NotFoundError("payment not found");
   }
 
-  return boothEventStream(c, {
-    boothId: kiosk.boothId,
+  return channelEventStream<BoothEvent>(c, {
+    subscribe: (handler) => subscribeBoothEvents(kiosk.boothId, handler),
     filter: (event) =>
       (event.type === "payment.completed" ||
-        event.type === "payment.canceled" ||
-        event.type === "payment.expired") &&
-      event.paymentId === paymentId,
+        event.type === "payment.canceled") &&
+      event.data.paymentId === paymentId,
     shouldClose: () => true,
   });
 });

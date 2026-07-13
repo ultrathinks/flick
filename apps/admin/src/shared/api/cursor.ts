@@ -1,6 +1,6 @@
 import { type QueryKey, useInfiniteQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { request } from "./request.ts";
+import { request } from "./index.ts";
 
 export interface Page<T> {
   items: T[];
@@ -13,8 +13,10 @@ export function useCursorQuery<T>(params: {
   itemSchema: z.ZodType<T>;
   searchParams?: Record<string, string | undefined>;
   enabled?: boolean;
+  refetchInterval?: number;
 }) {
-  const { queryKey, path, itemSchema, searchParams, enabled } = params;
+  const { queryKey, path, itemSchema, searchParams, enabled, refetchInterval } =
+    params;
   const schema = z.object({
     items: z.array(itemSchema),
     nextCursor: z.string().nullable(),
@@ -22,6 +24,7 @@ export function useCursorQuery<T>(params: {
   return useInfiniteQuery({
     queryKey,
     enabled,
+    refetchInterval,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) => {
       const search = new URLSearchParams();

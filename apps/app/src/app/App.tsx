@@ -7,6 +7,7 @@ import {
   PaymentSheetHost,
   QrScannerHost,
 } from "@/features/pay-by-code";
+import { UserEventsHost } from "@/features/user-events";
 import { installBridgeMock } from "@/shared/lib";
 import { resetRouterStack } from "./lib/reset-router-stack.ts";
 import { Providers } from "./providers";
@@ -19,6 +20,7 @@ resetRouterStack();
 export const App = () => (
   <Providers>
     <AuthGate>
+      <UserEventsHost />
       <PayByCodeProvider>
         <div className="relative flex h-dvh flex-col overflow-hidden">
           <div className="relative flex-1 overflow-hidden">

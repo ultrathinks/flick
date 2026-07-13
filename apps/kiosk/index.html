@@ -21,18 +21,6 @@
       media="(prefers-color-scheme: dark)"
     />
     <title>Flick Kiosk</title>
-    <script>
-      (() => {
-        try {
-          const stored = localStorage.getItem("flick:theme") || "system";
-          const dark =
-            stored === "dark" ||
-            (stored === "system" &&
-              window.matchMedia("(prefers-color-scheme: dark)").matches);
-          document.documentElement.classList.toggle("dark", dark);
-        } catch {}
-      })();
-    </script>
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"

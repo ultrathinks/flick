@@ -1,8 +1,10 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { type Booth, type BoothStatus, useBooths } from "@/entities/booth";
 import { useBoothModeration } from "@/features/booth-moderation";
+import { useAdminEvents } from "@/shared/api/use-admin-events.ts";
 import {
   Badge,
   Button,
@@ -25,6 +27,22 @@ export function BoothQueue() {
   const moderation = useBoothModeration();
   const confirm = useConfirm();
   const toast = useToast();
+  const queryClient = useQueryClient();
+
+  useAdminEvents({
+    onEvent: (event) => {
+      if (
+        event.type === "booth.created" ||
+        event.type === "booth.approved" ||
+        event.type === "booth.rejected"
+      ) {
+        queryClient.invalidateQueries({ queryKey: ["booths"] });
+      }
+    },
+    onReconnect: () => {
+      queryClient.invalidateQueries({ queryKey: ["booths"] });
+    },
+  });
 
   const filtered = useMemo(() => {
     const all = booths.data ?? [];

@@ -34,6 +34,12 @@ export class ForbiddenError extends AppError {
   }
 }
 
+export class KioskRevokedError extends AppError {
+  constructor(message = "Kiosk revoked") {
+    super(403, "KIOSK_REVOKED", message);
+  }
+}
+
 export class NotFoundError extends AppError {
   constructor(message = "Not found") {
     super(404, "NOT_FOUND", message);

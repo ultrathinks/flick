@@ -315,3 +315,19 @@ export const auditLogPageSchema = z
     nextCursor: z.string().nullable(),
   })
   .openapi("AuditLogPage");
+
+export const boothOrderPageSchema = z
+  .object({
+    items: z.array(orderSchema),
+    nextCursor: z.string().nullable(),
+  })
+  .openapi("BoothOrderPage");
+
+export const boothSalesSchema = z
+  .object({
+    paidCount: z.number(),
+    paidRevenue: z.number(),
+    refundedCount: z.number(),
+    refundedRevenue: z.number(),
+  })
+  .openapi("BoothSales");

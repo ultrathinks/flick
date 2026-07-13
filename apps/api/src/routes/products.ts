@@ -17,7 +17,6 @@ import { productWithOptionsSchema } from "../openapi/schemas.ts";
 const productPatchSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional(),
   price: z.number().int().positive().max(MAX_PRODUCT_PRICE).optional(),
   stock: z.number().int().min(0).nullable().optional(),
   status: z.enum(["available", "soldout", "hidden"]).optional(),
@@ -79,7 +78,7 @@ productsRoutes.openapi(
     });
     await publishBoothEvent(updated.boothId, {
       type: "product.updated",
-      productId: updated.id,
+      data: { productId: updated.id },
     });
     return c.json(updated, 200);
   },
@@ -120,7 +119,7 @@ productsRoutes.openapi(
       .where(eq(products.id, productId));
     await publishBoothEvent(product.product.boothId, {
       type: "product.updated",
-      productId,
+      data: { productId },
     });
     return c.body(null, 204);
   },

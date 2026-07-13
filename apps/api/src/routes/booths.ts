@@ -1,5 +1,16 @@
+import type { BoothEvent } from "@flick/contract";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { and, asc, desc, eq, gt, inArray, isNull } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import {
   type AuthVariables,
   requireAdmin,
@@ -20,19 +31,31 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "../lib/errors.ts";
-import { publishBoothEvent } from "../lib/events.ts";
+import {
+  publishAdminEvent,
+  publishBoothEvent,
+  subscribeBoothEvents,
+} from "../lib/events.ts";
+import {
+  createdAtMicrosColumn,
+  decodeCursor,
+  encodeCursor,
+  keysetCondition,
+  parseLimit,
+} from "../lib/pagination.ts";
 import {
   loadProductOptions,
   optionsInputSchema,
   replaceProductOptions,
 } from "../lib/product-options.ts";
-import { boothEventStream } from "../lib/sse.ts";
+import { channelEventStream } from "../lib/sse.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   boothKiosksSchema,
+  boothOrderPageSchema,
+  boothSalesSchema,
   boothSchema,
   kioskPairingSchema,
-  orderSchema,
   productWithOptionsSchema,
 } from "../openapi/schemas.ts";
 import {
@@ -45,13 +68,11 @@ import { createKioskPairing } from "./kiosks.ts";
 const boothBodySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional(),
 });
 
 const productBodySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional(),
   price: z.number().int().positive().max(MAX_PRODUCT_PRICE),
   stock: z.number().int().min(0).nullable().optional(),
   status: z.enum(["available", "soldout", "hidden"]).optional(),
@@ -89,7 +110,9 @@ boothsRoutes.get("/:id/events", requireAuth, async (c) => {
   if (!owns && !user.isAdmin) {
     throw new ForbiddenError();
   }
-  return boothEventStream(c, { boothId });
+  return channelEventStream<BoothEvent>(c, {
+    subscribe: (handler) => subscribeBoothEvents(boothId, handler),
+  });
 });
 
 boothsRoutes.openapi(
@@ -146,6 +169,10 @@ boothsRoutes.openapi(
     if (!row) {
       throw new Error("failed to create booth");
     }
+    await publishAdminEvent({
+      type: "booth.created",
+      data: { boothId: row.id },
+    });
     return c.json(serializeBooth(row), 201);
   },
 );
@@ -320,6 +347,11 @@ boothsRoutes.openapi(
       targetType: "booth",
       targetId: boothId,
     });
+    await publishBoothEvent(boothId, {
+      type: "booth.approved",
+      data: { boothId },
+    });
+    await publishAdminEvent({ type: "booth.approved", data: { boothId } });
     return c.json(row, 200);
   },
 );
@@ -356,6 +388,11 @@ boothsRoutes.openapi(
       targetType: "booth",
       targetId: boothId,
     });
+    await publishBoothEvent(boothId, {
+      type: "booth.rejected",
+      data: { boothId },
+    });
+    await publishAdminEvent({ type: "booth.rejected", data: { boothId } });
     return c.json(serializeBooth(row), 200);
   },
 );
@@ -413,9 +450,73 @@ boothsRoutes.openapi(
     tags: ["booths"],
     security: [{ Bearer: [] }],
     middleware: [requireAuth] as const,
+    request: {
+      params: idParam,
+      query: z.object({
+        limit: z.string().optional(),
+        cursor: z.string().optional(),
+      }),
+    },
+    responses: {
+      200: jsonContent(boothOrderPageSchema, "Booth orders"),
+      400: errorResponse("Bad request"),
+      401: errorResponse("Unauthorized"),
+      403: errorResponse("Forbidden"),
+      404: errorResponse("Not found"),
+    },
+  }),
+  async (c) => {
+    const user = c.get("user");
+    const boothId = c.req.valid("param").id;
+    const query = c.req.valid("query");
+    const { owns } = await requireBoothOwnerOrAdmin(user.id, boothId);
+    if (!owns && !user.isAdmin) {
+      throw new ForbiddenError();
+    }
+    const limit = parseLimit(query.limit);
+    const cursor = decodeCursor(query.cursor);
+    const conditions: SQL[] = [eq(orders.boothId, boothId)];
+    if (cursor) {
+      conditions.push(keysetCondition(orders.createdAt, orders.id, cursor));
+    }
+    const rows = await getDb()
+      .select({
+        id: orders.id,
+        boothId: orders.boothId,
+        kioskId: orders.kioskId,
+        buyerId: orders.buyerId,
+        totalAmount: orders.totalAmount,
+        status: orders.status,
+        paidAt: orders.paidAt,
+        canceledAt: orders.canceledAt,
+        refundedAt: orders.refundedAt,
+        createdAt: orders.createdAt,
+        createdAtMicros: createdAtMicrosColumn(orders.createdAt),
+      })
+      .from(orders)
+      .where(and(...conditions))
+      .orderBy(desc(orders.createdAt), desc(orders.id))
+      .limit(limit);
+    const items = rows.map(({ createdAtMicros, ...order }) => order);
+    const last = rows.at(-1);
+    const nextCursor =
+      rows.length === limit && last
+        ? encodeCursor({ createdAtMicros: last.createdAtMicros, id: last.id })
+        : null;
+    return c.json({ items, nextCursor }, 200);
+  },
+);
+
+boothsRoutes.openapi(
+  createRoute({
+    method: "get",
+    path: "/{id}/sales",
+    tags: ["booths"],
+    security: [{ Bearer: [] }],
+    middleware: [requireAuth] as const,
     request: { params: idParam },
     responses: {
-      200: jsonContent(z.array(orderSchema), "Booth orders"),
+      200: jsonContent(boothSalesSchema, "Booth sales summary"),
       401: errorResponse("Unauthorized"),
       403: errorResponse("Forbidden"),
       404: errorResponse("Not found"),
@@ -428,12 +529,24 @@ boothsRoutes.openapi(
     if (!owns && !user.isAdmin) {
       throw new ForbiddenError();
     }
-    const rows = await getDb()
-      .select()
+    const [row] = await getDb()
+      .select({
+        paidCount: sql<number>`count(*) filter (where ${orders.status} = 'paid')`,
+        paidRevenue: sql<number>`coalesce(sum(${orders.totalAmount}) filter (where ${orders.status} = 'paid'), 0)`,
+        refundedCount: sql<number>`count(*) filter (where ${orders.status} = 'refunded')`,
+        refundedRevenue: sql<number>`coalesce(sum(${orders.totalAmount}) filter (where ${orders.status} = 'refunded'), 0)`,
+      })
       .from(orders)
-      .where(eq(orders.boothId, boothId))
-      .orderBy(desc(orders.createdAt));
-    return c.json(rows, 200);
+      .where(eq(orders.boothId, boothId));
+    return c.json(
+      {
+        paidCount: Number(row?.paidCount ?? 0),
+        paidRevenue: Number(row?.paidRevenue ?? 0),
+        refundedCount: Number(row?.refundedCount ?? 0),
+        refundedRevenue: Number(row?.refundedRevenue ?? 0),
+      },
+      200,
+    );
   },
 );
 
@@ -478,7 +591,7 @@ boothsRoutes.openapi(
     });
     await publishBoothEvent(boothId, {
       type: "product.updated",
-      productId: created.id,
+      data: { productId: created.id },
     });
     return c.json(created, 201);
   },

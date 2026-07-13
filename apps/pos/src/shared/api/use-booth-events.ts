@@ -1,31 +1,10 @@
 "use client";
 
+import { openSse } from "@flick/api-client";
+import type { BoothEvent } from "@flick/contract";
 import { useEffect, useRef } from "react";
 
-export type BoothEvent =
-  | { type: "order.created"; orderId: string; kioskId: string | null }
-  | { type: "order.updated"; orderId: string; kioskId: string | null }
-  | {
-      type: "payment.completed";
-      paymentId: string;
-      orderId: string;
-      kioskId: string | null;
-    }
-  | {
-      type: "payment.canceled";
-      paymentId: string;
-      orderId: string;
-      kioskId: string | null;
-    }
-  | {
-      type: "payment.expired";
-      paymentId: string;
-      orderId: string;
-      kioskId: string | null;
-    }
-  | { type: "product.updated"; productId: string }
-  | { type: "kiosk.presence"; kioskId: string; online: boolean }
-  | { type: "kiosk.revoked"; kioskId: string };
+export type { BoothEvent } from "@flick/contract";
 
 type Options = {
   onEvent: (event: BoothEvent) => void;
@@ -45,20 +24,11 @@ export function useBoothEvents(
     if (!boothId) {
       return;
     }
-    const source = new EventSource(`/api/proxy/booths/${boothId}/events`);
-
-    source.onopen = () => {
-      onReconnectRef.current?.();
-    };
-
-    source.onmessage = (event) => {
-      try {
-        onEventRef.current(JSON.parse(event.data) as BoothEvent);
-      } catch {}
-    };
-
-    return () => {
-      source.close();
-    };
+    const handle = openSse({
+      url: `/api/proxy/booths/${boothId}/events`,
+      onOpen: () => onReconnectRef.current?.(),
+      onEvent: (e) => onEventRef.current(e.data as BoothEvent),
+    });
+    return () => handle.close();
   }, [boothId]);
 }

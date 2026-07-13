@@ -2,6 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -90,6 +91,7 @@ export const products = pgTable(
     price: bigint("price", { mode: "number" }).notNull(),
     stock: integer("stock"),
     status: productStatus("status").notNull().default("available"),
+    autoSoldout: boolean("auto_soldout").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -102,6 +104,11 @@ export const products = pgTable(
   (table) => [
     index("products_booth_id_idx").on(table.boothId),
     index("products_status_idx").on(table.status),
+    check(
+      "products_stock_non_negative",
+      sql`${table.stock} is null or ${table.stock} >= 0`,
+    ),
+    check("products_price_non_negative", sql`${table.price} >= 0`),
   ],
 );
 
@@ -222,6 +229,7 @@ export const orders = pgTable(
       table.createdAt.desc(),
       table.id.desc(),
     ),
+    check("orders_total_amount_non_negative", sql`${table.totalAmount} >= 0`),
   ],
 );
 
@@ -240,7 +248,10 @@ export const orderItems = pgTable(
     quantity: integer("quantity").notNull(),
     totalAmount: bigint("total_amount", { mode: "number" }).notNull(),
   },
-  (table) => [index("order_items_order_id_idx").on(table.orderId)],
+  (table) => [
+    index("order_items_order_id_idx").on(table.orderId),
+    check("order_items_quantity_positive", sql`${table.quantity} > 0`),
+  ],
 );
 
 export const orderItemOptions = pgTable(
@@ -283,6 +294,10 @@ export const payments = pgTable(
     uniqueIndex("payments_one_pending_per_order_idx")
       .on(table.orderId)
       .where(sql`${table.status} = 'pending'`),
+    check(
+      "payments_expires_after_created",
+      sql`${table.expiresAt} > ${table.createdAt}`,
+    ),
   ],
 );
 
@@ -317,6 +332,9 @@ export const transactions = pgTable(
     uniqueIndex("transactions_one_grant_per_user_idx")
       .on(table.userId)
       .where(sql`${table.type} = 'grant'`),
+    uniqueIndex("transactions_one_purchase_per_order_idx")
+      .on(table.orderId)
+      .where(sql`${table.type} = 'purchase'`),
   ],
 );
 

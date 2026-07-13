@@ -5,6 +5,7 @@ export {
 export { installSessionAuth } from "./model/session-auth.ts";
 export {
   clearTokens,
+  readAccessToken,
   readTokens,
   type SessionTokens,
   subscribeSessionCleared,

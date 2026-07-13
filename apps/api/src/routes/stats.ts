@@ -1,7 +1,7 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { type AuthVariables, requireAdmin } from "../auth/middleware.ts";
-import { getDb } from "../db/index.ts";
+import { getReadDb } from "../db/index.ts";
 import {
   booths,
   orderItems,
@@ -30,7 +30,7 @@ statsRoutes.openapi(
     },
   }),
   async (c) => {
-    const db = getDb();
+    const db = getReadDb();
     const totals = await db
       .select({
         type: transactions.type,
@@ -47,7 +47,7 @@ statsRoutes.openapi(
       .from(booths)
       .leftJoin(
         transactions,
-        sql`${transactions.orderId} in (select id from orders where booth_id = ${booths.id} and status = 'paid') and ${transactions.type} = 'purchase'`,
+        sql`${transactions.orderId} in (select id from orders where booth_id = ${booths.id} and status in ('paid', 'refunded')) and ${transactions.type} = 'purchase'`,
       )
       .groupBy(booths.id);
     return c.json({ totals, boothSales }, 200);
@@ -68,7 +68,7 @@ statsRoutes.openapi(
     },
   }),
   async (c) => {
-    const db = getDb();
+    const db = getReadDb();
 
     const [totalChargedRow] = await db
       .select({
@@ -83,7 +83,7 @@ statsRoutes.openapi(
       })
       .from(transactions)
       .where(
-        sql`${transactions.type} = 'purchase' and ${transactions.orderId} in (select id from orders where status = 'paid')`,
+        sql`${transactions.type} = 'purchase' and ${transactions.orderId} in (select id from orders where status in ('paid', 'refunded'))`,
       );
 
     const [totalRefundRow] = await db
@@ -152,7 +152,7 @@ statsRoutes.openapi(
       .from(booths)
       .leftJoin(
         transactions,
-        sql`${transactions.orderId} in (select id from orders where booth_id = ${booths.id} and status = 'paid') and ${transactions.type} = 'purchase'`,
+        sql`${transactions.orderId} in (select id from orders where booth_id = ${booths.id} and status in ('paid', 'refunded')) and ${transactions.type} = 'purchase'`,
       )
       .groupBy(booths.id)
       .orderBy(desc(sql`coalesce(sum(-${transactions.amount}), 0)`));
@@ -172,7 +172,7 @@ statsRoutes.openapi(
       .from(orderItems)
       .innerJoin(
         orders,
-        sql`${orders.id} = ${orderItems.orderId} and ${orders.status} = 'paid'`,
+        sql`${orders.id} = ${orderItems.orderId} and ${orders.status} in ('paid', 'refunded')`,
       )
       .innerJoin(booths, eq(booths.id, orders.boothId))
       .leftJoin(products, eq(products.id, orderItems.productId))

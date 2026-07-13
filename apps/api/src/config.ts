@@ -13,7 +13,7 @@ const envSchema = z.object({
   NODE_ENV: z.string().default("development"),
   PORT: z.coerce.number().int().min(0).max(65535).default(3000),
   DATABASE_URL: z.string().min(1),
-  REDIS_URL: z.string().min(1).optional(),
+  REDIS_URL: z.string().min(1),
   CORS_ORIGIN: z.string().min(1),
   DAUTH_CLIENT_ID: z.string().min(1),
   DAUTH_CLIENT_SECRET: z.string().min(1),
