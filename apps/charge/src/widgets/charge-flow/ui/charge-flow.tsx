@@ -9,6 +9,7 @@ import {
 } from "@/features/charge";
 import { QrScanner } from "@/features/qr-scan";
 import { ApiError } from "@/shared/api";
+import brandMark from "@/shared/assets/brand-mark.png";
 import { useHaptic } from "@/shared/lib";
 import {
   Avatar,
@@ -136,7 +137,7 @@ export const ChargeFlow = ({ topInset, bottomInset }: ChargeFlowProps) => {
           className="flex items-center gap-2 px-5 pb-2"
           style={{ paddingTop: topInset + 20 }}
         >
-          <BrandMark className="size-7" />
+          <BrandMark src={brandMark} className="size-7" />
           <h1 className="text-title font-bold text-foreground">충전</h1>
         </header>
 
