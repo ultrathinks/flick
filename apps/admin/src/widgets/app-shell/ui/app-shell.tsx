@@ -1,9 +1,10 @@
 "use client";
 
-import { Menu as MenuIcon, ShieldCheck, X } from "lucide-react";
+import { Menu as MenuIcon, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import type { Me } from "@/shared/auth/me";
+import { BrandMark } from "@/shared/ui";
 import { SidebarNav } from "./sidebar-nav.tsx";
 import { UserMenu } from "./user-menu.tsx";
 
@@ -47,9 +48,7 @@ export function AppShell({
             <MenuIcon className="size-5" strokeWidth={1.75} />
           </button>
           <div className="flex items-center gap-2.5">
-            <span className="flex size-7 items-center justify-center rounded-card-sm bg-brand text-brand-foreground">
-              <ShieldCheck className="size-4" />
-            </span>
+            <BrandMark className="size-7" />
             <span className="text-heading font-semibold tracking-tight text-foreground">
               Flick Admin
             </span>
