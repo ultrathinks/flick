@@ -14,10 +14,12 @@
       ]
     },
     "dev": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     },
     "test": {
+      "dependsOn": ["^build"],
       "outputs": [],
       "passThroughEnv": [
         "DATABASE_URL",
