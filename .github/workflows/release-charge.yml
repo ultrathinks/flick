@@ -1,0 +1,42 @@
+name: Release charge
+
+on:
+  push:
+    tags:
+      - "charge-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build charge
+        env:
+          VITE_API_URL: https://flickapi.dgsw.kr/v1
+        run: pnpm turbo run build --filter=charge
+
+      - name: Zip dist
+        working-directory: apps/charge/dist
+        run: zip -r ../../../dist.zip .
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" dist.zip --title "$GITHUB_REF_NAME" --generate-notes
