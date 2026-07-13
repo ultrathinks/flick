@@ -1,5 +1,5 @@
-import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { BrandMark } from "@/shared/ui";
 
 export default async function LoginPage({
   searchParams,
@@ -12,9 +12,7 @@ export default async function LoginPage({
   return (
     <div className="mx-auto flex min-h-screen max-w-sm flex-col items-center justify-center px-5">
       <div className="mb-7 flex flex-col items-center">
-        <div className="mb-3 flex size-9 items-center justify-center rounded-card-sm bg-brand text-brand-foreground">
-          <ShieldCheck className="size-5" />
-        </div>
+        <BrandMark className="mb-3 size-12" />
         <h1 className="text-heading font-semibold tracking-tight text-foreground">
           Flick Admin
         </h1>

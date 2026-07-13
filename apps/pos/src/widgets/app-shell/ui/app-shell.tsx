@@ -1,11 +1,12 @@
 "use client";
 
-import { Lock, Store } from "lucide-react";
+import { Lock } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import type { Booth } from "@/entities/booth";
 import { cn } from "@/shared/lib/cn.ts";
+import { BrandMark } from "@/shared/ui";
 import { isTabLocked, TABS, type TabDef, type TabKey } from "../model/tabs.ts";
 import { BoothMenu } from "./booth-menu.tsx";
 
@@ -38,9 +39,7 @@ export function AppShell({
     <div className="flex min-h-screen flex-col bg-bg">
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface px-4 lg:px-6">
         <div className="flex items-center gap-2.5">
-          <span className="flex size-7 items-center justify-center rounded-card-sm bg-brand text-brand-foreground">
-            <Store className="size-4" />
-          </span>
+          <BrandMark className="size-7" />
           <span className="text-heading font-semibold tracking-tight text-foreground">
             Flick POS
           </span>
