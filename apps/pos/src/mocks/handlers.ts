@@ -1,10 +1,6 @@
 import { HttpResponse, http } from "msw";
 import { booth, boothKiosks, me, orders, products } from "./fixtures.ts";
 
-function errorResponse(status: number, code: string, message: string) {
-  return HttpResponse.json({ error: { code, message } }, { status });
-}
-
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -180,12 +176,9 @@ export function createHandlers(base: string) {
 
     http.get(url("booths/:boothId/sales"), () => {
       const paid = orders.filter((o) => o.status === "paid");
-      const refunded = orders.filter((o) => o.status === "refunded");
       return HttpResponse.json({
         paidCount: paid.length,
         paidRevenue: paid.reduce((sum, o) => sum + o.totalAmount, 0),
-        refundedCount: refunded.length,
-        refundedRevenue: refunded.reduce((sum, o) => sum + o.totalAmount, 0),
       });
     }),
 
@@ -195,20 +188,5 @@ export function createHandlers(base: string) {
         { status: 201 },
       ),
     ),
-
-    http.post(url("refunds"), async ({ request }) => {
-      const input = (await request.json()) as Record<string, unknown>;
-      const orderId = String(input.orderId ?? "");
-      const order = orders.find((o) => o.id === orderId);
-      if (!order) {
-        return errorResponse(404, "NOT_FOUND", "order not found");
-      }
-      return HttpResponse.json({
-        id: randomId("refund"),
-        orderId,
-        amount: order.totalAmount,
-        createdAt: nowIso(),
-      });
-    }),
   ];
 }

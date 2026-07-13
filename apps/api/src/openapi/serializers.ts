@@ -13,7 +13,6 @@ export const BOOTH_PUBLIC_OMIT = { approvedBy: true } as const;
 export const TRANSACTION_PUBLIC_OMIT = {
   idempotencyKey: true,
   adminId: true,
-  refundedTransactionId: true,
 } as const;
 
 declare const publicBrand: unique symbol;
@@ -52,6 +51,6 @@ export function serializeBooth(row: Booth): PublicBooth {
 }
 
 export function serializeTransaction(row: Transaction): PublicTransaction {
-  const { idempotencyKey, adminId, refundedTransactionId, ...rest } = row;
+  const { idempotencyKey, adminId, ...rest } = row;
   return rest as PublicTransaction;
 }

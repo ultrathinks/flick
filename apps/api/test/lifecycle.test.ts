@@ -53,7 +53,7 @@ async function expectBalanceMatchesLedger(userId: string): Promise<number> {
 }
 
 describe("full money lifecycle keeps balance equal to the ledger", () => {
-  it("holds the invariant across charge, purchase, and refund", async () => {
+  it("holds the invariant across charge and purchase", async () => {
     const admin = await createUser({ isAdmin: true });
     const owner = await createUser();
     const buyer = await createUser({ balance: 10000 });
@@ -74,25 +74,14 @@ describe("full money lifecycle keeps balance equal to the ledger", () => {
     expect(charge.status).toBe(201);
     expect(await expectBalanceMatchesLedger(buyer.id)).toBe(15000);
 
-    const { orderId, code } = await createOrderWithPayment(
-      boothId,
-      kioskId,
-      productId,
-      { price: 2000 },
-    );
+    const { code } = await createOrderWithPayment(boothId, kioskId, productId, {
+      price: 2000,
+    });
     const confirm = await app.request(`/v1/payment-codes/${code}/confirm`, {
       method: "POST",
       headers: authHeaders(buyer.accessToken),
     });
     expect(confirm.status).toBe(200);
     expect(await expectBalanceMatchesLedger(buyer.id)).toBe(13000);
-
-    const refund = await app.request("/v1/refunds", {
-      method: "POST",
-      headers: authHeaders(owner.accessToken),
-      body: JSON.stringify({ orderId }),
-    });
-    expect(refund.status).toBe(201);
-    expect(await expectBalanceMatchesLedger(buyer.id)).toBe(15000);
   });
 });

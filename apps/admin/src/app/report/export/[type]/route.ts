@@ -91,8 +91,8 @@ function buildSummarySheet(
 
   const moneyRows: [string, number][] = [
     ["실충전", summary.totalCharged],
-    ["기부 재원 (구매 총액)", summary.totalRevenue],
-    ["순기부액 (환불 반영)", summary.netDonation],
+    ["구매 총액", summary.totalRevenue],
+    ["기부액 (기본금 제외)", summary.totalDonation],
     ["환급 대상 총액", summary.refundableTotal],
     ["미등록 환급 총액", summary.unregisteredTotal],
     ["검산 (잔액-원장)", summary.reconciliation],

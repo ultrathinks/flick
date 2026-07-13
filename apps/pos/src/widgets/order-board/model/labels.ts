@@ -5,7 +5,6 @@ export const STATUS_LABEL: Record<OrderStatus, string> = {
   paid: "결제 완료",
   canceled: "취소",
   expired: "만료",
-  refunded: "환불",
 };
 
 export const STATUS_TONE: Record<
@@ -16,5 +15,4 @@ export const STATUS_TONE: Record<
   paid: "success",
   canceled: "neutral",
   expired: "danger",
-  refunded: "danger",
 };

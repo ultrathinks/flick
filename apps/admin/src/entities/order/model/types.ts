@@ -5,7 +5,6 @@ export const orderStatuses = [
   "paid",
   "canceled",
   "expired",
-  "refunded",
 ] as const;
 
 export type OrderStatus = (typeof orderStatuses)[number];
@@ -19,7 +18,6 @@ export const adminOrderSchema = z.object({
   status: z.enum(orderStatuses),
   paidAt: z.coerce.date().nullable(),
   canceledAt: z.coerce.date().nullable(),
-  refundedAt: z.coerce.date().nullable(),
   createdAt: z.coerce.date(),
   boothName: z.string(),
   buyerName: z.string().nullable(),

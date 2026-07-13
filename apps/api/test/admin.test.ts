@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.ts";
 import { getDb } from "../src/db/index.ts";
-import { orders, transactions, users } from "../src/db/schema/index.ts";
+import { orders, users } from "../src/db/schema/index.ts";
 import { closeEvents } from "../src/lib/events.ts";
 import {
   authHeaders,
@@ -209,61 +209,6 @@ describe("GET /v1/audit-logs", () => {
   });
 });
 
-describe("POST /v1/refunds (booth owner only)", () => {
-  async function paidOrder() {
-    const owner = await createUser();
-    const buyer = await createUser({ balance: 5000 });
-    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
-    const productId = await createProduct(boothId);
-    const { orderId } = await createOrderWithPayment(
-      boothId,
-      kioskId,
-      productId,
-      { price: 1000 },
-    );
-    await getDb()
-      .update(orders)
-      .set({ status: "paid", buyerId: buyer.id, paidAt: new Date() })
-      .where(eq(orders.id, orderId));
-    await getDb().insert(transactions).values({
-      userId: buyer.id,
-      amount: -1000,
-      type: "purchase",
-      orderId,
-    });
-    return { owner, buyer, orderId };
-  }
-
-  it("lets the booth owner refund and restores buyer balance", async () => {
-    const { owner, buyer, orderId } = await paidOrder();
-    const before = await balanceOf(buyer.id);
-    const res = await app.request("/v1/refunds", {
-      method: "POST",
-      headers: authHeaders(owner.accessToken),
-      body: JSON.stringify({ orderId }),
-    });
-    expect(res.status).toBe(201);
-    const after = await balanceOf(buyer.id);
-    expect(after - before).toBe(1000);
-    const [order] = await getDb()
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderId));
-    expect(order?.status).toBe("refunded");
-  });
-
-  it("forbids a non-owner (even admin) from refunding", async () => {
-    const { orderId } = await paidOrder();
-    const admin = await createUser({ isAdmin: true });
-    const res = await app.request("/v1/refunds", {
-      method: "POST",
-      headers: authHeaders(admin.accessToken),
-      body: JSON.stringify({ orderId }),
-    });
-    expect(res.status).toBe(403);
-  });
-});
-
 describe("user code (stable per-user identifier)", () => {
   it("returns the caller's own code and never rotates it", async () => {
     const user = await createUser();
@@ -422,33 +367,28 @@ async function balanceOf(userId: string): Promise<number> {
   return row?.balance ?? 0;
 }
 
-describe("GET /v1/stats (booth sales count gross confirmed orders)", () => {
-  it("counts both paid and refunded orders as gross booth sales", async () => {
+describe("GET /v1/stats (booth sales sum paid orders)", () => {
+  it("sums paid orders as booth sales", async () => {
     const admin = await createUser({ isAdmin: true });
     const owner = await createUser();
     const buyer = await createUser({ balance: 10000 });
     const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
     const productId = await createProduct(boothId, { price: 1000, stock: 10 });
 
-    const kept = await createOrderWithPayment(boothId, kioskId, productId, {
+    const first = await createOrderWithPayment(boothId, kioskId, productId, {
       price: 1000,
     });
-    await app.request(`/v1/payment-codes/${kept.code}/confirm`, {
+    await app.request(`/v1/payment-codes/${first.code}/confirm`, {
       method: "POST",
       headers: authHeaders(buyer.accessToken),
     });
 
-    const refunded = await createOrderWithPayment(boothId, kioskId, productId, {
+    const second = await createOrderWithPayment(boothId, kioskId, productId, {
       price: 1000,
     });
-    await app.request(`/v1/payment-codes/${refunded.code}/confirm`, {
+    await app.request(`/v1/payment-codes/${second.code}/confirm`, {
       method: "POST",
       headers: authHeaders(buyer.accessToken),
-    });
-    await app.request("/v1/refunds", {
-      method: "POST",
-      headers: authHeaders(owner.accessToken),
-      body: JSON.stringify({ orderId: refunded.orderId }),
     });
 
     const res = await app.request("/v1/stats", {

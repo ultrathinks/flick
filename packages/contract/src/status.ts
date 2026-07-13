@@ -3,7 +3,6 @@ export const ORDER_STATUSES = [
   "paid",
   "canceled",
   "expired",
-  "refunded",
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
@@ -22,7 +21,6 @@ export const TRANSACTION_TYPES = [
   "grant",
   "charge",
   "purchase",
-  "refund",
   "adjustment",
 ] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];

@@ -2,12 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.ts";
 import { getDb } from "../src/db/index.ts";
-import {
-  products,
-  refunds,
-  transactions,
-  users,
-} from "../src/db/schema/index.ts";
+import { products, transactions, users } from "../src/db/schema/index.ts";
 import { closeEvents } from "../src/lib/events.ts";
 import {
   authHeaders,
@@ -119,47 +114,6 @@ describe("concurrent orders on the last unit of stock", () => {
       await Promise.all(orders.map((o) => purchaseCount(o.orderId)))
     ).reduce((sum, n) => sum + n, 0);
     expect(paidCount).toBe(1);
-  });
-});
-
-describe("concurrent refunds on one order", () => {
-  it("credits the buyer exactly once", async () => {
-    const owner = await createUser();
-    const buyer = await createUser({ balance: 5000 });
-    const { boothId, kioskId } = await createBoothWithKiosk(owner.id);
-    const productId = await createProduct(boothId, { price: 2000, stock: 5 });
-    const { orderId, code } = await createOrderWithPayment(
-      boothId,
-      kioskId,
-      productId,
-      { price: 2000 },
-    );
-    await app.request(`/v1/payment-codes/${code}/confirm`, {
-      method: "POST",
-      headers: authHeaders(buyer.accessToken),
-    });
-    expect(await balanceOf(buyer.id)).toBe(3000);
-
-    const results = await Promise.all(
-      Array.from({ length: 6 }, () =>
-        app.request("/v1/refunds", {
-          method: "POST",
-          headers: authHeaders(owner.accessToken),
-          body: JSON.stringify({ orderId }),
-        }),
-      ),
-    );
-    const statuses = results.map((r) => r.status);
-
-    expect(statuses.filter((s) => s >= 500)).toHaveLength(0);
-    expect(statuses.filter((s) => s === 201)).toHaveLength(1);
-    expect(await balanceOf(buyer.id)).toBe(5000);
-
-    const refundRows = await getDb()
-      .select()
-      .from(refunds)
-      .where(eq(refunds.orderId, orderId));
-    expect(refundRows).toHaveLength(1);
   });
 });
 

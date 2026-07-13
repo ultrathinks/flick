@@ -4,7 +4,7 @@ export const reportSchema = z.object({
   summary: z.object({
     totalCharged: z.number(),
     totalRevenue: z.number(),
-    netDonation: z.number(),
+    totalDonation: z.number(),
     userCount: z.number(),
     orderCount: z.number(),
     refundableTotal: z.number(),

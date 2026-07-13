@@ -1,44 +1,14 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { and, eq, sql } from "drizzle-orm";
-import {
-  type AuthVariables,
-  requireAdmin,
-  requireAuth,
-} from "../auth/middleware.ts";
+import { type AuthVariables, requireAdmin } from "../auth/middleware.ts";
 import { getDb } from "../db/index.ts";
-import {
-  auditLogs,
-  booths,
-  orderItems,
-  orders,
-  products,
-  refunds,
-  transactions,
-  users,
-} from "../db/schema/index.ts";
+import { auditLogs, transactions, users } from "../db/schema/index.ts";
 import { MAX_CHARGE_AMOUNT, MAX_TRANSACTION_AMOUNT } from "../lib/constants.ts";
-import {
-  isCheckViolation,
-  isForeignKeyViolation,
-  isUniqueViolation,
-} from "../lib/db-errors.ts";
-import {
-  BadRequestError,
-  ConflictError,
-  ForbiddenError,
-  NotFoundError,
-} from "../lib/errors.ts";
-import {
-  publishAdminEvent,
-  publishBoothEvent,
-  publishUserEvent,
-} from "../lib/events.ts";
+import { isCheckViolation, isForeignKeyViolation } from "../lib/db-errors.ts";
+import { BadRequestError, NotFoundError } from "../lib/errors.ts";
+import { publishAdminEvent, publishUserEvent } from "../lib/events.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
-import {
-  refundSchema,
-  resolvedUserSchema,
-  transactionSchema,
-} from "../openapi/schemas.ts";
+import { resolvedUserSchema, transactionSchema } from "../openapi/schemas.ts";
 import { serializeTransaction } from "../openapi/serializers.ts";
 
 const resolveSchema = z.object({ code: z.string().min(1) });
@@ -58,11 +28,6 @@ const adjustmentSchema = z.object({
   reason: z.string().max(200).optional(),
   idempotencyKey: z.string().min(1),
 });
-const refundBodySchema = z.object({
-  orderId: z.string().uuid(),
-  reason: z.string().optional(),
-});
-
 export const moneyRoutes = new OpenAPIHono<{ Variables: AuthVariables }>();
 
 moneyRoutes.openapi(
@@ -287,187 +252,6 @@ moneyRoutes.openapi(
       }
       if (isForeignKeyViolation(error)) {
         throw new NotFoundError("user not found");
-      }
-      throw error;
-    }
-  },
-);
-
-moneyRoutes.openapi(
-  createRoute({
-    method: "post",
-    path: "/refunds",
-    tags: ["money"],
-    security: [{ Bearer: [] }],
-    middleware: [requireAuth] as const,
-    request: {
-      body: { content: { "application/json": { schema: refundBodySchema } } },
-    },
-    responses: {
-      201: jsonContent(refundSchema, "Created refund"),
-      400: errorResponse("Bad request"),
-      401: errorResponse("Unauthorized"),
-      403: errorResponse("Forbidden"),
-      404: errorResponse("Not found"),
-      409: errorResponse("Conflict"),
-    },
-  }),
-  async (c) => {
-    const actor = c.get("user");
-    const { orderId, reason } = c.req.valid("json");
-    try {
-      const result = await getDb().transaction(async (tx) => {
-        const [order] = await tx
-          .select()
-          .from(orders)
-          .where(eq(orders.id, orderId))
-          .for("update");
-        if (!order) {
-          throw new NotFoundError("order not found");
-        }
-        const [booth] = await tx
-          .select({ ownerId: booths.ownerId })
-          .from(booths)
-          .where(eq(booths.id, order.boothId));
-        if (!booth || booth.ownerId !== actor.id) {
-          throw new ForbiddenError();
-        }
-        if (order.status !== "paid" || !order.buyerId) {
-          throw new BadRequestError("order is not refundable");
-        }
-        const [purchase] = await tx
-          .select()
-          .from(transactions)
-          .where(
-            and(
-              eq(transactions.orderId, orderId),
-              eq(transactions.type, "purchase"),
-            ),
-          )
-          .limit(1);
-        if (!purchase) {
-          throw new BadRequestError("purchase transaction not found");
-        }
-        const [refundTransaction] = await tx
-          .insert(transactions)
-          .values({
-            userId: order.buyerId,
-            amount: order.totalAmount,
-            type: "refund",
-            orderId,
-            paymentId: purchase.paymentId,
-            adminId: actor.id,
-            refundedTransactionId: purchase.id,
-          })
-          .returning();
-        if (!refundTransaction) {
-          throw new Error("failed to create refund transaction");
-        }
-        const [updatedBuyer] = await tx
-          .update(users)
-          .set({
-            balance: sql<number>`${users.balance} + ${order.totalAmount}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(users.id, order.buyerId))
-          .returning({ balance: users.balance });
-        if (!updatedBuyer) {
-          throw new Error("failed to update buyer balance");
-        }
-        const [refund] = await tx
-          .insert(refunds)
-          .values({
-            orderId,
-            paymentTransactionId: purchase.id,
-            refundTransactionId: refundTransaction.id,
-            amount: order.totalAmount,
-            reason,
-            adminId: actor.id,
-          })
-          .returning();
-        const refundedItems = await tx
-          .select({
-            productId: orderItems.productId,
-            quantity: orderItems.quantity,
-          })
-          .from(orderItems)
-          .where(eq(orderItems.orderId, orderId));
-        for (const item of refundedItems) {
-          await tx
-            .update(products)
-            .set({
-              stock: sql<number>`${products.stock} + ${item.quantity}`,
-              status: sql`case when ${products.autoSoldout} then 'available'::product_status else ${products.status} end`,
-              autoSoldout: sql`case when ${products.autoSoldout} then false else ${products.autoSoldout} end`,
-              updatedAt: new Date(),
-            })
-            .where(
-              and(
-                eq(products.id, item.productId),
-                sql`${products.stock} is not null`,
-              ),
-            );
-        }
-        await tx
-          .update(orders)
-          .set({ status: "refunded", refundedAt: new Date() })
-          .where(eq(orders.id, orderId));
-        await tx.insert(auditLogs).values({
-          actorId: actor.id,
-          action: "refund.create",
-          targetType: "order",
-          targetId: orderId,
-          metadata: { amount: order.totalAmount },
-        });
-        if (!refund) {
-          throw new Error("failed to create refund");
-        }
-        return {
-          refund,
-          refundTransactionId: refundTransaction.id,
-          buyerId: order.buyerId,
-          balance: updatedBuyer.balance,
-          boothId: order.boothId,
-          kioskId: order.kioskId,
-          orderId,
-          productIds: refundedItems.map((item) => item.productId),
-        };
-      });
-      await publishUserEvent(result.buyerId, {
-        type: "balance.changed",
-        data: { balance: result.balance },
-      });
-      await publishUserEvent(result.buyerId, {
-        type: "transaction.created",
-        data: { transactionId: result.refundTransactionId },
-      });
-      await publishAdminEvent({ type: "stats.changed", data: {} });
-      await publishAdminEvent({
-        type: "order.updated",
-        data: {
-          orderId: result.orderId,
-          boothId: result.boothId,
-          status: "refunded",
-        },
-      });
-      await publishBoothEvent(result.boothId, {
-        type: "order.updated",
-        data: {
-          orderId: result.orderId,
-          kioskId: result.kioskId,
-          status: "refunded",
-        },
-      });
-      for (const productId of new Set(result.productIds)) {
-        await publishBoothEvent(result.boothId, {
-          type: "product.updated",
-          data: { productId },
-        });
-      }
-      return c.json(result.refund, 201);
-    } catch (error) {
-      if (isUniqueViolation(error)) {
-        throw new ConflictError("order already refunded");
       }
       throw error;
     }

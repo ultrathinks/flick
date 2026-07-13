@@ -5,18 +5,15 @@ import { CreditCard, Receipt, Wallet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { type Booth, fetchBoothSales } from "@/entities/booth";
 import { type Order, type OrderStatus, useBoothOrders } from "@/entities/order";
-import { useRefund } from "@/features/refund";
 import { useBoothEvents } from "@/shared/api/use-booth-events.ts";
 import {
   Badge,
-  Button,
   EmptyState,
   QueryState,
   SectionHeader,
   Select,
   Skeleton,
   Stat,
-  useConfirm,
   useToast,
 } from "@/shared/ui";
 import { STATUS_LABEL, STATUS_TONE } from "../model/labels.ts";
@@ -33,15 +30,7 @@ function formatTime(iso: string): string {
   });
 }
 
-function OrderCard({
-  order,
-  onRefund,
-  refunding,
-}: {
-  order: Order;
-  onRefund: (orderId: string) => void;
-  refunding: boolean;
-}) {
+function OrderCard({ order }: { order: Order }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface px-3 py-2.5">
       <div className="min-w-0">
@@ -52,21 +41,9 @@ function OrderCard({
           {formatTime(order.createdAt)}
         </p>
       </div>
-      <div className="flex items-center gap-2">
-        <Badge tone={STATUS_TONE[order.status]}>
-          {STATUS_LABEL[order.status]}
-        </Badge>
-        {order.status === "paid" && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onRefund(order.id)}
-            disabled={refunding}
-          >
-            환불
-          </Button>
-        )}
-      </div>
+      <Badge tone={STATUS_TONE[order.status]}>
+        {STATUS_LABEL[order.status]}
+      </Badge>
     </div>
   );
 }
@@ -78,8 +55,6 @@ export function OrderBoard({ booth }: { booth: Booth }) {
     queryFn: () => fetchBoothSales(booth.id),
     refetchInterval: 30_000,
   });
-  const refund = useRefund(booth.id);
-  const confirm = useConfirm();
   const toast = useToast();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Filter>("all");
@@ -116,20 +91,6 @@ export function OrderBoard({ booth }: { booth: Booth }) {
     }, 30_000);
     return () => clearInterval(timer);
   }, [booth.id, queryClient]);
-
-  async function handleRefund(orderId: string) {
-    const ok = await confirm({
-      title: "이 주문을 환불할까요?",
-      description: "결제 금액이 구매자에게 돌아가요.",
-      confirmLabel: "환불",
-      tone: "danger",
-    });
-    if (!ok) return;
-    refund.mutate(orderId, {
-      onSuccess: () => toast.success("환불했어요."),
-      onError: () => toast.error("환불에 실패했어요."),
-    });
-  }
 
   const summary = {
     total: orders.data?.length ?? 0,
@@ -175,7 +136,6 @@ export function OrderBoard({ booth }: { booth: Booth }) {
               <option value="paid">결제 완료</option>
               <option value="pending">결제 대기</option>
               <option value="canceled">취소</option>
-              <option value="refunded">환불</option>
               <option value="expired">만료</option>
             </Select>
           </div>
@@ -204,12 +164,7 @@ export function OrderBoard({ booth }: { booth: Booth }) {
       >
         <div className="space-y-2 md:hidden">
           {filtered.map((order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              onRefund={handleRefund}
-              refunding={refund.isPending}
-            />
+            <OrderCard key={order.id} order={order} />
           ))}
         </div>
         <div className="hidden overflow-hidden rounded-card border border-border md:block">
@@ -240,21 +195,9 @@ export function OrderBoard({ booth }: { booth: Booth }) {
                     {order.totalAmount.toLocaleString()}원
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <div className="flex h-9 items-center justify-end gap-2">
-                      <Badge tone={STATUS_TONE[order.status]}>
-                        {STATUS_LABEL[order.status]}
-                      </Badge>
-                      {order.status === "paid" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRefund(order.id)}
-                          disabled={refund.isPending}
-                        >
-                          환불
-                        </Button>
-                      )}
-                    </div>
+                    <Badge tone={STATUS_TONE[order.status]}>
+                      {STATUS_LABEL[order.status]}
+                    </Badge>
                   </td>
                 </tr>
               ))}

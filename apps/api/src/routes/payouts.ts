@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import {
   type AuthVariables,
   requireAdmin,
@@ -7,7 +7,6 @@ import {
 } from "../auth/middleware.ts";
 import { getDb } from "../db/index.ts";
 import { type Payout, payouts, users } from "../db/schema/index.ts";
-import { BASE_GRANT_AMOUNT } from "../lib/constants.ts";
 import { errorResponse, jsonContent } from "../openapi/helpers.ts";
 import {
   adminPayoutSchema,
@@ -21,16 +20,18 @@ const payoutBodySchema = z.object({
   accountHolder: z.string().min(1).max(64),
 });
 
-function payableBalance(balance: number): number {
-  return Math.max(0, balance - BASE_GRANT_AMOUNT);
+const chargedPerUser = sql<number>`coalesce((select sum(t.amount) from transactions t where t.user_id = users.id and t.type = 'charge'), 0)`;
+
+function payable(charged: number, balance: number): number {
+  return Math.min(charged, balance);
 }
 
-async function userBalance(userId: string): Promise<number> {
+async function userPayable(userId: string): Promise<number> {
   const [row] = await getDb()
-    .select({ balance: users.balance })
+    .select({ charged: chargedPerUser, balance: users.balance })
     .from(users)
     .where(eq(users.id, userId));
-  return row?.balance ?? 0;
+  return row ? payable(Number(row.charged), row.balance) : 0;
 }
 
 function payoutAccount(row: Payout) {
@@ -62,7 +63,7 @@ payoutsRoutes.openapi(
       .from(payouts)
       .where(eq(payouts.userId, user.id))
       .limit(1);
-    const availableAmount = payableBalance(await userBalance(user.id));
+    const availableAmount = await userPayable(user.id);
     return c.json(
       {
         availableAmount,
@@ -133,6 +134,7 @@ payoutsRoutes.openapi(
     const rows = await getDb()
       .select({
         payout: payouts,
+        charged: chargedPerUser,
         balance: users.balance,
         name: users.name,
         studentNumber: users.studentNumber,
@@ -146,7 +148,7 @@ payoutsRoutes.openapi(
         userId: row.payout.userId,
         name: row.name,
         studentNumber: row.studentNumber,
-        availableAmount: payableBalance(row.balance),
+        availableAmount: payable(Number(row.charged), row.balance),
         accountHolder: row.payout.accountHolder,
         bankName: row.payout.bankName,
         accountNumber: row.payout.accountNumber,

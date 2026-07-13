@@ -108,7 +108,6 @@ export const order: Order = {
   status: "pending",
   paidAt: null,
   canceledAt: null,
-  refundedAt: null,
   createdAt: "2026-07-05T11:00:00+09:00",
 };
 

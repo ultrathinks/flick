@@ -5,7 +5,6 @@ export const orderStatusSchema = z.enum([
   "paid",
   "canceled",
   "expired",
-  "refunded",
 ]);
 
 export const orderSchema = z.object({
@@ -17,7 +16,6 @@ export const orderSchema = z.object({
   status: orderStatusSchema,
   paidAt: z.string().nullable(),
   canceledAt: z.string().nullable(),
-  refundedAt: z.string().nullable(),
   createdAt: z.string(),
 });
 

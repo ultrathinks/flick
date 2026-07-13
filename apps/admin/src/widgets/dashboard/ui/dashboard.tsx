@@ -25,8 +25,8 @@ export function Dashboard() {
   if (stats.isPending) {
     return (
       <div className="flex flex-col gap-6">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, index) => (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no stable id
             <Card key={index} className="flex flex-col gap-2 p-4">
               <Skeleton className="h-3 w-16" />
@@ -37,10 +37,7 @@ export function Dashboard() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <SectionHeader
-            title="부스 매출"
-            description="환불 반영 전 구매 총액 기준"
-          />
+          <SectionHeader title="부스 매출" description="구매 총액 기준" />
           <Card className="flex flex-col gap-4 p-4">
             {Array.from({ length: 4 }).map((_, index) => (
               <div
@@ -75,10 +72,7 @@ export function Dashboard() {
       <DashboardStats stats={stats.data} />
 
       <div className="flex flex-col gap-2">
-        <SectionHeader
-          title="부스 매출"
-          description="환불 반영 전 구매 총액 기준"
-        />
+        <SectionHeader title="부스 매출" description="구매 총액 기준" />
         <Card className="p-0 overflow-hidden">
           {boothSales.length === 0 ? (
             <p className="px-4 py-10 text-center text-body text-foreground-subtle">
