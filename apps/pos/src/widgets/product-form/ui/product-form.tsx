@@ -112,19 +112,15 @@ export function ProductForm({
 
     if (product) {
       try {
-        let imageUrl: string | undefined;
         if (file) {
           setUploading(true);
-          imageUrl = await uploadImage({
+          await uploadImage({
             kind: "product",
             targetId: product.id,
             file,
           });
         }
-        await update.mutateAsync({
-          id: product.id,
-          input: imageUrl ? { ...base, imageUrl } : base,
-        });
+        await update.mutateAsync({ id: product.id, input: base });
         toast.success("메뉴를 수정했어요.");
         back();
       } catch {
@@ -146,12 +142,11 @@ export function ProductForm({
     if (file) {
       try {
         setUploading(true);
-        const imageUrl = await uploadImage({
+        await uploadImage({
           kind: "product",
           targetId: created.id,
           file,
         });
-        await update.mutateAsync({ id: created.id, input: { imageUrl } });
       } catch {
         toast.error(
           "메뉴는 추가했지만 사진 등록에 실패했어요. 수정에서 다시 시도해 주세요.",

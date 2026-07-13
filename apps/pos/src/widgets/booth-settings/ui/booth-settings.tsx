@@ -23,11 +23,10 @@ export function BoothSettings({ booth }: { booth: Booth }) {
   const valid = name.trim().length > 0;
 
   const save = async () => {
-    let imageUrl: string | undefined;
     if (file) {
       try {
         setUploading(true);
-        imageUrl = await uploadImage({
+        await uploadImage({
           kind: "booth",
           targetId: booth.id,
           file,
@@ -43,7 +42,6 @@ export function BoothSettings({ booth }: { booth: Booth }) {
       {
         name: name.trim(),
         description: description.trim() || undefined,
-        ...(imageUrl ? { imageUrl } : {}),
       },
       {
         onSuccess: () => {

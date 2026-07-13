@@ -24,7 +24,6 @@ export interface OptionGroupInput {
 export interface ProductInput {
   name: string;
   description?: string;
-  imageUrl?: string;
   price: number;
   stock: number | null;
   status?: "available" | "soldout" | "hidden";

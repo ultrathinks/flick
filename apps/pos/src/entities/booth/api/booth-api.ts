@@ -9,7 +9,6 @@ export function fetchBooths(): Promise<Booth[]> {
 export interface BoothInput {
   name: string;
   description?: string;
-  imageUrl?: string;
 }
 
 export function createBooth(input: BoothInput): Promise<Booth> {

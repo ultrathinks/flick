@@ -189,16 +189,11 @@ export function createHandlers(base: string) {
       });
     }),
 
-    http.post(url("uploads/presign"), () =>
-      HttpResponse.json({
-        uploadUrl: `${base}/uploads/mock-object`,
-        publicUrl: "https://mock.flick.dev/uploads/mock-object.png",
-        key: "mock-object.png",
-      }),
-    ),
-    http.put(
-      url("uploads/mock-object"),
-      () => new HttpResponse(null, { status: 200 }),
+    http.post(url("uploads"), () =>
+      HttpResponse.json(
+        { imageUrl: "https://mock.flick.dev/uploads/mock-object.webp" },
+        { status: 201 },
+      ),
     ),
 
     http.post(url("refunds"), async ({ request }) => {

@@ -1,32 +1,20 @@
 import { z } from "zod";
 import { request } from "@/shared/api";
 
-const presignSchema = z.object({
-  uploadUrl: z.string(),
-  publicUrl: z.string(),
-  key: z.string(),
-});
+const uploadResultSchema = z.object({ imageUrl: z.string() });
 
 export async function uploadImage(params: {
   kind: "booth" | "product";
   targetId: string;
   file: File;
 }): Promise<string> {
-  const presign = await request(presignSchema, "uploads/presign", {
+  const body = new FormData();
+  body.set("kind", params.kind);
+  body.set("targetId", params.targetId);
+  body.set("file", params.file);
+  const result = await request(uploadResultSchema, "uploads", {
     method: "post",
-    json: {
-      kind: params.kind,
-      targetId: params.targetId,
-      contentType: params.file.type,
-    },
+    body,
   });
-  const put = await fetch(presign.uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": params.file.type },
-    body: params.file,
-  });
-  if (!put.ok) {
-    throw new Error("upload failed");
-  }
-  return presign.publicUrl;
+  return result.imageUrl;
 }
