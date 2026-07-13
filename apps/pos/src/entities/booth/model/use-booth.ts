@@ -4,15 +4,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type BoothInput,
   createBooth,
-  fetchBooths,
+  fetchMyBooth,
   updateBooth,
 } from "../api/booth-api.ts";
 
 export function useMyBooth() {
   return useQuery({
-    queryKey: ["booths"],
-    queryFn: fetchBooths,
-    select: (booths) => booths[0] ?? null,
+    queryKey: ["my-booth"],
+    queryFn: fetchMyBooth,
   });
 }
 
@@ -20,14 +19,14 @@ export function useCreateBooth() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: BoothInput) => createBooth(input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["booths"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["my-booth"] }),
   });
 }
 
-export function useUpdateBooth(id: string) {
+export function useUpdateBooth() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: Partial<BoothInput>) => updateBooth(id, input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["booths"] }),
+    mutationFn: (input: Partial<BoothInput>) => updateBooth(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["my-booth"] }),
   });
 }

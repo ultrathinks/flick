@@ -1,9 +1,15 @@
-import { z } from "zod";
-import { request } from "@/shared/api";
+import { ApiError, request } from "@/shared/api";
 import { type Booth, boothSchema } from "../model/types.ts";
 
-export function fetchBooths(): Promise<Booth[]> {
-  return request(z.array(boothSchema), "booths");
+export async function fetchMyBooth(): Promise<Booth | null> {
+  try {
+    return await request(boothSchema, "users/me/booth");
+  } catch (error) {
+    if (error instanceof ApiError && error.code === "NOT_FOUND") {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export interface BoothInput {
@@ -12,14 +18,14 @@ export interface BoothInput {
 }
 
 export function createBooth(input: BoothInput): Promise<Booth> {
-  return request(boothSchema, "booths", { method: "post", json: input });
+  return request(boothSchema, "users/me/booth", {
+    method: "post",
+    json: input,
+  });
 }
 
-export function updateBooth(
-  id: string,
-  input: Partial<BoothInput>,
-): Promise<Booth> {
-  return request(boothSchema, `booths/${id}`, {
+export function updateBooth(input: Partial<BoothInput>): Promise<Booth> {
+  return request(boothSchema, "users/me/booth", {
     method: "patch",
     json: input,
   });

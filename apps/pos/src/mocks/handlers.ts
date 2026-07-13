@@ -66,8 +66,8 @@ export function createHandlers(base: string) {
   return [
     http.get(url("users/me"), () => HttpResponse.json(me)),
 
-    http.get(url("booths"), () => HttpResponse.json([booth])),
-    http.post(url("booths"), async ({ request }) => {
+    http.get(url("users/me/booth"), () => HttpResponse.json(booth)),
+    http.post(url("users/me/booth"), async ({ request }) => {
       const input = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         ...booth,
@@ -75,13 +75,13 @@ export function createHandlers(base: string) {
         name: String(input.name ?? booth.name),
         description: (input.description as string | undefined) ?? null,
         imageUrl: (input.imageUrl as string | undefined) ?? null,
-        status: "draft",
+        status: "pending",
         approvedAt: null,
         createdAt: nowIso(),
         updatedAt: nowIso(),
       });
     }),
-    http.patch(url("booths/:id"), async ({ request }) => {
+    http.patch(url("users/me/booth"), async ({ request }) => {
       const input = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         ...booth,

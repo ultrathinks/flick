@@ -13,7 +13,7 @@ export function BoothSettings({ booth }: { booth: Booth }) {
   const [description, setDescription] = useState(booth.description ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const update = useUpdateBooth(booth.id);
+  const update = useUpdateBooth();
   const toast = useToast();
 
   const dirty =

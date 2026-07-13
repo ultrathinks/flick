@@ -2,14 +2,26 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "@/mocks/server.ts";
 import { ApiError } from "@/shared/api";
-import { createBooth, fetchBooths } from "./booth-api.ts";
+import { createBooth, fetchMyBooth } from "./booth-api.ts";
 
 describe("booth-api", () => {
-  it("fetchBooths parses the mocked list", async () => {
-    const booths = await fetchBooths();
+  it("fetchMyBooth parses the mocked booth", async () => {
+    const booth = await fetchMyBooth();
 
-    expect(booths).toHaveLength(1);
-    expect(booths[0]?.name).toBe("떡볶이 부스");
+    expect(booth?.name).toBe("떡볶이 부스");
+  });
+
+  it("fetchMyBooth returns null when the caller has no booth", async () => {
+    server.use(
+      http.get("/api/proxy/users/me/booth", () =>
+        HttpResponse.json(
+          { error: { code: "NOT_FOUND", message: "booth not found" } },
+          { status: 404 },
+        ),
+      ),
+    );
+
+    await expect(fetchMyBooth()).resolves.toBeNull();
   });
 
   it("createBooth sends the payload and returns a draft booth", async () => {
@@ -21,7 +33,7 @@ describe("booth-api", () => {
 
   it("maps API error bodies to ApiError", async () => {
     server.use(
-      http.get("/api/proxy/booths", () =>
+      http.get("/api/proxy/users/me/booth", () =>
         HttpResponse.json(
           { error: { code: "FORBIDDEN", message: "nope" } },
           { status: 403 },
@@ -29,10 +41,10 @@ describe("booth-api", () => {
       ),
     );
 
-    await expect(fetchBooths()).rejects.toMatchObject({
+    await expect(fetchMyBooth()).rejects.toMatchObject({
       code: "FORBIDDEN",
       status: 403,
     });
-    await expect(fetchBooths()).rejects.toBeInstanceOf(ApiError);
+    await expect(fetchMyBooth()).rejects.toBeInstanceOf(ApiError);
   });
 });
