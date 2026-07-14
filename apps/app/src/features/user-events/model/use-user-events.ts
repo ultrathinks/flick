@@ -36,9 +36,10 @@ export function useUserEvents(): void {
       },
       onEvent: (event) => {
         const envelope = event.data as UserEvent;
-        if (envelope.type === "balance.changed") {
-          refetchBalance();
-        } else if (envelope.type === "transaction.created") {
+        if (
+          envelope.type === "balance.changed" ||
+          envelope.type === "transaction.created"
+        ) {
           refetchBalance();
           refetchHistory();
         }

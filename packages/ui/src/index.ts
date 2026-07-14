@@ -16,6 +16,7 @@ export { Menu, MenuItem } from "./components/menu";
 export { Money } from "./components/money";
 export { Page } from "./components/page";
 export { PageHeader } from "./components/page-header";
+export { PullToRefresh } from "./components/pull-to-refresh";
 export { QueryState } from "./components/query-state";
 export { RollingNumber } from "./components/rolling-number";
 export { SectionHeader } from "./components/section-header";
