@@ -1,5 +1,6 @@
 import { Actions, useBridgeProvider } from "@b1nd/aid-kit/bridge-kit/web";
 import { useRouter } from "@b1nd/aid-kit/navigation";
+import { useSafeArea } from "@b1nd/aid-kit/safe-area-provider";
 import { TransactionRow, useMyTransactions } from "@/entities/transaction";
 import { useMe } from "@/entities/user";
 import {
@@ -16,6 +17,7 @@ import { HomeHeader } from "@/widgets/home-header";
 export const HomePage = () => {
   const { stack } = useRouter();
   const { send } = useBridgeProvider();
+  const { bottom } = useSafeArea();
   const me = useMe();
   const transactions = useMyTransactions();
   const list = transactions.data ?? [];
@@ -29,7 +31,10 @@ export const HomePage = () => {
         onRefresh={onRefresh}
         onReachThreshold={() => send(Actions.HAPTIC, { style: "light" })}
       >
-        <div className="mx-auto w-full max-w-md space-y-6 px-5 pb-10 pt-2">
+        <div
+          className="mx-auto w-full max-w-md space-y-6 px-5 pt-2"
+          style={{ paddingBottom: bottom + 40 }}
+        >
           {me.isPending ? (
             <div className="space-y-4">
               <Skeleton className="aspect-[1.586/1] w-full rounded-card" />
