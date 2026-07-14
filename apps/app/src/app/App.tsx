@@ -25,7 +25,7 @@ export const App = () => (
         <UserEventsHost />
         <PayByCodeProvider>
           <div className="relative flex h-dvh flex-col overflow-hidden">
-            <div className="relative flex-1 overflow-hidden">
+            <div className="relative flex flex-1 flex-col overflow-hidden [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
               <Router routes={routes} />
             </div>
           </div>
