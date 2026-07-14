@@ -58,12 +58,30 @@ export const products: Product[] = [
         ],
       },
       {
+        id: "grp_size",
+        productId: "prod_1",
+        name: "사이즈 업",
+        required: false,
+        maxSelect: 1,
+        sortOrder: 1,
+        values: [
+          {
+            id: "val_large",
+            groupId: "grp_size",
+            name: "곱빼기",
+            priceDelta: 1000,
+            isDefault: false,
+            sortOrder: 0,
+          },
+        ],
+      },
+      {
         id: "grp_topping",
         productId: "prod_1",
         name: "토핑 추가",
         required: false,
         maxSelect: null,
-        sortOrder: 1,
+        sortOrder: 2,
         values: [
           {
             id: "val_cheese",
