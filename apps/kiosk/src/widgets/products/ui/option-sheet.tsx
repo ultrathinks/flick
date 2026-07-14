@@ -62,6 +62,9 @@ export function OptionSheet({ product, onClose, onConfirm }: OptionSheetProps) {
     setSelection((prev) => {
       const current = prev[group.id] ?? [];
       if (isSingle(group)) {
+        if (!group.required && current.includes(valueId)) {
+          return { ...prev, [group.id]: [] };
+        }
         return { ...prev, [group.id]: [valueId] };
       }
       if (current.includes(valueId)) {
